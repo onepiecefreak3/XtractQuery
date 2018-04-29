@@ -1,0 +1,21 @@
+# Will be generated on build time
+bin
+obj
+*.suo
+*.user
+/sample_files
+/sample_images
+/Publish.bat
+/Publish.ps1
+/.vs
+/src/Kuriimu/Properties/AssemblyInfo.cs
+*.sqlite
+/packages
+/src/Karameru/Properties/AssemblyInfo.cs
+/src/Kukkii/Properties/AssemblyInfo.cs
+/src/Kontract/Properties/AssemblyInfo.cs
+/src/runext/Properties/AssemblyInfo.cs
+/*Release Notes.md
+/src/sample_files/test_files/tmp
+/src/sample_files/test_files/tmp
+/src/sample_files/image_files
