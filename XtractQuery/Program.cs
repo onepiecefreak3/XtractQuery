@@ -80,16 +80,17 @@ namespace XtractQuery
             #region Syntax check
             for (int i = 0; i < lines.Count(); i++)
             {
-                if (lines[i].Contains('('))
-                {
-                    if (lines[i].Substring(lines[i].Count() - 2, 2) != ");")
-                        throw new Exception($"Sub has syntax errors in line {i}.");
-                }
-                else
-                {
-                    if (lines[i].Last() != ':')
-                        throw new Exception($"Commandblock label has syntax errors in line {i}.");
-                }
+                if (lines[i].Replace("\t", "") != String.Empty)
+                    if (lines[i].Contains('('))
+                    {
+                        if (lines[i].Substring(lines[i].Count() - 2, 2) != ");")
+                            throw new Exception($"Sub has syntax errors in line {i}.");
+                    }
+                    else
+                    {
+                        if (lines[i].Last() != ':')
+                            throw new Exception($"Commandblock label has syntax errors in line {i}.");
+                    }
             }
             #endregion
 
@@ -133,8 +134,11 @@ namespace XtractQuery
                 //Else it's a subLine
                 else
                 {
+                    if (line.Replace("\t", "") == String.Empty)
+                        continue;
+
                     var workingLine = line.Replace("\t", "");
-                    var subSplit = workingLine.Split('(');
+                    var subSplit = workingLine.Split(new string[] { ">(" }, StringSplitOptions.None);
 
                     var subType = Convert.ToInt16(subSplit[0].Split('<')[0].Replace("sub", ""));
                     var unk1 = Convert.ToInt16(subSplit[0].Split('<')[1].Split('>')[0]);
@@ -374,6 +378,12 @@ namespace XtractQuery
     {
         public static void WriteMultipleCompressed<T>(this BinaryWriterY bw, IEnumerable<T> list, Level5.Method comp)
         {
+            if (list.Count() <= 0)
+            {
+                bw.Write(0);
+                return;
+            }
+
             var ms = new MemoryStream();
             using (var bwIntern = new BinaryWriterY(ms, true))
                 foreach (var t in list)
