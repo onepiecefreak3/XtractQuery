@@ -54,6 +54,7 @@ namespace XtractQuery
 
             string mode = args[0];
             string file = args[1];
+            string donor = (args.Count() >= 3) ? args[2] : String.Empty;
             if (!File.Exists(file))
             {
                 Console.WriteLine($"{file} not found.");
@@ -66,14 +67,26 @@ namespace XtractQuery
             }
             else if (mode == "-c")
             {
-                CreateXQ(file);
+                CreateXQ(file, donor);
             }
 
         }
 
-        static void CreateXQ(string file)
+        static void CreateXQ(string file, string donor)
         {
-            if (Path.GetExtension(file) != ".txt")
+            using (var tp = new TXTParser(file, donor))
+            {
+                while (tp.ReadNextCodeBlock())
+                {
+                    while (tp.ReadNextCode())
+                    {
+                        ;
+                    }
+                }
+                File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".xq2", tp.GetXQData());
+            }
+
+            /*if (Path.GetExtension(file) != ".txt")
             {
                 Console.WriteLine("No supported text file.");
                 return;
@@ -231,139 +244,27 @@ namespace XtractQuery
                 bw.BaseStream.Position = 0;
                 bw.WriteStruct(header);
             }
-            #endregion
+            #endregion*/
         }
 
-        static int GetType(string input) => (Convert.ToInt32(input.Split(':')[0]) << 1) | (Convert.ToInt32(input.Split(':')[1]) & 1);
+        //static int GetType(string input) => (Convert.ToInt32(input.Split(':')[0]) << 1) | (Convert.ToInt32(input.Split(':')[1]) & 1);
 
         static void ExtractXQ(string file)
         {
+            using (var sw = new StringWriter())
             using (var xqReader = new XQParser(file))
             {
                 while (xqReader.ReadNextCodeBlock())
                 {
-                    xqReader.GetCodeBlockName();
+                    sw.Write(xqReader.GetCodeBlockLine());
                     while (xqReader.ReadNextCode())
                     {
-                        xqReader.GetCodeSub();
-                        xqReader.GetCodeArguments();
+                        sw.Write(xqReader.GetCodeLine());
                     }
                 }
+
+                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + "2.txt", sw.ToString());
             }
-
-            if (new BinaryReaderY(File.OpenRead(file)).ReadString(4) != "XQ32")
-                throw new InvalidDataException("This is no xq file.");
-
-            var result = "";
-            using (var xq = new BinaryReaderY(File.OpenRead(file)))
-            {
-                //Header
-                var header = xq.ReadStruct<Header>();
-
-                //Decompressed tables
-                xq.BaseStream.Position = header.table0Offset << 2;
-                var table0 = new BinaryReaderY(new MemoryStream(Level5.Decompress(xq.BaseStream))).ReadMultiple<T0Entry>(header.table0EntryCount).OrderBy(t0 => t0.t2Offset);
-                xq.BaseStream.Position = header.table1Offset << 2;
-                var table1 = new BinaryReaderY(new MemoryStream(Level5.Decompress(xq.BaseStream))).ReadMultiple<T1Entry>(header.table1EntryCount);
-                xq.BaseStream.Position = header.table2Offset << 2;
-                var funcs = new BinaryReaderY(new MemoryStream(Level5.Decompress(xq.BaseStream))).ReadMultiple<FuncStruct>(header.table2EntryCount);
-                xq.BaseStream.Position = header.table3Offset << 2;
-                var variables = new BinaryReaderY(new MemoryStream(Level5.Decompress(xq.BaseStream))).ReadMultiple<VarStruct>(header.table3EntryCount);
-                xq.BaseStream.Position = header.table4Offset << 2;
-                var strings = Level5.Decompress(xq.BaseStream);
-
-                using (var stringTable = new BinaryReaderY(new MemoryStream(strings)))
-                {
-                    #region Integrity checks
-                    //Table 0 Integrity check
-                    foreach (var t0 in table0)
-                    {
-                        stringTable.BaseStream.Position = t0.nameOffset;
-                        var name = stringTable.ReadCStringSJIS();
-                        if (Crc32.Create(Encoding.GetEncoding("SJIS").GetBytes(name)) != t0.hash)
-                            throw new Exception($"Table0: {name} hasn't produced hash 0x{t0.hash:x8}");
-                    }
-
-                    //Table 1 Integrity check
-                    foreach (var t1 in table1)
-                    {
-                        stringTable.BaseStream.Position = t1.nameOffset;
-                        var name = stringTable.ReadCStringSJIS();
-                        if (Crc32.Create(Encoding.GetEncoding("SJIS").GetBytes(name)) != t1.hash)
-                            throw new Exception($"Table1: {name} hasn't produced hash 0x{t1.hash:x8}");
-                    }
-                    #endregion
-
-                    foreach (var commandblock in table0)
-                    {
-                        stringTable.BaseStream.Position = commandblock.nameOffset;
-                        var commandBlockName = stringTable.ReadCStringSJIS();
-                        result += commandBlockName + ":\n";
-
-                        for (int ind = commandblock.t2Offset; ind < commandblock.t2EndOffset; ind++)
-                        {
-                            result += "\tsub" + funcs[ind].subType;
-                            result += "<" + funcs[ind].unk1 + ">" + "(";
-
-                            for (int i = funcs[ind].varOffset; i < funcs[ind].varOffset + funcs[ind].varCount; i++)
-                            {
-                                switch (variables[i].type >> 1)
-                                {
-                                    case 0:
-                                    case 1:
-                                    case 2:
-                                        result += variables[i].value;
-                                        break;
-                                    case 0xc:
-                                        stringTable.BaseStream.Position = variables[i].value;
-                                        result += "\"" + stringTable.ReadCStringSJIS() + "\"";
-                                        break;
-                                }
-                                result += $"<{variables[i].type >> 1}:{variables[i].type & 1}>";
-
-                                if (i != funcs[ind].varOffset + funcs[ind].varCount - 1)
-                                    result += ", ";
-                            }
-
-                            result += ");\n";
-                        }
-                    }
-                }
-            }
-
-            File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".txt", result);
-        }
-
-
-    }
-
-    public static class Extensions
-    {
-        public static void WriteMultipleCompressed<T>(this BinaryWriterY bw, IEnumerable<T> list, Level5.Method comp)
-        {
-            if (list.Count() <= 0)
-            {
-                bw.Write(0);
-                return;
-            }
-
-            var ms = new MemoryStream();
-            using (var bwIntern = new BinaryWriterY(ms, true))
-                foreach (var t in list)
-                    bwIntern.WriteStruct(t);
-            bw.Write(Level5.Compress(ms, comp));
-        }
-
-        public static void WriteStringsCompressed(this BinaryWriterY bw, IEnumerable<string> list, Level5.Method comp, Encoding enc)
-        {
-            var ms = new MemoryStream();
-            using (var bwIntern = new BinaryWriterY(ms, true))
-                foreach (var t in list)
-                {
-                    bwIntern.Write(enc.GetBytes(t));
-                    bwIntern.Write((byte)0);
-                }
-            bw.Write(Level5.Compress(ms, comp));
         }
     }
 }

@@ -51,9 +51,11 @@
     <Compile Include="Compression\LZ10.cs" />
     <Compile Include="Compression\LZ11.cs" />
     <Compile Include="Compression\RLE.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Hash\Crc32.cs" />
     <Compile Include="IO\BinaryReaderY.cs" />
     <Compile Include="IO\BinaryWriterY.cs" />
+    <Compile Include="Parser\TXTParser.cs" />
     <Compile Include="Parser\XQParser.cs" />
     <Compile Include="Parser\XQStructs.cs" />
     <Compile Include="Program.cs" />
