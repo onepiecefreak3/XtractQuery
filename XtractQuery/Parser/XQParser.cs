@@ -132,7 +132,7 @@ namespace XtractQuery.Parser
 
         public bool ReadNextCode()
         {
-            if (_currentCodeBlock < 0 || _currentCodeBlock + 1 >= codeBlocks.Count || _currentCode + 1 >= codeBlocks[_currentCodeBlock].t2EndOffset - codeBlocks[_currentCodeBlock].t2Offset)
+            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode + 1 >= codeBlocks[_currentCodeBlock].t2EndOffset)
                 return false;
 
             _currentCode++;
@@ -141,7 +141,7 @@ namespace XtractQuery.Parser
 
         public string GetCodeLine()
         {
-            if (_currentCodeBlock < 0 || _currentCodeBlock + 1 >= codeBlocks.Count || _currentCode + 1 >= codeBlocks[_currentCodeBlock].t2EndOffset - codeBlocks[_currentCodeBlock].t2Offset)
+            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode >= codeBlocks[_currentCodeBlock].t2EndOffset)
                 return String.Empty;
 
             string result = "";

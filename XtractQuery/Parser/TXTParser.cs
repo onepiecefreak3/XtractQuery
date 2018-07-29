@@ -97,9 +97,6 @@ namespace XtractQuery.Parser
 
         public bool ReadNextCode()
         {
-            if (codes.Count > 0)
-                codes.Last().varCount = (short)(variables.Count - codes.Last().varOffset);
-
             string line;
             while ((line = sr.ReadLine()) != null)
                 if (line.Last() == ';' && line.Replace("\t", "") != String.Empty)
@@ -124,12 +121,15 @@ namespace XtractQuery.Parser
             {
                 var subPart = _currentCodeLine.Split(new string[] { "sub" }, StringSplitOptions.None)[1].Split('(')[0];
                 var args = _currentCodeLine.Split(new string[] { ">(" }, StringSplitOptions.None)[1].Split(new string[] { ");" }, StringSplitOptions.None)[0].Replace(", ", ",").Split(',');
+                if (args[0] == String.Empty)
+                    args = new string[0];
 
                 var func = new FuncStruct
                 {
                     varOffset = (short)variables.Count,
-                    unk1 = Convert.ToInt16(subPart.Split('<')[0]),
-                    subType = Convert.ToInt16(subPart.Split('<')[1].Split('>')[0])
+                    varCount = (short)args.Count(),
+                    unk1 = Convert.ToInt16(subPart.Split('<')[1].Split('>')[0]),
+                    subType = Convert.ToInt16(subPart.Split('<')[0])
                 };
 
                 if (args.Count() > 0 && args[0] != String.Empty)

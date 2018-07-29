@@ -86,6 +86,7 @@ namespace XtractQuery
                 File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".xq2", tp.GetXQData());
             }
         }
+
         static void ExtractXQ(string file)
         {
             using (var sw = new StringWriter())
@@ -100,7 +101,7 @@ namespace XtractQuery
                     }
                 }
 
-                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + "2.txt", sw.ToString());
+                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".txt", sw.ToString());
             }
         }
     }
