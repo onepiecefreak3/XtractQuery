@@ -21,7 +21,7 @@ namespace XtractQuery
             Console.WriteLine($"\nSupported modes:\n" +
                 $"\t-h\tShows this help text\n" +
                 $"\t-e\tExtracts a given xq32\n" +
-                $"\t-e\tExtracts a given xseq\n" +
+                $"\t-es\tExtracts a given xseq\n" +
                 $"\t-c\tCreate a xq32 from a given txt; donor for table1 only used here");
         }
 
