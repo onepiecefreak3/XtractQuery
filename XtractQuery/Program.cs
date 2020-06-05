@@ -16,17 +16,19 @@ namespace XtractQuery
     {
         static void PrintHelp()
         {
-            Console.WriteLine("This program converts an xq used in 3DS Professor Layton games from Level5 to a more human readable text file and vice versa.");
+            Console.WriteLine("This program converts an xq used in 3DS Professor Layton and Inazuma games from Level5 to a more human readable text file and vice versa.");
             Console.WriteLine($"\nUsage:\n{Path.GetFileName(Application.ExecutablePath)} <mode> [filepath] [donor XQ for table1]");
             Console.WriteLine($"\nSupported modes:\n" +
-                $"\t-h\tShows this help\n" +
-                $"\t-e\tExtracts a given xq\n" +
-                $"\t-c\tCreate a xq from a given txt; donor for table1 only used here");
+                $"\t-h\tShows this help text\n" +
+                $"\t-e\tExtracts a given xq32\n" +
+                $"\t-e\tExtracts a given xseq\n" +
+                $"\t-c\tCreate a xq32 from a given txt; donor for table1 only used here");
         }
 
         static void Main(string[] args)
         {
             #region Arguments Handling
+
             if (args.Count() == 0 || args[0] == "-h")
             {
                 PrintHelp();
@@ -39,7 +41,7 @@ namespace XtractQuery
                 return;
             }
 
-            if (args[0] != "-e" && args[0] != "-c" && args[0] != "-h")
+            if (args[0] != "-e" && args[0] != "-es" && args[0] != "-c" && args[0] != "-h")
             {
                 Console.WriteLine("Mode not supported.");
                 return;
@@ -50,6 +52,7 @@ namespace XtractQuery
                 PrintHelp();
                 return;
             }
+
             #endregion
 
             string mode = args[0];
@@ -64,6 +67,10 @@ namespace XtractQuery
             if (mode == "-e")
             {
                 ExtractXQ(file);
+            }
+            else if (mode == "-es")
+            {
+                ExtractXSEQ(file);
             }
             else if (mode == "-c")
             {
@@ -91,6 +98,24 @@ namespace XtractQuery
         {
             using (var sw = new StringWriter())
             using (var xqReader = new XQParser(file))
+            {
+                while (xqReader.ReadNextCodeBlock())
+                {
+                    sw.Write(xqReader.GetCodeBlockLine());
+                    while (xqReader.ReadNextCode())
+                    {
+                        sw.Write(xqReader.GetCodeLine());
+                    }
+                }
+
+                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".txt", sw.ToString());
+            }
+        }
+
+        static void ExtractXSEQ(string file)
+        {
+            using (var sw = new StringWriter())
+            using (var xqReader = new XSEQParser(file))
             {
                 while (xqReader.ReadNextCodeBlock())
                 {

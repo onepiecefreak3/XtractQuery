@@ -55,9 +55,13 @@
     <Compile Include="Hash\Crc32.cs" />
     <Compile Include="IO\BinaryReaderY.cs" />
     <Compile Include="IO\BinaryWriterY.cs" />
+    <Compile Include="Parser2\Models\XseqHeader.cs" />
+    <Compile Include="Parser2\XseqParser.cs" />
     <Compile Include="Parser\TXTParser.cs" />
+    <Compile Include="Parser\XSEQParser.cs" />
     <Compile Include="Parser\XQParser.cs" />
     <Compile Include="Parser\XQStructs.cs" />
+    <Compile Include="Parser\XSEQStructs.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

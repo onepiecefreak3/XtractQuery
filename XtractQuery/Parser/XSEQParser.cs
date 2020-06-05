@@ -1,42 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using XtractQuery.IO;
 using XtractQuery.Compression;
-using XtractQuery.Hash;
 
 namespace XtractQuery.Parser
 {
-    public class XQParser : IDisposable
+    public class XSEQParser : IDisposable
     {
         BinaryReaderY _stream;
 
         Header header;
-        List<CodeBlock> codeBlocks;
-        List<AdditionalCodeBinding> bindings;
-        List<FuncStruct> codes;
-        List<VarStruct> variables;
+        List<XseqCodeBlock> codeBlocks;
+        List<XseqAdditionalCodeBinding> bindings;
+        List<XseqFuncStruct> codes;
+        List<XseqVarStruct> variables;
         BinaryReaderY strings;
 
         int _currentCodeBlock = -1;
         int _currentCode = -1;
 
-        public XQParser(string file)
+        public XSEQParser(string file)
         {
             if (!File.Exists(file))
                 throw new Exception($"File {file} was not found.");
 
             var magic = new BinaryReaderY(File.OpenRead(file)).ReadString(4);
-            if (magic != "XQ32")
+            if (magic != "XSEQ")
                 throw new InvalidDataException("This is no xq file.");
 
             _stream = new BinaryReaderY(File.OpenRead(file));
 
             ParseTables();
-            SanityCheck();
         }
 
         private void ParseTables()
@@ -44,35 +40,15 @@ namespace XtractQuery.Parser
             header = _stream.ReadStruct<Header>();
 
             _stream.BaseStream.Position = header.table0Offset << 2;
-            codeBlocks = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<CodeBlock>(header.table0EntryCount).OrderBy(t0 => t0.t2Offset).ToList();
+            codeBlocks = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<XseqCodeBlock>(header.table0EntryCount).OrderBy(t0 => t0.instructionOffset).ToList();
             _stream.BaseStream.Position = header.table1Offset << 2;
-            bindings = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<AdditionalCodeBinding>(header.table1EntryCount);
+            bindings = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<XseqAdditionalCodeBinding>(header.table1EntryCount);
             _stream.BaseStream.Position = header.table2Offset << 2;
-            codes = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<FuncStruct>(header.table2EntryCount);
+            codes = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<XseqFuncStruct>(header.table2EntryCount);
             _stream.BaseStream.Position = header.table3Offset << 2;
-            variables = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<VarStruct>(header.table3EntryCount);
+            variables = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream))).ReadMultiple<XseqVarStruct>(header.table3EntryCount);
             _stream.BaseStream.Position = header.table4Offset << 2;
             strings = new BinaryReaderY(new MemoryStream(Level5.Decompress(_stream.BaseStream)));
-        }
-
-        private void SanityCheck()
-        {
-            foreach (var t0 in codeBlocks)
-            {
-                strings.BaseStream.Position = t0.nameOffset;
-                var name = strings.ReadCStringSJIS();
-                if (Crc32.Create(Encoding.GetEncoding("SJIS").GetBytes(name)) != t0.hash)
-                    throw new Exception($"Table0: {name} hasn't produced hash 0x{t0.hash:x8}");
-            }
-
-            //Table 1 Integrity check
-            foreach (var t1 in bindings)
-            {
-                strings.BaseStream.Position = t1.nameOffset;
-                var name = strings.ReadCStringSJIS();
-                if (Crc32.Create(Encoding.GetEncoding("SJIS").GetBytes(name)) != t1.hash)
-                    throw new Exception($"Table1: {name} hasn't produced hash 0x{t1.hash:x8}");
-            }
         }
 
         public bool ReadNextCodeBlock()
@@ -81,16 +57,16 @@ namespace XtractQuery.Parser
                 return false;
 
             _currentCodeBlock++;
-            _currentCode = codeBlocks[_currentCodeBlock].t2Offset - 1;
+            _currentCode = codeBlocks[_currentCodeBlock].instructionOffset - 1;
             return true;
         }
 
         public string GetCodeBlockName()
         {
             if (_currentCodeBlock >= codeBlocks.Count || _currentCodeBlock < 0)
-                return String.Empty;
+                return string.Empty;
 
-            strings.BaseStream.Position = codeBlocks[_currentCodeBlock].nameOffset;
+            strings.BaseStream.Position = codeBlocks[_currentCodeBlock].functionNameOffset;
             return strings.ReadCStringSJIS();
         }
 
@@ -99,7 +75,7 @@ namespace XtractQuery.Parser
             return GetCodeBlockName() + ":\r\n";
         }
 
-        public CodeBlock GetCodeBlockInfo()
+        public XseqCodeBlock GetCodeBlockInfo()
         {
             if (_currentCodeBlock + 1 >= codeBlocks.Count)
                 return null;
@@ -107,11 +83,11 @@ namespace XtractQuery.Parser
             return codeBlocks[_currentCodeBlock];
         }
 
-        public CodeBlock GetCodeBlockInfo(string name)
+        public XseqCodeBlock GetCodeBlockInfo(string name)
         {
             foreach (var cb in codeBlocks)
             {
-                strings.BaseStream.Position = cb.nameOffset;
+                strings.BaseStream.Position = cb.functionNameOffset;
                 var cn = strings.ReadCStringSJIS();
                 if (cn == name)
                     return cb;
@@ -120,7 +96,7 @@ namespace XtractQuery.Parser
             return null;
         }
 
-        public List<AdditionalCodeBinding> GetTable1() => bindings;
+        public List<XseqAdditionalCodeBinding> GetTable1() => bindings;
 
         public IEnumerable<string> GetTable1Names()
         {
@@ -133,7 +109,7 @@ namespace XtractQuery.Parser
 
         public bool ReadNextCode()
         {
-            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode + 1 >= codeBlocks[_currentCodeBlock].t2EndOffset)
+            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode + 1 >= codeBlocks[_currentCodeBlock].instructionEndOffset)
                 return false;
 
             _currentCode++;
@@ -142,12 +118,12 @@ namespace XtractQuery.Parser
 
         public string GetCodeLine()
         {
-            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode >= codeBlocks[_currentCodeBlock].t2EndOffset)
-                return String.Empty;
+            if (_currentCodeBlock < 0 || _currentCodeBlock >= codeBlocks.Count || _currentCode >= codeBlocks[_currentCodeBlock].instructionEndOffset)
+                return string.Empty;
 
             string result = "";
 
-            result += "\tsub" + codes[_currentCode].subType;
+            result += "\tsub" + codes[_currentCode].subroutine;
             result += "<" + codes[_currentCode].unk1 + ">" + "(";
 
             for (int i = codes[_currentCode].varOffset; i < codes[_currentCode].varOffset + codes[_currentCode].varCount; i++)
@@ -158,7 +134,7 @@ namespace XtractQuery.Parser
                         result += variables[i].value;
                         break;
                     case 1:
-                        if (codes[_currentCode].subType == 0x14 && i == codes[_currentCode].varOffset && Listings.OpCodes.ContainsKey(variables[i].value))
+                        if (codes[_currentCode].subroutine == 0x14 && i == codes[_currentCode].varOffset && Listings.OpCodes.ContainsKey(variables[i].value))
                             result += "\"" + Listings.OpCodes[variables[i].value] + "\"";
                         else
                             result += variables[i].value;
