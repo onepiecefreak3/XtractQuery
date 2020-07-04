@@ -1,133 +1,147 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using XtractQuery.IO;
 using System.IO;
-using XtractQuery.Compression;
-using XtractQuery.Hash;
-using System.Windows.Forms;
-using XtractQuery.Parser;
+using System.Linq;
+using XtractQuery.Interfaces;
+using XtractQuery.Options;
+using XtractQuery.Parsers;
 
 namespace XtractQuery
 {
     class Program
     {
-        static void PrintHelp()
-        {
-            Console.WriteLine("This program converts an xq used in 3DS Professor Layton and Inazuma games from Level5 to a more human readable text file and vice versa.");
-            Console.WriteLine($"\nUsage:\n{Path.GetFileName(Application.ExecutablePath)} <mode> [filepath] [donor XQ for table1]");
-            Console.WriteLine($"\nSupported modes:\n" +
-                $"\t-h\tShows this help text\n" +
-                $"\t-e\tExtracts a given xq32\n" +
-                $"\t-es\tExtracts a given xseq\n" +
-                $"\t-c\tCreate a xq32 from a given txt; donor for table1 only used here");
-        }
-
         static void Main(string[] args)
         {
-            #region Arguments Handling
+            var arguments = new ApplicationArguments(args);
 
-            if (args.Count() == 0 || args[0] == "-h")
+            string operation;
+            string type;
+            string file;
+
+            #region Argument checking
+
+            if (arguments.NoArguments || arguments.Help.Exists)
             {
                 PrintHelp();
                 return;
             }
 
-            if (args.Count() < 2)
+            if (!arguments.Operation.Exists)
             {
-                Console.WriteLine("Not enough arguments.");
+                Console.WriteLine("Specify a valid operation");
                 return;
             }
 
-            if (args[0] != "-e" && args[0] != "-es" && args[0] != "-c" && args[0] != "-h")
+            if (!arguments.QueryType.Exists)
             {
-                Console.WriteLine("Mode not supported.");
+                Console.WriteLine("Specify a valid type");
                 return;
             }
 
-            if (args[0] == "-h")
+            if (!arguments.QueryFile.Exists)
             {
-                PrintHelp();
+                Console.WriteLine("Specify a file");
+                return;
+            }
+
+            operation = arguments.Operation.Values.First();
+            type = arguments.QueryType.Values.First();
+            file = arguments.QueryFile.Values.First();
+
+            if (operation != "e" && operation != "c")
+            {
+                Console.WriteLine("Specify a valid operation");
+                return;
+            }
+
+            if (type != "xq32" && type != "xseq")
+            {
+                Console.WriteLine("Specifiy a valid type");
+                return;
+            }
+
+            if (!File.Exists(file))
+            {
+                Console.WriteLine($"File {file} does not exist");
                 return;
             }
 
             #endregion
 
-            string mode = args[0];
-            string file = args[1];
-            string donor = (args.Count() >= 3) ? args[2] : String.Empty;
-            if (!File.Exists(file))
+            switch (operation)
             {
-                Console.WriteLine($"{file} not found.");
-                return;
-            }
+                case "e":
+                    ExtractFile(type, file);
+                    break;
 
-            if (mode == "-e")
-            {
-                ExtractXQ(file);
-            }
-            else if (mode == "-es")
-            {
-                ExtractXSEQ(file);
-            }
-            else if (mode == "-c")
-            {
-                CreateXQ(file, donor);
-            }
-
-        }
-
-        static void CreateXQ(string file, string donor)
-        {
-            using (var tp = new TXTParser(file, donor))
-            {
-                while (tp.ReadNextCodeBlock())
-                {
-                    while (tp.ReadNextCode())
-                    {
-                        ;
-                    }
-                }
-                File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".xq2", tp.GetXQData());
+                case "c":
+                    CreateFile(type, file);
+                    break;
             }
         }
 
-        static void ExtractXQ(string file)
+        private static void ExtractFile(string type, string file)
         {
-            using (var sw = new StringWriter())
-            using (var xqReader = new XQParser(file))
+            IParser parser;
+            switch (type)
             {
-                while (xqReader.ReadNextCodeBlock())
-                {
-                    sw.Write(xqReader.GetCodeBlockLine());
-                    while (xqReader.ReadNextCode())
-                    {
-                        sw.Write(xqReader.GetCodeLine());
-                    }
-                }
+                case "xq32":
+                    parser = new Xq32Parser();
+                    break;
 
-                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".txt", sw.ToString());
+                case "xseq":
+                    parser = new XseqParser();
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown type {type}.");
             }
+
+            var outputFile = file + ".txt";
+            var inputStream = File.OpenRead(file);
+            var outputStream = File.Create(outputFile);
+
+            parser.Decompile(inputStream, outputStream);
+
+            inputStream.Close();
+            outputStream.Close();
         }
 
-        static void ExtractXSEQ(string file)
+        private static void CreateFile(string type, string file)
         {
-            using (var sw = new StringWriter())
-            using (var xqReader = new XSEQParser(file))
+            IParser parser;
+            switch (type)
             {
-                while (xqReader.ReadNextCodeBlock())
-                {
-                    sw.Write(xqReader.GetCodeBlockLine());
-                    while (xqReader.ReadNextCode())
-                    {
-                        sw.Write(xqReader.GetCodeLine());
-                    }
-                }
+                case "xq32":
+                    parser = new Xq32Parser();
+                    break;
 
-                File.WriteAllText(Path.Combine(Path.GetDirectoryName(file), Path.GetFileNameWithoutExtension(file)) + ".txt", sw.ToString());
+                case "xseq":
+                    parser = new XseqParser();
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown type {type}.");
             }
+
+            var outputFile = file + ".xq";
+            var inputStream = File.OpenRead(file);
+            var outputStream = File.Create(outputFile);
+
+            parser.Compile(inputStream, outputStream);
+
+            inputStream.Close();
+            outputStream.Close();
+        }
+
+        private static void PrintHelp()
+        {
+            Console.WriteLine("Following commands exist:");
+            Console.WriteLine("  -h, --help\t\tShows this help message.");
+            Console.WriteLine("  -o, --operation\tThe operation to take on the file");
+            Console.WriteLine("    Valid operations are: e for extraction, c for creation");
+            Console.WriteLine("  -t, --type\t\tThe type of file given");
+            Console.WriteLine("    Valid types are: xq32, xseq");
+            Console.WriteLine("  -f, --file\t\tThe file to process");
         }
     }
 }
