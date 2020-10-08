@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using XtractQuery.Interfaces;
-using StringSplitOptions = System.StringSplitOptions;
 
 namespace XtractQuery.Parsers.Models
 {
@@ -32,35 +31,62 @@ namespace XtractQuery.Parsers.Models
 
         public string GetString(IStringReader stringReader)
         {
-            var lineValues = Instructions.Select(x => $"\t{x.GetString(stringReader)}").ToList();
-            var offset = 0;
-            foreach (var jump in Jumps)
+            var lineValues = new List<string>();
+            foreach (var instruction in Instructions)
             {
-                var instructionIndex = Instructions.IndexOf(jump.Instruction);
-                if (instructionIndex == -1)
-                {
-                    offset++;
-                    lineValues.Add(jump.Label + ":");
-                }
-                else
-                {
-                    lineValues.Insert(instructionIndex + offset++, jump.Label + ":");
-                }
+                // Get all jumps pointing to the current instruction
+                var viableJumps = Jumps.Where(x => x.Instruction == instruction);
+
+                // Add jump labels
+                lineValues.AddRange(viableJumps.Select(x => x.GetString() + ":"));
+
+                // Add instruction
+                lineValues.Add("\t" + instruction.GetString(stringReader));
             }
 
+            // Add jumps at end of function
+            var endJumps = Jumps.Where(x => !Instructions.Contains(x.Instruction));
+            lineValues.AddRange(endJumps.Select(x => x.GetString() + ":"));
+
+            // Prepare other strings
             var lines = string.Join(Environment.NewLine, lineValues);
             var parameters = string.Join(", ", Enumerable.Range(0, ParameterCount).Select(x => $"$p{x}"));
             var unknowns = string.Join(',', Unknowns);
 
-            var functionParts = new[] { $"{Name}<{unknowns}>({parameters})", "{", lines, "}" };
-            return string.Join(Environment.NewLine, functionParts);
+            // Build final function
+            var functionParts = new[] { $"{Name}<{unknowns}>({parameters})" };
+            var functionParts2 = !lines.Any() ? new[] { "{", "}" } : new[] { "{", lines, "}" };
+            return string.Join(Environment.NewLine, functionParts.Concat(functionParts2));
         }
 
-        public static Function Parse(string input, IStringWriter stringWriter)
+        public static IList<Function> ParseMultiple(string input, IStringWriter stringWriter)
         {
-            if (!ParseCheck.IsMatch(input))
-                return null;
+            // Split input to function parts
+            var functionValues = input.Split(Environment.NewLine + Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
+            // Check if all functions match the pattern
+            if (functionValues.Any(x => !ParseCheck.IsMatch(x)))
+                return Array.Empty<Function>();
+
+            // Write all function names
+            foreach (var functionValue in functionValues.OrderBy(x => stringWriter.GetHash(GetFunctionName(x))))
+                stringWriter.Write(GetFunctionName(functionValue));
+
+            // Write all jump labels
+            foreach (var functionValue in functionValues)
+            {
+                var functionBody = GetFunctionBody(functionValue);
+                var jumps = GetJumpLabels(functionBody).OrderBy(x => stringWriter.GetHash(x.label));
+                foreach (var jump in jumps)
+                    stringWriter.Write(jump.label);
+            }
+
+            // Parse all functions
+            return functionValues.Select(x => Parse(x, stringWriter)).ToArray();
+        }
+
+        private static Function Parse(string input, IStringWriter stringWriter)
+        {
             var functionName = GetFunctionName(input);
             var parameterCount = GetParameterCount(input);
             var unknowns = GetUnknowns(input);

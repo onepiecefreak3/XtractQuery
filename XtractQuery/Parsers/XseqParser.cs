@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Komponent.IO;
 using XtractQuery.Interfaces;
 using XtractQuery.Parsers.Models;
 using XtractQuery.Parsers.Models.Xseq;
+using XtractQuery.Parsers.StringWriter;
 
 namespace XtractQuery.Parsers
 {
@@ -21,9 +23,10 @@ namespace XtractQuery.Parsers
 
         public override void Decompile(Stream input, Stream output)
         {
-            var functions = ParseTables(input);
+            var functions = ParseTables(input, out var headerUnk);
 
             using var streamWriter = new StreamWriter(output, Encoding.UTF8, -1, true);
+            streamWriter.WriteLine($"{{{headerUnk}}}");
             foreach (var function in functions)
             {
                 streamWriter.WriteLine(function.GetString(_stringReader));
@@ -34,15 +37,22 @@ namespace XtractQuery.Parsers
         public override void Compile(Stream input, Stream output)
         {
             var stringStream = new MemoryStream();
-            var stringWriter = new StringWriter(stringStream);
+            var stringWriter = new XseqStringWriter(stringStream);
 
-            var functions = ParseText(input, stringWriter);
-            var jumps = functions.SelectMany(x => x.Jumps).ToArray();
+            var content = new StreamReader(input).ReadToEnd();
+
+            var unkRegex = new Regex("^{(\\d+)}");
+            if (!unkRegex.IsMatch(content))
+                throw new InvalidOperationException("Unknown header value is not prefixed to the script.");
+
+            var headerUnk = short.Parse(unkRegex.Match(content).Groups[1].Value);
+            var functions = Function.ParseMultiple(string.Join(Environment.NewLine, content.Split(Environment.NewLine).Skip(1)), stringWriter);
+            var jumps = functions.SelectMany(x => x.Jumps.OrderBy(y => stringWriter.GetHash(y.Label))).ToArray();
             var instructions = functions.SelectMany(x => x.Instructions).ToArray();
             var arguments = functions.SelectMany(x => x.Instructions.SelectMany(y => y.Arguments)).ToArray();
 
-            var functionStream = WriteFunctions(functions, stringWriter);
-            var jumpStream = WriteJumps(jumps, instructions, stringWriter);
+            var functionStream = WriteFunctions(functions, jumps, instructions, stringWriter);
+            var jumpStream = WriteJumps(jumps, functions, instructions, stringWriter);
             var instructionStream = WriteInstructions(instructions);
             var argumentStream = WriteArguments(arguments);
 
@@ -51,7 +61,8 @@ namespace XtractQuery.Parsers
                 table0EntryCount = (short)functions.Count,
                 table1EntryCount = (short)jumps.Length,
                 table2EntryCount = (short)instructions.Length,
-                table3EntryCount = (short)arguments.Length
+                table3EntryCount = (short)arguments.Length,
+                unk3 = headerUnk
             };
 
             output.Position = header.table0Offset << 2;
@@ -78,11 +89,12 @@ namespace XtractQuery.Parsers
             bw.WriteType(header);
         }
 
-        private IList<Function> ParseTables(Stream input)
+        private IList<Function> ParseTables(Stream input, out int headerUnk)
         {
             using var br = new BinaryReaderX(input, true);
 
             var header = br.ReadType<XseqHeader>();
+            headerUnk = header.unk3;
 
             _stringReader = CreateStringReader(br, header);
 
@@ -93,15 +105,6 @@ namespace XtractQuery.Parsers
             return ParseFunctions(br, header, jumps, instructions);
         }
 
-        private IList<Function> ParseText(Stream input, IStringWriter stringWriter)
-        {
-            var inputReader = new StreamReader(input);
-            var content = inputReader.ReadToEnd();
-
-            var functionValues = content.Split(Environment.NewLine + Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-            return functionValues.Select(f => Function.Parse(f, stringWriter)).ToArray();
-        }
-
         private IStringReader CreateStringReader(BinaryReaderX br, XseqHeader header)
         {
             var stringStream = Decompress(br.BaseStream, header.table4Offset << 2);
@@ -109,32 +112,7 @@ namespace XtractQuery.Parsers
             return new StringReader(stringStream);
         }
 
-        private IList<Argument> ParseArguments(BinaryReaderX br, XseqHeader header)
-        {
-            var argumentStream = Decompress(br.BaseStream, header.table3Offset << 2);
-
-            var arguments = new BinaryReaderX(argumentStream).ReadMultiple<XseqArgument>(header.table3EntryCount);
-            return arguments.Select(x => new Argument(x.type, x.value)).ToArray();
-        }
-
-        private IList<Instruction> ParseInstructions(BinaryReaderX br, XseqHeader header, IList<Argument> arguments)
-        {
-            var instructionStream = Decompress(br.BaseStream, header.table2Offset << 2);
-            var instructions = new BinaryReaderX(instructionStream).ReadMultiple<XseqInstruction>(header.table2EntryCount);
-
-            var result = new List<Instruction>();
-            foreach (var instruction in instructions)
-            {
-                var instructionArguments = arguments
-                    .Skip(instruction.argOffset)
-                    .Take(instruction.argCount)
-                    .ToArray();
-
-                result.Add(new Instruction(instruction.subType, instructionArguments, instruction.returnParameter));
-            }
-
-            return result;
-        }
+        #region Parse Methods
 
         private IList<Function> ParseFunctions(BinaryReaderX br, XseqHeader header, IList<Jump> jumps, IList<Instruction> instructions)
         {
@@ -142,7 +120,7 @@ namespace XtractQuery.Parsers
             var functions = new BinaryReaderX(functionStream).ReadMultiple<XseqFunction>(header.table0EntryCount);
 
             var result = new List<Function>();
-            foreach (var function in functions)
+            foreach (var function in functions.OrderBy(x => x.instructionOffset))
             {
                 var functionName = _stringReader.Read(function.nameOffset);
                 var functionInstructions = instructions
@@ -178,55 +156,99 @@ namespace XtractQuery.Parsers
             return result;
         }
 
-        private Stream WriteFunctions(IList<Function> functions, IStringWriter stringWriter)
+        private IList<Instruction> ParseInstructions(BinaryReaderX br, XseqHeader header, IList<Argument> arguments)
+        {
+            var instructionStream = Decompress(br.BaseStream, header.table2Offset << 2);
+            var instructions = new BinaryReaderX(instructionStream).ReadMultiple<XseqInstruction>(header.table2EntryCount);
+
+            var result = new List<Instruction>();
+            foreach (var instruction in instructions)
+            {
+                var instructionArguments = arguments
+                    .Skip(instruction.argOffset)
+                    .Take(instruction.argCount)
+                    .ToArray();
+
+                result.Add(new Instruction(instruction.subType, instructionArguments, instruction.returnParameter));
+            }
+
+            return result;
+        }
+
+        private IList<Argument> ParseArguments(BinaryReaderX br, XseqHeader header)
+        {
+            var argumentStream = Decompress(br.BaseStream, header.table3Offset << 2);
+            var arguments = new BinaryReaderX(argumentStream).ReadMultiple<XseqArgument>(header.table3EntryCount);
+
+            return arguments.Select(x => new Argument(x.type, x.value)).ToArray();
+        }
+
+        #endregion
+
+        #region Write Methods
+
+        private Stream WriteFunctions(IList<Function> functions, IList<Jump> jumps, IList<Instruction> instructions, IStringWriter stringWriter)
         {
             var functionStream = new MemoryStream();
 
-            var instructionOffset = 0;
-            var jumpOffset = 0;
+            var lastInstructionOffset = 0;
+            var lastJumpOffset = 0;
 
-            using var bw = new BinaryWriterX(functionStream, true);
+            var convertedFunctions = new List<XseqFunction>();
             foreach (var function in functions)
             {
-                bw.WriteType(new XseqFunction
+                var currentInstructionOffset = instructions.IndexOf(function.Instructions.FirstOrDefault());
+                if (currentInstructionOffset >= 0)
+                    lastInstructionOffset = currentInstructionOffset;
+
+                var currentJumpOffset = jumps.IndexOf(function.Jumps.OrderBy(x => stringWriter.GetHash(x.Label)).FirstOrDefault());
+                if (currentJumpOffset >= 0)
+                    lastJumpOffset = currentJumpOffset;
+
+                convertedFunctions.Add(new XseqFunction
                 {
-                    instructionOffset = (short)instructionOffset,
-                    instructionEndOffset = (short)(instructionOffset + function.Instructions.Count),
+                    instructionOffset = (short)lastInstructionOffset,
+                    instructionEndOffset = (short)(lastInstructionOffset + function.Instructions.Count),
 
                     nameOffset = (int)stringWriter.Write(function.Name),
-                    crc16 = (short)stringWriter.GetCrc16(function.Name),
+                    crc16 = (ushort)stringWriter.GetHash(function.Name),
 
-                    jumpOffset = (short)jumpOffset,
+                    jumpOffset = (short)lastJumpOffset,
                     jumpCount = (short)function.Jumps.Count,
 
                     parameterCount = (short)function.ParameterCount,
 
-                    // TODO: Retrieve unknown values
                     unk1 = (short)function.Unknowns[0],
                     unk2 = (short)function.Unknowns[1]
                 });
 
-                instructionOffset += function.Instructions.Count;
-                jumpOffset += function.Jumps.Count;
+                lastInstructionOffset += function.Instructions.Count;
+                lastJumpOffset += function.Jumps.Count;
             }
+
+            using var bw = new BinaryWriterX(functionStream, true);
+            bw.WriteMultiple(convertedFunctions.OrderBy(x => x.crc16));
 
             functionStream.Position = 0;
             return functionStream;
         }
 
-        private Stream WriteJumps(IList<Jump> jumps, IList<Instruction> instructions, IStringWriter stringWriter)
+        private Stream WriteJumps(IList<Jump> jumps, IList<Function> functions, IList<Instruction> instructions, IStringWriter stringWriter)
         {
             var jumpStream = new MemoryStream();
 
             using var bw = new BinaryWriterX(jumpStream, true);
             foreach (var jump in jumps)
             {
+                var relatedFunction = functions.First(x => x.Jumps.Contains(jump));
+                var lastInstruction = relatedFunction.Instructions.Last();
+
                 var instructionIndex = instructions.IndexOf(jump.Instruction);
                 bw.WriteType(new XseqJump
                 {
-                    instructionIndex = (short)(instructionIndex == -1 ? instructions.Count : instructionIndex),
+                    instructionIndex = (short)(instructionIndex == -1 ? instructions.IndexOf(lastInstruction) + 1 : instructionIndex),
                     nameOffset = (int)stringWriter.Write(jump.Label),
-                    crc16 = stringWriter.GetCrc16(jump.Label)
+                    crc16 = (ushort)stringWriter.GetHash(jump.Label)
                 });
             }
 
@@ -250,7 +272,7 @@ namespace XtractQuery.Parsers
                     argOffset = (short)argumentOffset,
                     argCount = (short)instruction.Arguments.Count,
 
-                    returnParameter = (short)instruction.Unk1
+                    returnParameter = (short)instruction.ReturnParameter
                 });
 
                 argumentOffset += instruction.Arguments.Count;
@@ -277,5 +299,7 @@ namespace XtractQuery.Parsers
             argumentStream.Position = 0;
             return argumentStream;
         }
+
+        #endregion
     }
 }

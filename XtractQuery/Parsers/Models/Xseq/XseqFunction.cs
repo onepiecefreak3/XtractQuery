@@ -3,7 +3,7 @@
     class XseqFunction
     {
         public int nameOffset;
-        public short crc16;
+        public ushort crc16;
         public short instructionOffset;
         public short instructionEndOffset;
         public short jumpOffset;

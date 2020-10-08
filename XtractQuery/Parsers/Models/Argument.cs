@@ -36,7 +36,14 @@ namespace XtractQuery.Parsers.Models
                 case 2:
                     if (subType == 0x14 || subType == 0x1E || subType == 0x1F || subType == 0x21)
                     {
-                        value = $"\"{stringReader.GetByHash((uint)Value)}\"";
+                        var foundString = stringReader.GetByHash((uint) Value);
+                        if (foundString == null)
+                        {
+                            value = $"{Value}";
+                            break;
+                        }
+
+                        value = $"\"{foundString}\"";
                         break;
                     }
 
@@ -45,7 +52,7 @@ namespace XtractQuery.Parsers.Models
 
                 // Float
                 case 3:
-                    value = $"{BitConverter.Int32BitsToSingle((int)Value).ToString("0.00", CultureInfo.GetCultureInfo("en-gb"))}";
+                    value = $"{BitConverter.Int32BitsToSingle((int)Value).ToString(CultureInfo.GetCultureInfo("en-gb"))}";
                     break;
 
                 // Execution Context values
@@ -98,9 +105,12 @@ namespace XtractQuery.Parsers.Models
                     if (subType != 0x14 && subType != 0x1E && subType != 0x1F && subType != 0x21)
                         return new Argument(type, long.Parse(value));
 
+                    if(!StringValue.IsMatch(value))
+                        return new Argument(type, long.Parse(value));
+
                     var stringValue = StringValue.Match(value).Groups.Values.Skip(1).First().Value;
                     stringWriter.Write(stringValue);
-                    var stringHash = stringWriter.GetCrc32(stringValue);
+                    var stringHash = stringWriter.GetHash(stringValue);
 
                     return new Argument(type, stringHash);
 

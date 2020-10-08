@@ -2,7 +2,7 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": "-o e -t xq32 -f D:\\Users\\Kirito\\Desktop\\xqs\\strinput.xq.txt.xq -d D:\\Users\\Kirito\\Desktop\\password_research\\go1_eur_pass_check.xq"
+      "commandLineArgs": "-o c -t xq32 -f D:\\Users\\Kirito\\Desktop\\party.xq.txt"
     }
   }
 }

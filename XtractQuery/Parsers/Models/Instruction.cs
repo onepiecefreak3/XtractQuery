@@ -6,31 +6,31 @@ using XtractQuery.Interfaces;
 
 namespace XtractQuery.Parsers.Models
 {
-    // TODO: Print and evaluate returnParameter (Unk1) correctly
     class Instruction
     {
-        private static readonly Regex ParseCheck = new Regex(".+\\(.*\\)");
+        private static readonly Regex ParseCheck = new Regex("\\$[pvxy]\\d+.*=.+\\(.*\\)");
         private static readonly Regex ArgumentSplit = new Regex(", *");
 
         public int InstructionType { get; }
 
         public IList<Argument> Arguments { get; }
 
-        public int Unk1 { get; }
+        public int ReturnParameter { get; }
 
-        public Instruction(int instructionType, IList<Argument> arguments, int unk1)
+        public Instruction(int instructionType, IList<Argument> arguments, int returnParameter)
         {
             InstructionType = instructionType;
             Arguments = arguments;
-            Unk1 = unk1;
+            ReturnParameter = returnParameter;
         }
 
         public string GetString(IStringReader stringReader)
         {
             var args = string.Join(", ", Arguments.Select(x => x.GetString(InstructionType, stringReader)));
             var subName = RoutineMap.ContainsKey(InstructionType) ? RoutineMap[InstructionType] : $"sub{InstructionType}";
+            var returnParameter = Parameter.Parse(ReturnParameter);
 
-            return $"{subName}<{Unk1}>({args})";
+            return $"{returnParameter.ParameterName} = {subName}({args})";
         }
 
         public static Instruction Parse(string input, IStringWriter stringWriter)
@@ -38,8 +38,8 @@ namespace XtractQuery.Parsers.Models
             if (!ParseCheck.IsMatch(input))
                 return null;
 
+            var returnParameter = GetReturnParameter(input);
             var instructionType = GetInstructionType(input);
-            var unkValue = int.Parse(GetUnknownValue(input));
 
             var argumentBody = GetArgumentBody(input);
             var arguments = string.IsNullOrEmpty(argumentBody) ?
@@ -48,20 +48,28 @@ namespace XtractQuery.Parsers.Models
                     .Select(x => Argument.Parse(instructionType, x, stringWriter))
                     .ToArray();
 
-            return new Instruction(instructionType, arguments, unkValue);
+            return new Instruction(instructionType, arguments, returnParameter.ParameterValue);
         }
 
         private static int GetInstructionType(string input)
         {
+            // Find start of instruction name after equal sign
+            var instructionIndex = input.IndexOf("=") + 1;
+            while (input[instructionIndex] == ' ')
+                instructionIndex++;
+
+            var instructionPart = input.Substring(instructionIndex, input.Length - instructionIndex);
+
             int endIndex;
-            if (input.StartsWith("sub"))
+            if (instructionPart.StartsWith("sub"))
             {
-                endIndex = input.IndexOf('<');
-                return int.Parse(input.Substring(3, endIndex - 3));
+                // Parse sub number
+                endIndex = instructionPart.IndexOf('(');
+                return int.Parse(instructionPart.Substring(3, endIndex - 3));
             }
 
-            endIndex = input.IndexOf('<');
-            var instructionName = input.Substring(0, endIndex);
+            endIndex = instructionPart.IndexOf('(');
+            var instructionName = instructionPart.Substring(0, endIndex);
             if (RoutineMap.Values.Contains(instructionName))
             {
                 return RoutineMap.First(x => x.Value == instructionName).Key;
@@ -70,12 +78,12 @@ namespace XtractQuery.Parsers.Models
             return -1;
         }
 
-        private static string GetUnknownValue(string input)
+        private static Parameter GetReturnParameter(string input)
         {
-            var index = input.IndexOf('<') + 1;
-            var endIndex = input.IndexOf('>');
+            var endIndex = input.IndexOf('=');
 
-            return input.Substring(index, endIndex - index);
+            var parameterName = input.Substring(0, endIndex).TrimEnd(' ');
+            return Parameter.Parse(parameterName);
         }
 
         private static string GetArgumentBody(string input)
@@ -97,7 +105,8 @@ namespace XtractQuery.Parsers.Models
             [30] = "Jump1",
             [31] = "Jump2",
             [33] = "JumpParameter",
-            [130] = "Compare"
+            [130] = "Compare",
+            [501] = "printf"
         };
     }
 }
