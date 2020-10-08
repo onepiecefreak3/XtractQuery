@@ -1,0 +1,144 @@
+XQ32 Documentation
+
+-- Basics
+
+XQ32 (and in extension XSEQ) is a script format used in 3DS Level5 games to script any sort of flow or high level behaviour.
+It is used to describe menu construction and behaviour, as well as environment management, and other similar tasks.
+The main motivation of this script format seems to be to elevate as much code as possible out of the compiled executable of the game.
+It may have been helpful in debugging and hot switching behaviour at development.
+
+-- Datatypes
+
+These are the data types of data units as they will apear in this documentation.
+byte - 1 byte
+short/ushort - 2 bytes
+int/uint - 4 bytes
+float - 4 bytes
+long/ulong - 8 bytes
+string[n] - an ASCII string; not null-terminated; n denotes the length
+
+-- Description
+
+This script format defines 4 tables and a string blob to store an arbitrary amount of methods of arbitrary length, callable through the games engine or itself.
+It is unknown what exactly the entry point into the script is or if it is even a set method to invoke the scripts logic.
+
+-- Compression
+
+Each table is compressed by Level5's own container specification, and borrows pre-existing compressions by Nintendo from their SDK.
+Read the first 4 bytes of a table in little endian, read it as an int [methodSize].
+Decompress the table from the 4th byte until the end, according to the method.
+method = methodSize & 0x7
+decompressedSize = methodSize >> 3
+
+The methods map to the following compressions:
+0 - No compression
+1 - LZ10
+2 - Huffman 4Bit
+3 - Huffman 8Bit
+4 - RLE
+5-7 - Not used
+
+-- Stack
+The script format utilizes a simple variant of a stack. One stack contains 5000 values statically.
+Values from 1000 - 1999 are local variables and should only be used by one function at a time without resetting.
+Values from 3000 - 3999 are function parameters and contain the input paramters to the current function.
+There is a clear range from 2000 - 2999 and 4000+, but it is unknown what they are used for.
+	Both are seen in the context of variables just like the 1000+ range. They maybe assuming function agnostic variables.
+Values from 0-999 are never used.
+
+-- Structure (2)
+
+All values are read as Little Endian, due to the platform being the 3DS. All values are read consecutively in one structure, if not stated otherwise.
+A structure member can have a constant value, since they wouldn't make sense logically otherwise or are inferable by static analysis.
+
+- XqHeader (same in both)
+string[4] magic = "XQ32"
+short functionCount
+short functionOffset = 0x20 >> 2
+short jumpOffset
+short jumpCount
+short instructionOffset
+short instructionCount
+short argumentOffset
+short argumentcount
+short zero = 0
+short stringOffset
+
+The header declares the start of each of the tables and the string blob. It also defines the number of entries each of those tables have.
+
+- Xq32Function
+int nameOffset
+uint crc32
+short instructionOffset
+short instructionEndOffset
+short jumpOffset
+short jumpCount
+short unk1
+short unk2
+int parameterCount
+
+- XseqFunction
+int nameOffset
+ushort crc32
+short instructionOffset
+short instructionEndOffset
+short jumpOffset
+short jumpCount
+short unk1
+short unk2
+short parameterCount
+
+The function structure declares one single function of the script.
+It declares the instructions and jumps used in this function, by giving the offset into the instruction and jump table and how many of them to read for this function.
+It declares the parameter count, the amount of values that are passed into the method from an external caller.
+It declares its own name, by giving the offset into the string blob and its CRC32 checksum.
+There are two unknown values present, that didn't yield any logical connection to other parts of the script yet.
+	Regardless of the modification, they can just be reused without side effects.
+
+- Xq32Jump
+int nameOffset
+uint crc32
+int instructionIndex
+
+- XseqJump
+int nameOffset
+ushort crc32
+short instructionIndex
+
+The jump structure declares one jump to another instruction inside the instruction table by index.
+It declares its own name, by giving the offset into the string blob and its CRC32 checksum.
+A function invokes a jump by name (or checksum, depending on the XQ flavor).
+A jump is normally function sentient, and a function only calls jumps into itself or its end.
+	There seems to be no technical hurdle to do function agnostic jumps, but for the sake of readability and logic, that is never the case.
+
+- XqInstruction (same in both)
+short argOffset
+short argCount
+short returnParameter
+short subType
+int zero = 0
+
+The instruction structure delcares one single instruction in a function of the script.
+It declares the arguments used in this instruction, by giving the offset into the argument table and how many of them to read for this instruction.
+It writes the result into the stack value indexed by [returnParameter].
+It defines its functionality by indexing it with [subType].
+	[subType]'s are defined by the engine the script is executed with and can define operations such as, but not limited to:
+		Mathematical operations
+		Conditional jumps
+		System methods, such as printf
+		More complex logic (usually subs in the 5000+ range)
+Not many subTypes are researched. In most cases the context of the instructions might give away what a function does, even without knowing their specific logic.
+
+- XqArgument (same in both)
+int type
+uint value
+
+The argument structure declares one single argument in an instruction.
+It declares its data type and the corresponding value.
+The data types are:
+1 - int - A signed integer value
+2 - uint - An unsigned integer
+3 - float - A floating point value
+4 - int - A value pointing to one index on the scripts stack (See "Stack" for more information)
+24 - int - A pointer into the string table and corresponding to a null-terminated string
+25 - int - A pointer into the string table and corresponding to the name of the callable logic in certain instruction [subType]'s
