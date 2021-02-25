@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using XtractQuery.Interfaces;
 using XtractQuery.Options;
 using XtractQuery.Parsers;
@@ -27,19 +28,19 @@ namespace XtractQuery
 
             if (!arguments.Operation.Exists)
             {
-                Console.WriteLine("Specify a valid operation");
+                Console.WriteLine("No operation mode was given. Specify an operation mode by using the -o argument.");
                 return;
             }
 
             if (!arguments.QueryType.Exists)
             {
-                Console.WriteLine("Specify a valid type");
+                Console.WriteLine("No query type was given. Specify a query type by using the -t argument.");
                 return;
             }
 
             if (!arguments.QueryFile.Exists)
             {
-                Console.WriteLine("Specify a file");
+                Console.WriteLine("No file to process was specified. Specify a file by using the -f argument.");
                 return;
             }
 
@@ -49,19 +50,19 @@ namespace XtractQuery
 
             if (operation != "e" && operation != "c")
             {
-                Console.WriteLine("Specify a valid operation");
+                Console.WriteLine($"The operation mode '{operation}' is not valid. Use -h to see a list of valid operation modes.");
                 return;
             }
 
             if (type != "xq32" && type != "xseq")
             {
-                Console.WriteLine("Specifiy a valid type");
+                Console.WriteLine($"The query type '{type}' is not valid. Use -h to see a list of valid query types.");
                 return;
             }
 
             if (!File.Exists(file))
             {
-                Console.WriteLine($"File {file} does not exist");
+                Console.WriteLine($"File '{Path.GetFullPath(file)}' was not found.");
                 return;
             }
 
@@ -142,6 +143,10 @@ namespace XtractQuery
             Console.WriteLine("  -t, --type\t\tThe type of file given");
             Console.WriteLine("    Valid types are: xq32, xseq");
             Console.WriteLine("  -f, --file\t\tThe file to process");
+            Console.WriteLine();
+            Console.WriteLine("Example usage:");
+            Console.WriteLine($"\tExtract a xq32 query to human readable text: {Assembly.GetExecutingAssembly().Location} -o e -t xq32 -f [file]");
+            Console.WriteLine($"\tCreate a xq32 query from human readable text: {Assembly.GetExecutingAssembly().Location} -o c -t xq32 -f [file]");
         }
     }
 }
