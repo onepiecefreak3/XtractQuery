@@ -43,7 +43,7 @@ namespace XtractQuery.Parsers.StringWriter
             if (!string.IsNullOrEmpty(value) && _stringMap.Keys.Any(x => x.EndsWith(value)))
             {
                 var element = _stringMap.First(x => x.Key.EndsWith(value));
-                var internalPosition = element.Value.Item2 + element.Key.LastIndexOf(value, StringComparison.InvariantCulture);
+                var internalPosition = element.Value.Item2 + SjisEncoding.GetByteCount(element.Key) - SjisEncoding.GetByteCount(value);
                 _stringMap[value] = (CreateHash(value), internalPosition);
 
                 return internalPosition;

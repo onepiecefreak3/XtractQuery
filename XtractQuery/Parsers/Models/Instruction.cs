@@ -9,7 +9,7 @@ namespace XtractQuery.Parsers.Models
     class Instruction
     {
         private static readonly Regex ParseCheck = new Regex("\\$[pvxy]\\d+.*=.+\\(.*\\)");
-        private static readonly Regex ArgumentSplit = new Regex(", *");
+        private static readonly Regex ArgumentSplit = new Regex(".*?<[\\d]+>");
 
         public int InstructionType { get; }
 
@@ -96,7 +96,17 @@ namespace XtractQuery.Parsers.Models
 
         private static IEnumerable<string> GetArguments(string argumentBody)
         {
-            return ArgumentSplit.Split(argumentBody);
+            var matches= ArgumentSplit.Matches(argumentBody);
+            foreach (var matchValue in matches.Select(x=>x.Value))
+            {
+                if (matchValue.StartsWith(", "))
+                {
+                    yield return matchValue.Substring(2);
+                    continue;
+                }
+
+                yield return matchValue;
+            }
         }
 
         private static IDictionary<int, string> RoutineMap = new Dictionary<int, string>
