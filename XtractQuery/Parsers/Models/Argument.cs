@@ -11,7 +11,7 @@ namespace XtractQuery.Parsers.Models
     {
         private static readonly Regex ParseCheck = new Regex("\"?.*\"?<\\d+>");
         private static readonly Regex StringValue = new Regex("\"(.*)\"");
-        private static readonly Regex IsParameter = new Regex("\\$p(\\d+)");
+        private static readonly Regex IsParameter = new Regex("^\\$[pvxy](\\d+)$");
 
         public int Type { get; }
 
@@ -62,13 +62,15 @@ namespace XtractQuery.Parsers.Models
                     // Values 3000+ are input parameters to the method
                     // 2000+ ?
                     // Values 1000+ are stack values
+                    value = "$";
+                    if (Value >= 1000 && Value <= 1999)
+                        value += $"v{Value - 1000}";
+                    if (Value >= 2000 && Value <= 2999)
+                        value += $"x{Value - 2000}";
                     if (Value >= 3000 && Value <= 3999)
-                    {
-                        value = $"$p{Value - 3000}";
-                        break;
-                    }
-
-                    value = $"{Value}";
+                        value += $"p{Value - 3000}";
+                    if (Value >= 4000 && Value <= 4999)
+                        value += $"y{Value - 4000}";
                     break;
 
                 // String
@@ -122,8 +124,12 @@ namespace XtractQuery.Parsers.Models
                     if (!IsParameter.IsMatch(value))
                         return new Argument(type, long.Parse(value));
 
-                    var parameter = IsParameter.Match(value).Groups.Values.Skip(1).First().Value;
-                    return new Argument(type, long.Parse(parameter) + 3000);
+                    var argumentValue = IsParameter.Match(value).Groups.Values.Skip(1).First().Value;
+                    var argType = value[0];
+                    var offset = argType == 'v' ? 1000 :
+                                 argType == 'x' ? 2000 :
+                                 argType == 'p' ? 3000 : 4000;
+                    return new Argument(type, long.Parse(argumentValue) + offset);
 
                 case 24:
                     var stringValue1 = StringValue.Match(value).Groups.Values.Skip(1).First().Value;
