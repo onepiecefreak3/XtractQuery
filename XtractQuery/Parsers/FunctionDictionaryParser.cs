@@ -38,8 +38,12 @@ namespace XtractQuery.Parsers
         private static int ExtractSubNumber(string key)
         {
             var match = Regex.Match(key, @"sub(\d+)");
-            return match.Success ? int.Parse(match.Groups[1].Value) : -1;
+            return match.Success && match.Groups.Count > 1
+                ? int.TryParse(match.Groups[1].Value, out int subNumber) ? subNumber : -1
+                : -1;
         }
+
+
 
         public static void MergeIntoDictionary(IDictionary<int, string> targetDictionary)
         {

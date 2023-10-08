@@ -2,7 +2,7 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": "-o e -f CharaMakeMenu_001e.xq"
+      "commandLineArgs": "-o e -f c10_trigger_0.03c.xq"
     }
   }
 }
