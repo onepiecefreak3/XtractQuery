@@ -27,6 +27,7 @@ namespace XtractQuery.Parsers.Models
         public string GetString(IStringReader stringReader)
         {
             var args = string.Join(", ", Arguments.Select(x => x.GetString(InstructionType, stringReader)));
+            FunctionDictionaryParser.MergeIntoDictionary(RoutineMap);
             var subName = RoutineMap.ContainsKey(InstructionType) ? RoutineMap[InstructionType] : $"sub{InstructionType}";
             var returnParameter = Parameter.Parse(ReturnParameter);
 
@@ -109,14 +110,9 @@ namespace XtractQuery.Parsers.Models
             }
         }
 
-        private static IDictionary<int, string> RoutineMap = new Dictionary<int, string>
+        public static IDictionary<int, string> RoutineMap = new Dictionary<int, string>
         {
-            [20] = "Call",
-            [30] = "Jump1",
-            [31] = "Jump2",
-            [33] = "JumpParameter",
-            [130] = "Compare",
-            [501] = "printf"
+          
         };
     }
 }
