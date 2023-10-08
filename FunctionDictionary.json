@@ -1,0 +1,17 @@
+{
+  
+    "sub20": "Call",
+    "sub30": "Jump1",
+    "sub31": "Jump2",
+    "sub33": "JumpParameter",
+    "sub130": "Compare",
+    "sub501": "printf",
+    "sub14040":"setDayTime",
+    "sub13609":"callMap",         
+    "sub13010":"callChapterTitle", 	
+    "sub3502": "loadXI",
+    "sub13612":"loadBossBattle",
+    "sub16526":"loadXa",
+    "sub3702":"loadXc",
+    "sub500":"COMMENT:"  
+}
