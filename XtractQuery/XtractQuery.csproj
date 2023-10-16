@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0-preview.4.20251.6" />
   </ItemGroup>
 

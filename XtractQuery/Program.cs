@@ -6,6 +6,7 @@ using Komponent.IO;
 using XtractQuery.Interfaces;
 using XtractQuery.Options;
 using XtractQuery.Parsers;
+using XtractQuery.Parsers.Models;
 
 namespace XtractQuery
 {
@@ -132,6 +133,7 @@ namespace XtractQuery
 
         private static void CreateFile(string type, string file)
         {
+            FunctionDictionaryParser.MergeIntoDictionary(Instruction.RoutineMap);
             IParser parser;
             switch (type)
             {
