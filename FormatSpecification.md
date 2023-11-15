@@ -9,7 +9,8 @@ It may have been helpful in debugging and hot switching behaviour in development
 
 ## Datatypes
 
-These are the data types of data units as they will apear in this documentation.
+These are the data types of data units as they will appear in this documentation.
+
 | Type | Size in bytes | Notes |
 | - | - | - |
 | short | 2 | |
@@ -133,7 +134,7 @@ A jump can only be performed in the current function. Jumps referenced outside t
 
 The instruction structure delcares one instruction in a function of the script.
 It declares the arguments used in this instruction, by giving the offset into the argument table and how many of them to read for this instruction.
-It writes the result into the stack value indexed by 'targetVariable' (see "Stack" in the script specification).
+It writes the result into the stack value indexed by 'targetVariable' (see "Variables").
 The logic to execute is defined by 'instructionType' (see "Instructions" in the script specification).
 
 | Datatype | Name |
@@ -161,5 +162,18 @@ Base types of arguments typically found in scripts:
 | 1 | int | A signed integer value |
 | 2 | uint | An unsigned integer value |
 | 3 | float | A floating point value |
-| 4 | int | An index to a stack value (See "Stack" in the script specification) |
+| 4 | int | An index to a stack value (see "Variables") |
 | 8 | int | An absolute offset into the string blob. Normally SJIS-encoded. Null-terminated. |
+
+## Variables
+
+Variables represent values on the stack. There are multiple stack regions when a script is executed, each with their own implications.
+There are generally up to 1000 slots per stack region.
+
+| Start | End | Description |
+| - | - | - |
+| 0 | 999 | Values, that persist through multiple scripts. Can contain any data, including primitive values and arrays. |
+| 1000 | 1999 | Values, that persist only in the function they were set in. 1000 is reserved as the return value for a function. Mostly used for primitive values. |
+| 2000 | 2999 | Values, that persist only in the function they were set in. Can contain any data, including primitive values and arrays. |
+| 3000 | 3999 | Values, that exclusively hold the input parameters to a function. Can contain any data, including primitive values and arrays. |
+| 4000 | 4999 | Values, that persist through multiple functions only in the script they were set in. Can contain any data, including primitive values and arrays. |
