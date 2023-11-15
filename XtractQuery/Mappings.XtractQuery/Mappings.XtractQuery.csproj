@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrossCutting.Core.Bootstrapping\CrossCutting.Core.Bootstrapping.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Configuration.CommandLine\CrossCutting.Core.Configuration.CommandLine.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Configuration.File\CrossCutting.Core.Configuration.File.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Configuration\CrossCutting.Core.Configuration.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.DI.AutofacAdapter\CrossCutting.Core.DI.AutofacAdapter.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.EventBrokerage\CrossCutting.Core.EventBrokerage.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Logging.NLogAdapter\CrossCutting.Core.Logging.NLogAdapter.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Scheduling.QuartzAdapter\CrossCutting.Core.Scheduling.QuartzAdapter.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.Serialization.JsonAdapter\CrossCutting.Core.Serialization.JsonAdapter.csproj" />
+    <ProjectReference Include="..\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement.csproj" />
+    <ProjectReference Include="..\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis.csproj" />
+    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.csproj" />
+    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter.csproj" />
+    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter.csproj" />
+    <ProjectReference Include="..\Logic.Domain.Level5\Logic.Domain.Level5\Logic.Domain.Level5.csproj" />
+  </ItemGroup>
+
+</Project>

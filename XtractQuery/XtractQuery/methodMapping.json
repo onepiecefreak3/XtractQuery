@@ -1,0 +1,103 @@
+{
+  //10: "yield", // return 1 (no-op)
+  //11: "return", // return 2 (sets a value as the method return parameter)
+  //12: "exit", // return 3 (no-op)
+
+  20: "call", // return 0 (Calls another method by name or crc with all arguments, ignoring the first one)
+  //21: "call", // return 0 (Duplicate of sub20)
+
+  //30: "if_cond", // return 1 on jump, 0 otherwise (If second argument converts to boolean true, execute jump)
+  //31: "goto", // returns 0 (Unconditional jump for 1 argument. For multiple arguments effectively don't jump and advance RNG)
+  //32: "if_imm_cond", // return 0 (Unconditional jump to argument 1, if only 1 argument is given. Otherwise, if 2nd argument converts to boolean true, execute jump)
+  //33: "if_imm_not_cond", // return 0 (Unconditional jump to argument 1, if only 1 argument is given. Otherwise, if 2nd argument converts to boolean false, execute jump)
+
+  40: "typeof", // return 0 (Gets the type of the static or variable value)
+
+  //100: "set", // return 0 (Retypes and resets a target variable to the given value)
+
+  //110: "bit_complement", // return 0 (Retype casts to int or uint and bitwise complements the value)
+  //111: "put", // return 0 (Sets a value into the target)
+  //112: "negate", // return 0 (Casts and negates the value)
+
+  //120: "bool_not", // return 0 (Retypes to int and set the negated boolean representation of the value)
+  //121: "bool_and", // return 0 (Retypes to int and ANDs the boolean representation of two values) (Meaning: bool($arg1) && bool($arg2))
+  //122: "bool_or", // return 0 (Retypes to int and ORs the boolean representation of two values) (Meaning: bool($arg1) || bool($arg2))
+
+  //130: "equals", // return 0 (If values have same type, comparison will always succeed. If values have different types, they have to be numerical values)
+  //131: "equals_not", // return 0 (Compares if two values are not equal)
+  //132: "greater_equals", // return 0 (Checks that value 1 is greater equal value 2)
+  //133: "smaller_equals", // return 0 (Checks that value 1 is smaller equal value 2)
+  //134: "greater_than", // return 0 (Checks that value 1 is greater than value 2)
+  //135: "smaller_than", // return 0 (Checks that value 1 is smaller than value 2)
+
+  //140: "increment", // return 0 (Increments the value by 1)
+  //141: "decrement", // return 0 (Decrements the value by 1)
+
+  //150: "add", // return 0 (Adds two values. Converts to type in first argument, float (if any value is a float) or int, if a float operation results in an int)
+  //151: "sub", // return 0 (Subtracts second from first value. Converts to type in first argument, float (if any value is a float) or int, if a float operation results in an int)
+  //152: "mul", // return 0 (Multiplies two values. Converts to type in first argument, float (if any value is a float) or int, if a float operation results in an int)
+  //153: "div", // return 0 (Divides first by second value. Results in 0, if second value is 0. Converts to type in first argument, float (if any value is a float) or int, if a float operation results in an int)
+  //154: "mod", // return 0 (Modulates first by second value. Results in 0, if second value is 0. Converts to type in first argument, float (if any value is a float) or int, if a float operation results in an int)
+
+  //160: "bit_and", // return 0 (Bitwise and's two values. Converts type to int or uint)
+  //161: "bit_or", // return 0 (Bitwise or's two values. Converts type to int or uint)
+  //162: "bit_xor", // return 0 (Bitwise xor's two values. Converts type to int or uint)
+
+  //170: "bit_shift_left", // return 0 (Bitwise left shifts first by second value. Converts type to int or uint. Shifts by 0 to 31 bits)
+  //171: "bit_shift_right", // return 0 (Bitwise right shifts first by second value. Converts type to int or uint. Shifts by 0 to 31 bits)
+
+  //240: "array_increment", // return 0 (Like sub140, but for arrays)
+  //241: "array_decrement", // return 0 (Like sub141, but for arrays)
+
+  //250: "array_add", // return 0 (Like sub150, but for arrays)
+  //251: "array_sub", // return 0 (Like sub151, but for arrays)
+  //252: "array_mul", // return 0 (Like sub152, but for arrays)
+  //253: "array_div", // return 0 (Like sub153, but for arrays)
+  //254: "array_mod", // return 0 (Like sub154, but for arrays)
+
+  //260: "array_bit_and", // return 0 (Like sub160, but for arrays)
+  //261: "array_bit_or", // return 0 (Like sub161, but for arrays)
+  //262: "array_bit_xor", // return 0 (Like sub162, but for arrays)
+
+  //270: "array_bit_shift_left", // return 0 (Like sub170, but for arrays)
+  //271: "array_bit_shift_right", // return 0 (Like sub171, but for arrays)
+
+  500: "log", // return 0 (no-op)
+  501: "format", // return 0 (Formats a string like printf)
+  //502: "", // return 0
+  503: "substring", // return 0 (Cuts a string at the beginning by n bytes)
+
+  510: "parameter_count", // return 0 (returns the amount of input parameters of the current function)
+  //511: "cast_int", // return 0 (converts the given value to int)
+  //512: "cast_bool", // return 0 (converts the given value to bool)
+  //513: "cast_float", // return 0 (converts the given value to float)
+
+  520: "random", // return 0 (Take one random from the n arguments and use it as the ceiling to create a random value)
+  521: "crc16", // return 0 (0, the value of the argument, or the CRC16 of the string)
+  522: "crc32", // return 0 (0, the value of the argument, or the CRC32 of the string)
+  //523: "map", // return 0 (Compare first value against value 3, 5, 7, etc. In this order, if any is equal, its next argument is returned. Otherwise second value is returned as fallback)
+
+  //530: "inst_array", // return 0 (creates an instance of an array. Arguments are multi-dimensional indeces)
+  //531: "array_from_index", // return 0 (gets a value reference from an array by index; First argument as the array, following arguments are multi-dimensional indeces)
+
+  600: "math_abs", // return 0 (Gets the absolute representation of a value)
+  601: "math_sqrt", // return 0 (Gets the square root of a value)
+  602: "math_floor", // return 0 (Rounds to next integer towards negative infinity)
+  603: "math_round", // return 0 (Rounds to nearest integer. At .5 towards positive infinity)
+  604: "math_ceiling", // return 0 (Rounds to next integer towards positive infinity)
+  605: "math_min", // return 0 (Gets the lowest of any 2 or more values)
+  606: "math_max", // return 0 (Gets the highest of any 2 or more values)
+  607: "math_clamp", // return 0 (Clamps a value between a minimum and maximum, given in that order)
+  //608: "", // return 0 (Something with 2*PI and 1/(2*PI))
+
+  610: "math_sin", // return 0 (Gets the sin of the value)
+  611: "math_cos", // return 0 (Gets the cos of the value)
+  612: "math_tan", // return 0 (Gets the tan of the value)
+
+  620: "math_asin", // return 0 (Gets the inverse sin of the value)
+  621: "math_acos", // return 0 (Gets the inverse cos of the value)
+  622: "math_atan" // return 0 (Gets the inverse tan of the value)
+
+  //630: "",
+  //631: "",
+}
