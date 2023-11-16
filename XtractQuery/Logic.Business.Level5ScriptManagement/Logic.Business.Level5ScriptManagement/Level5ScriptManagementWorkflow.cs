@@ -196,10 +196,9 @@ namespace Logic.Business.Level5ScriptManagement
             Console.WriteLine("    The type is automatically detected when extracting; This argument will not have any effect on operation 'e'");
             Console.WriteLine("  -f, --file\t\tThe file to process");
             Console.WriteLine();
-            Console.WriteLine("Example usage:");
-            Console.WriteLine($"\tExtract any script to human readable text: {Environment.ProcessPath} -o e -f [file]");
-            Console.WriteLine($"\tCreate a xq32 script from human readable text: {Environment.ProcessPath} -o c -t xq32 -f [file]");
-            Console.WriteLine($"\tCreate a xseq script from human readable text: {Environment.ProcessPath} -o c -t xseq -f [file]");
+            Console.WriteLine("Examples:");
+            Console.WriteLine($"\tExtract any script to human readable text: {Environment.ProcessPath} -o e -f Path/To/File.xq");
+            Console.WriteLine($"\tCreate a xq32 script from human readable text: {Environment.ProcessPath} -o c -t xq32 -f Path/To/File.txt");
         }
     }
 }

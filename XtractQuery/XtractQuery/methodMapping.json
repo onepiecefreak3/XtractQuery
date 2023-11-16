@@ -3,20 +3,8 @@
 
   40: "typeof", // return 0 (Gets the type of the static or variable value)
 
-  //120: "bool_not", // return 0 (Retypes to int and set the negated boolean representation of the value)
-  //121: "bool_and", // return 0 (Retypes to int and ANDs the boolean representation of two values) (Meaning: bool($arg1) && bool($arg2))
-  //122: "bool_or", // return 0 (Retypes to int and ORs the boolean representation of two values) (Meaning: bool($arg1) || bool($arg2))
-
-  //130: "equals", // return 0 (If values have same type, comparison will always succeed. If values have different types, they have to be numerical values)
-  //131: "equals_not", // return 0 (Compares if two values are not equal)
-  //132: "greater_equals", // return 0 (Checks that value 1 is greater equal value 2)
-  //133: "smaller_equals", // return 0 (Checks that value 1 is smaller equal value 2)
-  //134: "greater_than", // return 0 (Checks that value 1 is greater than value 2)
-  //135: "smaller_than", // return 0 (Checks that value 1 is smaller than value 2)
-
   500: "log", // return 0 (no-op)
   501: "format", // return 0 (Formats a string like printf)
-  //502: "", // return 0
   503: "substring", // return 0 (Cuts a string at the beginning by n bytes)
 
   510: "parameter_count", // return 0 (returns the amount of input parameters of the current function)
@@ -24,10 +12,6 @@
   520: "random", // return 0 (Take one random from the n arguments and use it as the ceiling to create a random value)
   521: "crc16", // return 0 (0, the value of the argument, or the CRC16 of the string)
   522: "crc32", // return 0 (0, the value of the argument, or the CRC32 of the string)
-  //523: "map", // return 0 (Compare first value against value 3, 5, 7, etc. In this order, if any is equal, its next argument is returned. Otherwise second value is returned as fallback)
-
-  //530: "inst_array", // return 0 (creates an instance of an array. Arguments are multi-dimensional indeces)
-  //531: "array_from_index", // return 0 (gets a value reference from an array by index; First argument as the array, following arguments are multi-dimensional indeces)
 
   600: "math_abs", // return 0 (Gets the absolute representation of a value)
   601: "math_sqrt", // return 0 (Gets the square root of a value)
@@ -46,7 +30,4 @@
   620: "math_asin", // return 0 (Gets the inverse sin of the value)
   621: "math_acos", // return 0 (Gets the inverse cos of the value)
   622: "math_atan" // return 0 (Gets the inverse tan of the value)
-
-  //630: "",
-  //631: "",
 }
