@@ -271,6 +271,27 @@ namespace Logic.Business.Level5ScriptManagement
             ValueExpressionSyntax leftValue = CreateValueExpression((uint)instruction.ReturnParameter);
             ExpressionSyntax left = leftValue;
 
+            switch (instruction.Type)
+            {
+                case 100:
+                case 250:
+                case 251:
+                case 252:
+                case 253:
+                case 254:
+                case 260:
+                case 261:
+                case 262:
+                case 270:
+                case 271:
+                    if (instruction.ArgumentCount > 1)
+                    {
+                        var indexes3 = script.Arguments.Skip(instruction.ArgumentIndex + 1).Take(instruction.ArgumentCount - 1).ToArray();
+                        left = CreateArrayIndexExpression(leftValue, indexes3);
+                    }
+                    break;
+            }
+
             SyntaxToken equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.EqualsSign);
             SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
@@ -279,11 +300,6 @@ namespace Logic.Business.Level5ScriptManagement
             {
                 case 100:
                     right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
-                    if (instruction.ArgumentCount > 1)
-                    {
-                        var indexes3 = script.Arguments.Skip(instruction.ArgumentIndex + 1).Take(instruction.ArgumentCount - 1).ToArray();
-                        left = CreateArrayIndexExpression(leftValue, indexes3);
-                    }
                     break;
 
                 case 110:
