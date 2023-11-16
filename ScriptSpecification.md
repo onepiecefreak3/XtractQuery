@@ -6,13 +6,28 @@ This document describes the human-readable output from XtractQuery and its synta
 It also describes its relation to the instruction types read from the format, as per the format specification.
 
 ## Functions
-TODO
+
+Functions in the script are a finite sequence of instructions to be executed. Some instructions can jump to labels to immitate higher level programming concepts, like ``if ... else ...`` or loops. A function always has a name consisting of only lower- and uppercase letters and alphanumerical digits. A function can have up to 1000 parameters to pass into.<br>
+```
+MyFunction($param0, $param1, ...)
+{
+  ...
+}
+```
 
 ## Jumps
-TODO
+
+Jumps in the script are string literals suffixed by a colon `:` above an instruction. An instruction can have multiple labels. If called by any operation, that can execute a jump (see "Instructions" > "Jumps") the function will jump to that instruction and continue execution there.<br>
+```
+    if 1 goto "@000@"h;
+"@000@":
+"@001@":
+    $local1 = log("Jumped here.");
+```
 
 ## Comments
-TODO
+
+The script can contain single-line comments prefixed with `//`. Those comments will be ignored on compilation.<br>```// This is a comment```
 
 ## Value notation
 
