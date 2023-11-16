@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+	<RootNamespace>Logic.Domain.Level5.Contract</RootNamespace>
+	<AssemblyName>Logic.Domain.Level5.Contract</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
+    <ProjectReference Include="..\..\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.Contract\Logic.Domain.Kuriimu2.KomponentAdapter.Contract.csproj" />
+  </ItemGroup>
+
+</Project>

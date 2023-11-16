@@ -1,0 +1,33 @@
+{
+  20: "call", // return 0 (Calls another method by name or crc with all arguments, ignoring the first one)
+
+  40: "typeof", // return 0 (Gets the type of the static or variable value)
+
+  500: "log", // return 0 (no-op)
+  501: "format", // return 0 (Formats a string like printf)
+  503: "substring", // return 0 (Cuts a string at the beginning by n bytes)
+
+  510: "parameter_count", // return 0 (returns the amount of input parameters of the current function)
+
+  520: "random", // return 0 (Take one random from the n arguments and use it as the ceiling to create a random value)
+  521: "crc16", // return 0 (0, the value of the argument, or the CRC16 of the string)
+  522: "crc32", // return 0 (0, the value of the argument, or the CRC32 of the string)
+
+  600: "math_abs", // return 0 (Gets the absolute representation of a value)
+  601: "math_sqrt", // return 0 (Gets the square root of a value)
+  602: "math_floor", // return 0 (Rounds to next integer towards negative infinity)
+  603: "math_round", // return 0 (Rounds to nearest integer. At .5 towards positive infinity)
+  604: "math_ceiling", // return 0 (Rounds to next integer towards positive infinity)
+  605: "math_min", // return 0 (Gets the lowest of any 2 or more values)
+  606: "math_max", // return 0 (Gets the highest of any 2 or more values)
+  607: "math_clamp", // return 0 (Clamps a value between a minimum and maximum, given in that order)
+  //608: "", // return 0 (Something with 2*PI and 1/(2*PI))
+
+  610: "math_sin", // return 0 (Gets the sin of the value)
+  611: "math_cos", // return 0 (Gets the cos of the value)
+  612: "math_tan", // return 0 (Gets the tan of the value)
+
+  620: "math_asin", // return 0 (Gets the inverse sin of the value)
+  621: "math_acos", // return 0 (Gets the inverse cos of the value)
+  622: "math_atan" // return 0 (Gets the inverse tan of the value)
+}

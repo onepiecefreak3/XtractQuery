@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Logic.Business.Level5ScriptManagement",
+    "Entries": [
+      {
+        "Key": "MethodMappingPath",
+        "Value": "methodMapping.json"
+      },
+      {
+        "Key": "ReferenceScriptPath",
+        "Value": "reference/"
+      }
+    ]
+  }
+]

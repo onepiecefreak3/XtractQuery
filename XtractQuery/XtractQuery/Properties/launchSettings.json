@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "XtractQuery": {
+      "commandName": "Project",
+      "commandLineArgs": "-o c -t xq32 -f D:\\Users\\Kirito\\Desktop\\xqs_new\\iego_bb\\seq\\prog_common.xq.dec.txt"
+    }
+  }
+}

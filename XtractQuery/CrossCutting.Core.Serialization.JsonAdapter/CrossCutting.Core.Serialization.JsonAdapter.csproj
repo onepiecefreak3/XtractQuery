@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>CrossCutting.Core.Serialization.JsonAdapter</RootNamespace>
+	<AssemblyName>CrossCutting.Core.Serialization.JsonAdapter</AssemblyName>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+	<RootNamespace>Logic.Business.Level5ScriptManagement</RootNamespace>
+	<AssemblyName>Logic.Business.Level5ScriptManagement</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
+    <ProjectReference Include="..\..\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis.Contract\Logic.Domain.CodeAnalysis.Contract.csproj" />
+    <ProjectReference Include="..\..\Logic.Domain.Level5\Logic.Domain.Level5.Contract\Logic.Domain.Level5.Contract.csproj" />
+    <ProjectReference Include="..\Logic.Business.Level5ScriptManagement.Contract\Logic.Business.Level5ScriptManagement.Contract.csproj" />
+  </ItemGroup>
+
+</Project>
