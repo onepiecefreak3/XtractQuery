@@ -34,8 +34,8 @@ namespace Logic.Business.Level5ScriptManagement
             if (string.IsNullOrWhiteSpace(config.FilePath))
                 throw new Level5ScriptManagementConfigurationValidationException("No file to process was specified. Specify a file by using the -f argument.");
 
-            if (!File.Exists(config.FilePath))
-                throw new Level5ScriptManagementConfigurationValidationException($"File '{Path.GetFullPath(config.FilePath)}' was not found.");
+            if (!File.Exists(config.FilePath) && !Directory.Exists(config.FilePath))
+                throw new Level5ScriptManagementConfigurationValidationException($"File or directory '{Path.GetFullPath(config.FilePath)}' was not found.");
         }
 
         private void ValidateQueryType(Level5ScriptManagementConfiguration config)

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Logic.Business.Level5ScriptManagement.Contract;
@@ -11,8 +10,6 @@ using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.Level5.Contract.Compression.DataClasses;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Xq32;
-using Logic.Domain.Level5.Contract.Script.Xseq;
 
 namespace Logic.Business.Level5ScriptManagement
 {
@@ -64,28 +61,51 @@ namespace Logic.Business.Level5ScriptManagement
             switch (_config.Operation)
             {
                 case "e":
-                    ExtractScript();
+                    ExtractScripts();
                     break;
 
                 case "c":
-                    CreateScript();
+                    CreateScripts();
                     break;
 
                 case "d":
-                    DecompressScript();
+                    DecompressScripts();
                     break;
             }
 
             return 0;
         }
 
-        private void ExtractScript()
+        private void ExtractScripts()
         {
             // Populate global string hash cache
             PopulateStringHashCache();
 
+            // Collect files to extract
+            string[] files = Directory.Exists(_config.FilePath) ?
+                Directory.GetFiles(_config.FilePath, "*.xq", SearchOption.AllDirectories) :
+                new[] { _config.FilePath };
+
+            // Extract files
+            foreach (string file in files)
+            {
+                Console.Write($"Extract {file}: ");
+                try
+                {
+                    ExtractScript(file);
+                    Console.WriteLine("Ok");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error ({e.Message})");
+                }
+            }
+        }
+
+        private void ExtractScript(string filePath)
+        {
             // Read script data
-            using Stream fileStream = File.OpenRead(_config.FilePath);
+            using Stream fileStream = File.OpenRead(filePath);
 
             ScriptType type = _typeReader.Peek(fileStream);
             IScriptReader scriptReader = _readerFactory.Create(type);
@@ -99,16 +119,39 @@ namespace Logic.Business.Level5ScriptManagement
             string readableScript = _scriptComposer.ComposeCodeUnit(codeUnit);
 
             // Write readable script
-            using Stream newFileStream = File.Create(_config.FilePath + ".txt");
+            using Stream newFileStream = File.Create(filePath + ".txt");
             using StreamWriter streamWriter = new(newFileStream);
 
             streamWriter.Write(readableScript);
         }
 
-        private void CreateScript()
+        private void CreateScripts()
+        {
+            // Collect files to extract
+            string[] files = Directory.Exists(_config.FilePath) ?
+                Directory.GetFiles(_config.FilePath, "*.txt", SearchOption.AllDirectories) :
+                new[] { _config.FilePath };
+
+            // Extract files
+            foreach (string file in files)
+            {
+                Console.Write($"Compile {file}: ");
+                try
+                {
+                    CreateScript(file);
+                    Console.WriteLine("Ok");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error ({e.Message})");
+                }
+            }
+        }
+
+        private void CreateScript(string filePath)
         {
             // Read readable script
-            using Stream fileStream = File.OpenRead(_config.FilePath);
+            using Stream fileStream = File.OpenRead(filePath);
             using StreamReader streamReader = new(fileStream);
 
             string readableScript = streamReader.ReadToEnd();
@@ -122,12 +165,35 @@ namespace Logic.Business.Level5ScriptManagement
             // Write script data
             IScriptWriter scriptWriter = _writerFactory.Create(type);
 
-            using Stream newFileStream = File.Create(_config.FilePath + ".xq");
+            using Stream newFileStream = File.Create(filePath + ".xq");
 
             scriptWriter.Write(script, newFileStream, CompressionType.None);
         }
 
-        private void DecompressScript()
+        private void DecompressScripts()
+        {
+            // Collect files to extract
+            string[] files = Directory.Exists(_config.FilePath) ?
+                Directory.GetFiles(_config.FilePath, "*.xq", SearchOption.AllDirectories) :
+                new[] { _config.FilePath };
+
+            // Extract files
+            foreach (string file in files)
+            {
+                Console.Write($"Decompress {file}: ");
+                try
+                {
+                    DecompressScript(file);
+                    Console.WriteLine("Ok");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Error ({e.Message})");
+                }
+            }
+        }
+
+        private void DecompressScript(string filePath)
         {
             // Decompress script data
             using Stream fileStream = File.OpenRead(_config.FilePath);
