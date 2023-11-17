@@ -24,11 +24,11 @@ If an unknown instruction type has no corresponding mapping, its name will be se
 
 ### Reference scripts
 
-Scripts can call methods from within themselves and other scripts currently loaded in the engine. Normally, those calls happen via the CRC32/CRC16 of the function name to invoke them.<br>
-To resolve those checksums back into human readable names, reference scripts can be placed in the folder `reference` next to the command line tool.
+.xq scripts can call methods from within themselves and other .xq scripts currently loaded in the engine. Normally, those calls happen via the CRC32/CRC16 of the function name to invoke them.<br>
+To resolve those checksums back into human readable names, reference .xq scripts can be placed in the folder `reference` next to the command line tool.
 
-It is recommended to put every script of a game in the references to have the highest probability of properly resolving all checksums.<br>
-However, there is no guarantee that a checksum will be resolved, so user action has to be taken.
+It is recommended to put every .xq script of a game in the references to have the highest probability of properly resolving all checksums.<br>
+However, there is no guarantee that a checksum will be resolved.
 
 ## Examples
 
