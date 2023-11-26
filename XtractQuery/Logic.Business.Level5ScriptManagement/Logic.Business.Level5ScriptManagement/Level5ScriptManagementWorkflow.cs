@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -82,7 +83,8 @@ namespace Logic.Business.Level5ScriptManagement
             PopulateStringHashCache();
 
             // Collect files to extract
-            string[] files = Directory.Exists(_config.FilePath) ?
+            bool isDirectory = Directory.Exists(_config.FilePath);
+            string[] files = isDirectory ?
                 Directory.GetFiles(_config.FilePath, "*.xq", SearchOption.AllDirectories) :
                 new[] { _config.FilePath };
 
@@ -97,7 +99,10 @@ namespace Logic.Business.Level5ScriptManagement
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error ({e.Message})");
+                    string relativePath = isDirectory ?
+                        Path.GetRelativePath(_config.FilePath, file) :
+                        Path.GetFileName(file);
+                    Console.WriteLine($"Could not extract {relativePath}: {GetInnermostException(e).Message}");
                 }
             }
         }
@@ -128,7 +133,8 @@ namespace Logic.Business.Level5ScriptManagement
         private void CreateScripts()
         {
             // Collect files to extract
-            string[] files = Directory.Exists(_config.FilePath) ?
+            bool isDirectory = Directory.Exists(_config.FilePath);
+            string[] files = isDirectory ?
                 Directory.GetFiles(_config.FilePath, "*.txt", SearchOption.AllDirectories) :
                 new[] { _config.FilePath };
 
@@ -143,7 +149,10 @@ namespace Logic.Business.Level5ScriptManagement
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error ({e.Message})");
+                    string relativePath = isDirectory ?
+                        Path.GetRelativePath(_config.FilePath, file) :
+                        Path.GetFileName(file);
+                    Console.WriteLine($"Could not compile {relativePath}: {GetInnermostException(e).Message}");
                 }
             }
         }
@@ -173,7 +182,8 @@ namespace Logic.Business.Level5ScriptManagement
         private void DecompressScripts()
         {
             // Collect files to extract
-            string[] files = Directory.Exists(_config.FilePath) ?
+            bool isDirectory = Directory.Exists(_config.FilePath);
+            string[] files = isDirectory ?
                 Directory.GetFiles(_config.FilePath, "*.xq", SearchOption.AllDirectories) :
                 new[] { _config.FilePath };
 
@@ -188,7 +198,10 @@ namespace Logic.Business.Level5ScriptManagement
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error ({e.Message})");
+                    string relativePath = isDirectory ?
+                        Path.GetRelativePath(_config.FilePath, file) :
+                        Path.GetFileName(file);
+                    Console.WriteLine($"Could not decompress {relativePath}: {GetInnermostException(e).Message}");
                 }
             }
         }
@@ -265,6 +278,14 @@ namespace Logic.Business.Level5ScriptManagement
             Console.WriteLine("Examples:");
             Console.WriteLine($"\tExtract any script to human readable text: {Environment.ProcessPath} -o e -f Path/To/File.xq");
             Console.WriteLine($"\tCreate a xq32 script from human readable text: {Environment.ProcessPath} -o c -t xq32 -f Path/To/File.txt");
+        }
+
+        private Exception GetInnermostException(Exception e)
+        {
+            while (e.InnerException != null)
+                e = e.InnerException;
+
+            return e;
         }
     }
 }

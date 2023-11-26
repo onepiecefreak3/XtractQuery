@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Logic.Domain.CodeAnalysis.Contract;
+using Logic.Domain.CodeAnalysis.Contract.Exceptions;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.CodeAnalysis.Level5.InternalContract.DataClasses;
 
@@ -634,7 +635,7 @@ namespace Logic.Domain.CodeAnalysis.Level5
             if (!string.IsNullOrEmpty(expected))
                 message = $"{message} (Expected \"{expected}\")";
 
-            throw new InvalidOperationException(message);
+            throw new LexerException(message, Line, Column);
         }
     }
 }

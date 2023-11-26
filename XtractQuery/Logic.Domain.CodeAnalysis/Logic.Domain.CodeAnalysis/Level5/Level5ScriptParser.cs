@@ -7,6 +7,7 @@ using Logic.Domain.CodeAnalysis.Contract;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
 using Logic.Domain.CodeAnalysis.Level5.InternalContract.DataClasses;
 
 namespace Logic.Domain.CodeAnalysis.Level5
@@ -431,7 +432,11 @@ namespace Logic.Domain.CodeAnalysis.Level5
                     left = ParseArrayIndexExpression(buffer, value);
             }
             else
-                left = ParseExpression(buffer);
+                throw CreateException(buffer, "Invalid expression.", SyntaxTokenKind.Variable,
+                    SyntaxTokenKind.StringLiteral,
+                    SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
+                    SyntaxTokenKind.HashStringLiteral,
+                    SyntaxTokenKind.HashNumericLiteral);
 
             if (HasTokenKind(buffer, SyntaxTokenKind.SwitchKeyword))
                 return ParseSwitchExpression(buffer, left);
@@ -1226,7 +1231,7 @@ namespace Logic.Domain.CodeAnalysis.Level5
                     $"{message} (Expected any of {string.Join(", ", expected)})";
             }
 
-            throw new InvalidOperationException(message);
+            throw new Level5ScriptParserException(message, line, column);
         }
     }
 }
