@@ -27,7 +27,12 @@ Jumps in the script are string literals suffixed by a colon `:` above an instruc
 
 ## Comments
 
-The script can contain single-line comments prefixed with `//`. Those comments will be ignored on compilation.<br>```// This is a comment```
+The script can contain single-line comments prefixed with `//` and multi-line comments encased in `/* Comment */`. Those comments will be ignored on compilation.<br>
+```
+// This is a comment
+/* This is also
+   a comment */
+```
 
 ## Value notation
 
