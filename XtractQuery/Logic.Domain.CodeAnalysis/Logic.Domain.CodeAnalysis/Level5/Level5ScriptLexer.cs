@@ -255,16 +255,32 @@ namespace Logic.Domain.CodeAnalysis.Level5
                 switch (character)
                 {
                     case '/':
-                        if (!IsPeekedChar(1, '/'))
-                            break;
-
-                        _sb.Append(ReadChar());
-                        _sb.Append(ReadChar());
-
-                        while (!IsPeekedChar('\n'))
+                        if (IsPeekedChar(1, '/'))
+                        {
+                            _sb.Append(ReadChar());
                             _sb.Append(ReadChar());
 
-                        continue;
+                            while (!IsPeekedChar('\n'))
+                                _sb.Append(ReadChar());
+
+                            continue;
+                        }
+
+                        if (IsPeekedChar(1, '*'))
+                        {
+                            _sb.Append(ReadChar());
+                            _sb.Append(ReadChar());
+
+                            while (!IsPeekedChar('*') || !IsPeekedChar(1, '/'))
+                                _sb.Append(ReadChar());
+
+                            _sb.Append(ReadChar());
+                            _sb.Append(ReadChar());
+
+                            continue;
+                        }
+
+                        break;
 
                     case ' ':
                     case '\t':
