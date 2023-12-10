@@ -27,7 +27,12 @@ Jumps in the script are string literals suffixed by a colon `:` above an instruc
 
 ## Comments
 
-The script can contain single-line comments prefixed with `//`. Those comments will be ignored on compilation.<br>```// This is a comment```
+The script can contain single-line comments prefixed with `//` and multi-line comments encased in `/* Comment */`. Those comments will be ignored on compilation.<br>
+```
+// This is a comment
+/* This is also
+   a comment */
+```
 
 ## Value notation
 
@@ -60,8 +65,8 @@ All variables start with the prefix '$', followed by a fixed term and number fro
 #### Returns
 | Type | Description |
 | - | - |
-| 10 | Returns from a function at that moment of execution. Can set the return value of the function.<br>```return;```<br>```return value;``` |
-| 11 | Yields back into the script engine to execute logic outside the script and continues the method at the next instruction.<br>```yield;``` |
+| 10 | Yields back into the script engine to execute logic outside the script and continues the method at the next instruction.<br>```yield;``` |
+| 11 | Returns from a function at that moment of execution. Can set the return value of the function.<br>```return;```<br>```return value;``` |
 | 12 | Exits the script, that is currently executed, completely.<br>```exit;``` |
 
 #### Calls
