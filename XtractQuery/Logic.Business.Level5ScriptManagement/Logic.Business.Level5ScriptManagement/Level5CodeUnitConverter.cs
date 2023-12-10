@@ -181,8 +181,14 @@ namespace Logic.Business.Level5ScriptManagement
         {
             var argumentStartIndex = (short)result.Arguments.Count;
 
-            AddArgument(result, returnStatement.ValueExpression);
-            AddInstruction(result, argumentStartIndex, 1, 11, 1000);
+            var argumentCount = 0;
+            if (returnStatement.ValueExpression != null)
+            {
+                AddArgument(result, returnStatement.ValueExpression);
+                argumentCount = 1;
+            }
+
+            AddInstruction(result, argumentStartIndex, argumentCount, 11, 1000);
         }
 
         private void AddExitStatement(ScriptFile result)

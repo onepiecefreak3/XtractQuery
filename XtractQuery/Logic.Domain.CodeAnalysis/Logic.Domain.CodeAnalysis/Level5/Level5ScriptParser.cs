@@ -327,7 +327,9 @@ namespace Logic.Domain.CodeAnalysis.Level5
         private ReturnStatementSyntax ParseReturnStatement(IBuffer<Level5SyntaxToken> buffer)
         {
             SyntaxToken returnToken = ParseReturnKeywordToken(buffer);
-            ValueExpressionSyntax valueExpression = ParseValueExpression(buffer);
+            ValueExpressionSyntax? valueExpression = null;
+            if (!HasTokenKind(buffer, SyntaxTokenKind.Semicolon))
+                valueExpression = ParseValueExpression(buffer);
             SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
             return new ReturnStatementSyntax(returnToken, valueExpression, semicolon);

@@ -252,7 +252,9 @@ namespace Logic.Business.Level5ScriptManagement
         private ReturnStatementSyntax CreateReturnStatement(ScriptInstruction instruction, ScriptFile script)
         {
             SyntaxToken returnToken = _syntaxFactory.Token(SyntaxTokenKind.ReturnKeyword);
-            ValueExpressionSyntax valueExpression = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
+            ValueExpressionSyntax? valueExpression = null;
+            if (instruction.ArgumentCount > 0)
+                valueExpression = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
             SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
             return new ReturnStatementSyntax(returnToken, valueExpression, semicolon);

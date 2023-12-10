@@ -166,7 +166,7 @@ namespace Logic.Domain.CodeAnalysis.Level5
         private void ComposeMethodDeclarationMetadataParameters(
             MethodDeclarationMetadataParametersSyntax? methodDeclarationMetadataParameters, StringBuilder sb)
         {
-            if(methodDeclarationMetadataParameters == null)
+            if (methodDeclarationMetadataParameters == null)
                 return;
 
             ComposeSyntaxToken(methodDeclarationMetadataParameters.RelSmaller, sb);
@@ -297,7 +297,8 @@ namespace Logic.Domain.CodeAnalysis.Level5
         private void ComposeReturnStatement(ReturnStatementSyntax returnStatement, StringBuilder sb)
         {
             ComposeSyntaxToken(returnStatement.Return, sb);
-            ComposeValueExpression(returnStatement.ValueExpression, sb);
+            if (returnStatement.ValueExpression != null)
+                ComposeValueExpression(returnStatement.ValueExpression, sb);
             ComposeSyntaxToken(returnStatement.Semicolon, sb);
         }
 

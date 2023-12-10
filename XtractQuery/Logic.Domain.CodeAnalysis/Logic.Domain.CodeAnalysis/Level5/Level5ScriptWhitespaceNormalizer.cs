@@ -374,8 +374,11 @@ namespace Logic.Domain.CodeAnalysis.Level5
 
         private void NormalizeReturnStatement(ReturnStatementSyntax returnStatement, WhitespaceNormalizeContext ctx)
         {
-            SyntaxToken newReturnKeyword = returnStatement.Return.WithLeadingTrivia(null).WithTrailingTrivia(" ");
+            SyntaxToken newReturnKeyword = returnStatement.Return.WithNoTrivia();
             SyntaxToken newSemicolon = returnStatement.Semicolon.WithNoTrivia();
+
+            if (returnStatement.ValueExpression != null)
+                newReturnKeyword = newReturnKeyword.WithTrailingTrivia(" ");
 
             if (ctx is { ShouldIndent: true, Indent: > 0 })
                 newReturnKeyword = newReturnKeyword.WithLeadingTrivia(new string('\t', ctx.Indent));
@@ -385,6 +388,9 @@ namespace Logic.Domain.CodeAnalysis.Level5
 
             returnStatement.SetReturn(newReturnKeyword, false);
             returnStatement.SetSemicolon(newSemicolon, false);
+
+            if (returnStatement.ValueExpression == null) 
+                return;
 
             ctx.IsFirstElement = true;
             ctx.ShouldIndent = false;
