@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
-    <ProjectReference Include="..\Logic.domain.Kuriimu2.KomponentAdapter.Contract\Logic.Domain.Kuriimu2.KomponentAdapter.Contract.csproj" />
+    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KomponentAdapter.Contract\Logic.Domain.Kuriimu2.KomponentAdapter.Contract.csproj" />
   </ItemGroup>
 
 </Project>
