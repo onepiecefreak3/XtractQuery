@@ -107,11 +107,6 @@ namespace Logic.Business.Level5ScriptManagement
 
         private void AddPostfixUnaryStatement(ScriptFile result, PostfixUnaryStatementSyntax postfixUnaryStatement)
         {
-            if (postfixUnaryStatement.Expression.Value is not ValueExpressionSyntax { Value: VariableExpressionSyntax variable })
-                throw CreateException($"Invalid expression {postfixUnaryStatement.Expression.Value.GetType().Name}", postfixUnaryStatement.Expression.Value.Location);
-
-            int variableSlot = GetVariable(variable);
-
             int instructionType;
             switch (postfixUnaryStatement.Expression.Operation.RawKind)
             {
@@ -126,8 +121,34 @@ namespace Logic.Business.Level5ScriptManagement
                 default:
                     throw CreateException($"Invalid operation {(SyntaxTokenKind)postfixUnaryStatement.Expression.Operation.RawKind} in postfix unary expression.", postfixUnaryStatement.Expression.Location);
             }
+            
+            if (postfixUnaryStatement.Expression.Value is ValueExpressionSyntax { Value: VariableExpressionSyntax variable })
+            {
+                int variableSlot = GetVariable(variable);
+                AddVariablePostfixUnaryStatement(result, instructionType, variableSlot);
+            }
+            else if (postfixUnaryStatement.Expression.Value is ArrayIndexExpressionSyntax { Value.Value: VariableExpressionSyntax variable1 } arrayValue)
+            {
+                int variableSlot = GetVariable(variable1);
+                AddArrayPostfixUnaryVariableStatement(result, arrayValue.Indexer, instructionType, variableSlot);
+            }
+            else
+                throw CreateException($"Invalid expression {postfixUnaryStatement.Expression.Value.GetType().Name}", postfixUnaryStatement.Expression.Value.Location);
+        }
 
+        private void AddVariablePostfixUnaryStatement(ScriptFile result, int instructionType, int variableSlot)
+        {
             AddInstruction(result, result.Arguments.Count, 0, instructionType, variableSlot);
+        }
+
+        private void AddArrayPostfixUnaryVariableStatement(ScriptFile result, IReadOnlyList<ArrayIndexerExpressionSyntax> indexer, int instructionType, int variableSlot)
+        {
+            int argumentIndex = result.Arguments.Count;
+
+            foreach (var index in indexer)
+                AddArgument(result, index.Index);
+
+            AddInstruction(result, argumentIndex, indexer.Count, instructionType, variableSlot);
         }
 
         private void AddIfGotoStatement(ScriptFile result, IfGotoStatementSyntax ifGotoStatement)
