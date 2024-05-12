@@ -373,11 +373,14 @@ namespace Logic.Domain.CodeAnalysis.Level5
                         _sb.Append(ReadChar());
                         continue;
 
+                    case 'E':
+                        _sb.Append(ReadChar());
+                        continue;
+
                     case 'A':
                     case 'B':
                     case 'C':
                     case 'D':
-                    case 'E':
                     case 'F':
                     case 'a':
                     case 'b':
