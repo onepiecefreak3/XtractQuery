@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>CrossCutting.Core.Contract</RootNamespace>
 	<AssemblyName>CrossCutting.Core.Contract</AssemblyName>
     <Version>1.0.0</Version>

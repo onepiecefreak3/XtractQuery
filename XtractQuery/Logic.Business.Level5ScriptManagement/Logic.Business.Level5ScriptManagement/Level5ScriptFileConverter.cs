@@ -1,9 +1,4 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
@@ -42,7 +37,7 @@ namespace Logic.Business.Level5ScriptManagement
         private MethodDeclarationSyntax CreateMethodDeclaration(ScriptFunction function, ScriptFile script)
         {
             SyntaxToken identifier = _syntaxFactory.Identifier(function.Name);
-            var metadataParameters = CreateMethodDeclarationMetadataParameters(function.LocalCount, function.ObjectCount);
+            _ = CreateMethodDeclarationMetadataParameters(function.LocalCount, function.ObjectCount);
             var parameters = CreateMethodDeclarationParameters(function.ParameterCount);
             var body = CreateMethodDeclarationBody(function, script);
 

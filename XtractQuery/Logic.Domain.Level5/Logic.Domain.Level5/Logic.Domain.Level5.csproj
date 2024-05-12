@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
 	<RootNamespace>Logic.Domain.Level5</RootNamespace>
 	<AssemblyName>Logic.Domain.Level5</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>

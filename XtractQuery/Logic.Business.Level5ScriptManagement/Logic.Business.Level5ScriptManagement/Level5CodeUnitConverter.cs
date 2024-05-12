@@ -1,15 +1,9 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
-using System.Linq.Expressions;
 
 namespace Logic.Business.Level5ScriptManagement
 {
@@ -510,57 +504,12 @@ namespace Logic.Business.Level5ScriptManagement
             }
         }
 
-        private bool IsSameExpression(ExpressionSyntax expression, ExpressionSyntax compare)
-        {
-            if (expression.GetType() != compare.GetType())
-                return false;
-
-            switch (expression)
-            {
-                case ValueExpressionSyntax value:
-                    return IsSameValueExpression(value, (ValueExpressionSyntax)compare);
-
-                case ArrayIndexExpressionSyntax array:
-                    var compareArray = (ArrayIndexExpressionSyntax)compare;
-                    if (array.Indexer.Count != compareArray.Indexer.Count)
-                        return false;
-
-                    if (!IsSameValueExpression(array.Value, compareArray.Value))
-                        return false;
-
-                    for (var i = 0; i < array.Indexer.Count; i++)
-                        if (!IsSameValueExpression(array.Indexer[i].Index, compareArray.Indexer[i].Index))
-                            return false;
-
-                    return true;
-            }
-
-            return false;
-        }
-
-        private bool IsSameValueExpression(ValueExpressionSyntax value, ValueExpressionSyntax compare)
-        {
-            if (value.Value.GetType() != compare.Value.GetType())
-                return false;
-
-            switch (value.Value)
-            {
-                case LiteralExpressionSyntax valueLiteral:
-                    return valueLiteral.Literal.Text == (compare.Value as LiteralExpressionSyntax)!.Literal.Text;
-
-                case VariableExpressionSyntax valueArrayIndex:
-                    return valueArrayIndex.Variable.Text == (compare.Value as VariableExpressionSyntax)!.Variable.Text;
-            }
-
-            return false;
-        }
-
         private int GetInstructionType(SyntaxToken identifier, out bool isMethodTransfer)
         {
             isMethodTransfer = false;
 
             if (_subPattern.IsMatch(identifier.Text))
-                return GetNumberFromStringEnd(identifier.Text, out _);
+                return GetNumberFromStringEnd(identifier.Text);
 
             if (_methodNameMapper.MapsMethodName(identifier.Text))
                 return _methodNameMapper.GetInstructionType(identifier.Text);
@@ -671,8 +620,8 @@ namespace Logic.Business.Level5ScriptManagement
             // Values 1000+ are primitively types local values
             // 0000+ ?
 
-            int slot = GetNumberFromStringEnd(variable.Variable.Text, out int numberIndex);
-            string varName = variable.Variable.Text[1..numberIndex];
+            int slot = GetVariableSlot(variable.Variable.Text, out int slotIndex);
+            string varName = variable.Variable.Text[1..slotIndex];
             switch (varName)
             {
                 case "unk":
@@ -739,9 +688,22 @@ namespace Logic.Business.Level5ScriptManagement
             return literal.Literal.Text[1..^1].Replace("\\\"", "\"");
         }
 
-        private int GetNumberFromStringEnd(string text, out int startIndex)
+        private int GetVariableSlot(string text, out int slotStartIndex)
         {
-            startIndex = text.Length;
+            slotStartIndex = 0;
+            while (slotStartIndex < text.Length && (text[slotStartIndex] < '0' || text[slotStartIndex] > '9'))
+                slotStartIndex++;
+
+            int endIndex = slotStartIndex;
+            while (endIndex < text.Length && text[endIndex] >= '0' && text[endIndex] <= '9')
+                endIndex++;
+
+            return int.Parse(text[slotStartIndex..endIndex]);
+        }
+
+        private int GetNumberFromStringEnd(string text)
+        {
+            int startIndex = text.Length;
             while (text[startIndex - 1] >= '0' && text[startIndex - 1] <= '9')
                 startIndex--;
 

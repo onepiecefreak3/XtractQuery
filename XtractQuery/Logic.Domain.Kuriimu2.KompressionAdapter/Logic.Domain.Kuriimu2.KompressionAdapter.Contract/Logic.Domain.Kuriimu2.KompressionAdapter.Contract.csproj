@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
 	<RootNamespace>Logic.Domain.Kuriimu2.KompressionAdapter.Contract</RootNamespace>
 	<AssemblyName>Logic.Domain.Kuriimu2.KompressionAdapter.Contract</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>

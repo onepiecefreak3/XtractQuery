@@ -176,7 +176,7 @@ namespace Logic.Business.Level5ScriptManagement
 
             using Stream newFileStream = File.Create(filePath + ".xq");
 
-            scriptWriter.Write(script, newFileStream, CompressionType.None);
+            scriptWriter.Write(script, newFileStream);
         }
 
         private void DecompressScripts()

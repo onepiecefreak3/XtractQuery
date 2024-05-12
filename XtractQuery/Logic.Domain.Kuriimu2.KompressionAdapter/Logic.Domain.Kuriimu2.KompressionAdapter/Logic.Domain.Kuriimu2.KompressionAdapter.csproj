@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
 	<RootNamespace>Logic.Domain.Kuriimu2.KompressionAdapter</RootNamespace>
 	<AssemblyName>Logic.Domain.Kuriimu2.KompressionAdapter</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Kompression" Version="2.0.9" />
+    <PackageReference Include="Kompression" Version="2.0.10" />
   </ItemGroup>
 
   <ItemGroup>
