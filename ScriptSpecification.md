@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document describes the human-readable output from XtractQuery and its syntax.
+This document describes the human-readable output from XtractQuery and its syntax.<br>
 It also describes its relation to the instruction types read from the format, as per the format specification.
 
 ## Functions
@@ -49,8 +49,11 @@ All literal values and variables have their own notation, so they can be faithfu
 
 ## Variable notation
 
-Variables have a fixed notation to declare their placement on the stack. (see "Variables" in the format specification)
+Variables have a fixed notation to declare their placement on the stack. (see "Variables" in the format specification)<br>
 All variables start with the prefix '$', followed by a fixed term and number from 0 to 999 for placement on the stack.
+
+Additionally, as of version 3.0.4, an optional variable name can be appended after the number portion of the variable.<br>
+Everything after the number will be ignored for compilation and follows no specific syntax other than it has to append to the number portion and shouldn't start with a number itself.
 
 | Notation | Description |
 | - | - |
