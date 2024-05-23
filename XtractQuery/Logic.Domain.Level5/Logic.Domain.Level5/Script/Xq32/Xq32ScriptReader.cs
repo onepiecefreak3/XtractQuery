@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Resources;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Domain.Level5.Contract.Script.Xq32.DataClasses;
@@ -17,14 +11,15 @@ namespace Logic.Domain.Level5.Script.Xq32
         private readonly IBinaryFactory _binaryFactory;
         private readonly IXq32ScriptHashStringCache _cache;
 
-        public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptHashStringCache cache, IBinaryFactory binaryFactory)
-            : base(decompressor, binaryFactory)
+        public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptHashStringCache cache,
+            IXq32ScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
+            : base(decompressor, entrySizeProvider, binaryFactory)
         {
             _binaryFactory = binaryFactory;
             _cache = cache;
         }
 
-        public override IReadOnlyList<Xq32Function> ReadFunctions(Stream functionStream, int entryCount)
+        public override IReadOnlyList<Xq32Function> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(functionStream, true);
 
@@ -32,24 +27,48 @@ namespace Logic.Domain.Level5.Script.Xq32
 
             for (var i = 0; i < entryCount; i++)
             {
-                result[i] = new Xq32Function
+                switch (length)
                 {
-                    nameOffset = br.ReadInt32(),
-                    crc32 = br.ReadUInt32(),
-                    instructionOffset = br.ReadInt16(),
-                    instructionEndOffset = br.ReadInt16(),
-                    jumpOffset = br.ReadInt16(),
-                    jumpCount = br.ReadInt16(),
-                    localCount = br.ReadInt16(),
-                    objectCount = br.ReadInt16(),
-                    parameterCount = br.ReadInt32()
-                };
+                    case PointerLength.Int:
+                        result[i] = new Xq32Function
+                        {
+                            nameOffset = br.ReadInt32(),
+                            crc32 = br.ReadUInt32(),
+                            instructionOffset = br.ReadInt16(),
+                            instructionEndOffset = br.ReadInt16(),
+                            jumpOffset = br.ReadInt16(),
+                            jumpCount = br.ReadInt16(),
+                            localCount = br.ReadInt16(),
+                            objectCount = br.ReadInt16(),
+                            parameterCount = br.ReadInt32()
+                        };
+                        break;
+
+                    case PointerLength.Long:
+                        result[i] = new Xq32Function
+                        {
+                            nameOffset = br.ReadInt64(),
+                            crc32 = br.ReadUInt32(),
+                            instructionOffset = br.ReadInt16(),
+                            instructionEndOffset = br.ReadInt16(),
+                            jumpOffset = br.ReadInt16(),
+                            jumpCount = br.ReadInt16(),
+                            localCount = br.ReadInt16(),
+                            objectCount = br.ReadInt16(),
+                            parameterCount = br.ReadInt32()
+                        };
+                        br.BaseStream.Position += 4;
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
         }
 
-        public override IReadOnlyList<Xq32Jump> ReadJumps(Stream jumpStream, int entryCount)
+        public override IReadOnlyList<Xq32Jump> ReadJumps(Stream jumpStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(jumpStream, true);
 
@@ -57,9 +76,24 @@ namespace Logic.Domain.Level5.Script.Xq32
 
             for (var i = 0; i < entryCount; i++)
             {
+                long nameOffset;
+                switch (length)
+                {
+                    case PointerLength.Int:
+                        nameOffset = br.ReadInt32();
+                        break;
+
+                    case PointerLength.Long:
+                        nameOffset = br.ReadInt64();
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
+
                 result[i] = new Xq32Jump
                 {
-                    nameOffset = br.ReadInt32(),
+                    nameOffset = nameOffset,
                     crc32 = br.ReadUInt32(),
                     instructionIndex = br.ReadInt32()
                 };
@@ -68,7 +102,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             return result;
         }
 
-        public override IReadOnlyList<Xq32Instruction> ReadInstructions(Stream instructionStream, int entryCount)
+        public override IReadOnlyList<Xq32Instruction> ReadInstructions(Stream instructionStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(instructionStream, true);
 
@@ -81,15 +115,28 @@ namespace Logic.Domain.Level5.Script.Xq32
                     argOffset = br.ReadInt16(),
                     argCount = br.ReadInt16(),
                     returnParameter = br.ReadInt16(),
-                    instructionType = br.ReadInt16(),
-                    zero0 = br.ReadInt32()
+                    instructionType = br.ReadInt16()
                 };
+
+                switch (length)
+                {
+                    case PointerLength.Int:
+                        br.BaseStream.Position += 4;
+                        break;
+
+                    case PointerLength.Long:
+                        br.BaseStream.Position += 8;
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
         }
 
-        public override IReadOnlyList<Xq32Argument> ReadArguments(Stream argumentStream, int entryCount)
+        public override IReadOnlyList<Xq32Argument> ReadArguments(Stream argumentStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(argumentStream, true);
 
@@ -97,34 +144,35 @@ namespace Logic.Domain.Level5.Script.Xq32
 
             for (var i = 0; i < entryCount; i++)
             {
-                result[i] = new Xq32Argument
+                switch (length)
                 {
-                    type = br.ReadInt32(),
-                    value = br.ReadUInt32()
-                };
+                    case PointerLength.Int:
+                        result[i] = new Xq32Argument
+                        {
+                            type = br.ReadInt32(),
+                            value = br.ReadUInt32()
+                        };
+                        break;
+
+                    case PointerLength.Long:
+                        int type = br.ReadInt32();
+                        br.BaseStream.Position += 4;
+                        uint value = br.ReadUInt32();
+                        br.BaseStream.Position += 4;
+
+                        result[i] = new Xq32Argument
+                        {
+                            type = type,
+                            value = value
+                        };
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
-        }
-
-        IList<ScriptFunction> IXq32ScriptReader.CreateFunctions(IReadOnlyList<Xq32Function> functions, ScriptStringTable? stringTable)
-        {
-            return CreateFunctions(functions, stringTable);
-        }
-
-        IList<ScriptJump> IXq32ScriptReader.CreateJumps(IReadOnlyList<Xq32Jump> jumps, ScriptStringTable? stringTable)
-        {
-            return CreateJumps(jumps, stringTable);
-        }
-
-        IList<ScriptInstruction> IXq32ScriptReader.CreateInstructions(IReadOnlyList<Xq32Instruction> instructions)
-        {
-            return CreateInstructions(instructions);
-        }
-
-        IList<ScriptArgument> IXq32ScriptReader.CreateArguments(IReadOnlyList<Xq32Argument> arguments, ScriptStringTable? stringTable)
-        {
-            return CreateArguments(arguments, stringTable);
         }
 
         protected override ScriptFunction CreateFunction(Xq32Function function, IBinaryReaderX? stringReader)

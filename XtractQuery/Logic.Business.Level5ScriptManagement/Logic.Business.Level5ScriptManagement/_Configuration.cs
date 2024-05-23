@@ -1,9 +1,4 @@
 ﻿using CrossCutting.Core.Contract.Configuration.DataClasses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Logic.Business.Level5ScriptManagement
 {
@@ -17,6 +12,12 @@ namespace Logic.Business.Level5ScriptManagement
 
         [ConfigMap("CommandLine", new[] { "t", "type" })]
         public virtual string QueryType { get; set; }
+
+        [ConfigMap("CommandLine", new[] { "l", "length" })]
+        public virtual string Length { get; set; } = "int";
+
+        [ConfigMap("CommandLine", new[] { "n", "no-compression" })]
+        public virtual bool WithoutCompression { get; set; } = false;
 
         [ConfigMap("CommandLine", new[] { "f", "file" })]
         public virtual string FilePath { get; set; }

@@ -2,7 +2,7 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": "-o c -t xq32 -f D:\\Users\\Kirito\\Desktop\\Samples\\scripts\\level5\\xq\\iego_bb\\data\\menu\\script\\AgeSelect.xq.txt"
+      "commandLineArgs": "-h"
     }
   }
 }

@@ -1,11 +1,6 @@
 ﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Level5.Compression.InternalContract;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Logic.Domain.Level5.Contract.Compression.DataClasses;
 using Logic.Domain.Level5.Contract.Script.Xseq.DataClasses;
 using Logic.Domain.Level5.Script.Xseq.InternalContract;
@@ -25,13 +20,36 @@ namespace Logic.Domain.Level5.Script.Xseq
             _compressor = compressor;
         }
 
-        public void Compress(ScriptContainer container, Stream output)
+        public void Compress(ScriptContainer container, Stream output, bool hasCompression)
         {
-            Stream functionStream = _compressor.Compress(container.FunctionTable.Stream, CompressionType.Huffman8Bit);
-            Stream jumpStream = _compressor.Compress(container.JumpTable.Stream, CompressionType.Huffman8Bit);
-            Stream instructionStream = _compressor.Compress(container.InstructionTable.Stream, CompressionType.Lz10);
-            Stream argumentStream = _compressor.Compress(container.ArgumentTable.Stream, CompressionType.Lz10);
-            Stream stringStream = _compressor.Compress(container.StringTable.Stream, CompressionType.Lz10);
+            Stream functionStream;
+            Stream jumpStream;
+            Stream instructionStream;
+            Stream argumentStream;
+            Stream stringStream;
+
+            if (hasCompression)
+            {
+                functionStream = _compressor.Compress(container.FunctionTable.Stream, CompressionType.Huffman8Bit);
+                jumpStream = _compressor.Compress(container.JumpTable.Stream, CompressionType.Huffman8Bit);
+                instructionStream = _compressor.Compress(container.InstructionTable.Stream, CompressionType.Lz10);
+                argumentStream = _compressor.Compress(container.ArgumentTable.Stream, CompressionType.Lz10);
+                stringStream = _compressor.Compress(container.StringTable.Stream, CompressionType.Lz10);
+            }
+            else
+            {
+                functionStream = container.FunctionTable.Stream;
+                jumpStream = container.JumpTable.Stream;
+                instructionStream = container.InstructionTable.Stream;
+                argumentStream = container.ArgumentTable.Stream;
+                stringStream = container.StringTable.Stream;
+
+                functionStream.Position = 0;
+                jumpStream.Position = 0;
+                instructionStream.Position = 0;
+                argumentStream.Position = 0;
+                stringStream.Position = 0;
+            }
 
             Write(container, output, functionStream, jumpStream, instructionStream, argumentStream, stringStream);
         }

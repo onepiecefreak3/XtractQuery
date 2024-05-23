@@ -17,6 +17,7 @@ namespace Logic.Business.Level5ScriptManagement
 
             ValidateOperation(config);
             ValidateFilePath(config);
+            ValidatePointerLength(config);
             ValidateQueryType(config);
         }
 
@@ -36,6 +37,18 @@ namespace Logic.Business.Level5ScriptManagement
 
             if (!File.Exists(config.FilePath) && !Directory.Exists(config.FilePath))
                 throw new Level5ScriptManagementConfigurationValidationException($"File or directory '{Path.GetFullPath(config.FilePath)}' was not found.");
+        }
+
+        private void ValidatePointerLength(Level5ScriptManagementConfiguration config)
+        {
+            if (config.Operation != "c")
+                return;
+
+            if (string.IsNullOrWhiteSpace(config.Length))
+                throw new Level5ScriptManagementConfigurationValidationException("No pointer length was given. Specify a pointer length by using the -l argument.");
+
+            if (config.Length != "int" && config.Length != "long")
+                throw new Level5ScriptManagementConfigurationValidationException($"The pointer length '{config.Length}' is not valid. Use -h to see a list of valid pointer lengths.");
         }
 
         private void ValidateQueryType(Level5ScriptManagementConfiguration config)

@@ -2,7 +2,7 @@
 {
     public struct Xq32Jump
     {
-        public int nameOffset;
+        public long nameOffset;
         public uint crc32;
         public int instructionIndex;
     }

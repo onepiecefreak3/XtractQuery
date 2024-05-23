@@ -12,5 +12,7 @@ namespace Logic.Domain.Level5.Contract.Script.DataClasses
         public IList<ScriptJump> Jumps { get; set; }
         public IList<ScriptInstruction> Instructions { get; set; }
         public IList<ScriptArgument> Arguments { get; set; }
+
+        public PointerLength Length { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 {
     public struct XseqJump
     {
-        public int nameOffset;
+        public long nameOffset;
         public ushort crc16;
         public short instructionIndex;
     }

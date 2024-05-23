@@ -17,7 +17,7 @@ namespace Logic.Business.Level5ScriptManagement
             _methodNameMapper = methodNameMapper;
         }
 
-        public ScriptFile CreateScriptFile(CodeUnitSyntax tree, ScriptType type)
+        public ScriptFile CreateScriptFile(CodeUnitSyntax tree)
         {
             var result = new ScriptFile
             {
@@ -121,7 +121,7 @@ namespace Logic.Business.Level5ScriptManagement
                 default:
                     throw CreateException($"Invalid operation {(SyntaxTokenKind)postfixUnaryStatement.Expression.Operation.RawKind} in postfix unary expression.", postfixUnaryStatement.Expression.Location);
             }
-            
+
             if (postfixUnaryStatement.Expression.Value is ValueExpressionSyntax { Value: VariableExpressionSyntax variable })
             {
                 int variableSlot = GetVariable(variable);

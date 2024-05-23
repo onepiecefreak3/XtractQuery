@@ -2,7 +2,7 @@
 {
     public struct XseqFunction
     {
-        public int nameOffset;
+        public long nameOffset;
         public ushort crc16;
         public short instructionOffset;
         public short instructionEndOffset;

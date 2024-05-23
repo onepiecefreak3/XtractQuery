@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Business.Level5ScriptManagement.Contract;
+﻿using Logic.Business.Level5ScriptManagement.Contract;
 using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
@@ -168,15 +162,16 @@ namespace Logic.Business.Level5ScriptManagement
             // Convert to script data
             CodeUnitSyntax codeUnit = _scriptParser.ParseCodeUnit(readableScript);
 
-            ScriptType type = DetermineScriptType(_config.QueryType);
-            ScriptFile script = _treeConverter.CreateScriptFile(codeUnit, type);
+            ScriptFile script = _treeConverter.CreateScriptFile(codeUnit);
+            script.Length = DeterminePointerLength(_config.Length);
 
             // Write script data
+            ScriptType type = DetermineScriptType(_config.QueryType);
             IScriptWriter scriptWriter = _writerFactory.Create(type);
 
             using Stream newFileStream = File.Create(filePath + ".xq");
 
-            scriptWriter.Write(script, newFileStream);
+            scriptWriter.Write(script, newFileStream, !_config.WithoutCompression);
         }
 
         private void DecompressScripts()
@@ -209,7 +204,7 @@ namespace Logic.Business.Level5ScriptManagement
         private void DecompressScript(string filePath)
         {
             // Decompress script data
-            using Stream fileStream = File.OpenRead(_config.FilePath);
+            using Stream fileStream = File.OpenRead(filePath);
 
             ScriptType type = _typeReader.Peek(fileStream);
             IScriptDecompressor decompressor = _decompressorFactory.Create(type);
@@ -217,7 +212,7 @@ namespace Logic.Business.Level5ScriptManagement
             ScriptContainer container = decompressor.Decompress(fileStream);
 
             // Write script data
-            using Stream newFileStream = File.Create(_config.FilePath + ".dec");
+            using Stream newFileStream = File.Create(filePath + ".dec");
 
             IScriptCompressor compressor = _compressorFactory.Create(type);
 
@@ -264,20 +259,43 @@ namespace Logic.Business.Level5ScriptManagement
             }
         }
 
+        private PointerLength DeterminePointerLength(string type)
+        {
+            switch (type)
+            {
+                case "int":
+                    return PointerLength.Int;
+
+                case "long":
+                    return PointerLength.Long;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported pointer length {type}");
+            }
+        }
+
         private void PrintHelp()
         {
             Console.WriteLine("Following commands exist:");
             Console.WriteLine("  -h, --help\t\tShows this help message.");
             Console.WriteLine("  -o, --operation\tThe operation to take on the file");
-            Console.WriteLine("    Valid operations are: e for extraction, c for creation, d for decompression");
             Console.WriteLine("  -t, --type\t\tThe type of file given");
             Console.WriteLine("    Valid types are: xq32, xseq");
             Console.WriteLine("    The type is automatically detected when extracting; This argument will not have any effect on operation 'e'");
+            Console.WriteLine("    Valid operations are: e for extraction, c for creation, d for decompression");
             Console.WriteLine("  -f, --file\t\tThe file to process");
+            Console.WriteLine("  -n, --no-compression\t[Optional] If the file uses a compression layer");
+            Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e'");
+            Console.WriteLine("  -l, --length\t\t[Optional]The pointer length given");
+            Console.WriteLine("    Valid lengths are: int, long");
+            Console.WriteLine("    Default value is 'int'");
+            Console.WriteLine("    The length is automatically detected when extracting; This argument will not have any effect on operation 'e'");
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine($"\tExtract any script to human readable text: {Environment.ProcessPath} -o e -f Path/To/File.xq");
             Console.WriteLine($"\tCreate a xq32 script from human readable text: {Environment.ProcessPath} -o c -t xq32 -f Path/To/File.txt");
+            Console.WriteLine($"\tCreate a xq32 script with long pointers from human readable text: {Environment.ProcessPath} -o c -t xq32 -l long -f Path/To/File.txt");
+            Console.WriteLine($"\tCreate a xq32 script without a compression layer from human readable text: {Environment.ProcessPath} -o c -t xq32 -n -f Path/To/File.txt");
         }
 
         private Exception GetInnermostException(Exception e)

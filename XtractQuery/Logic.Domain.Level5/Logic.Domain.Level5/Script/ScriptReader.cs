@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 
@@ -12,11 +7,13 @@ namespace Logic.Domain.Level5.Script
     internal abstract class ScriptReader<TFunction, TJump, TInstruction, TArgument> : IScriptReader
     {
         private readonly IScriptDecompressor _decompressor;
+        private readonly IScriptEntrySizeProvider _entrySizeProvider;
         private readonly IBinaryFactory _binaryFactory;
 
-        public ScriptReader(IScriptDecompressor decompressor, IBinaryFactory binaryFactory)
+        public ScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
         {
             _decompressor = decompressor;
+            _entrySizeProvider = entrySizeProvider;
             _binaryFactory = binaryFactory;
         }
 
@@ -29,62 +26,63 @@ namespace Logic.Domain.Level5.Script
 
         public ScriptFile Read(ScriptContainer container)
         {
-            IList<ScriptFunction> functions = ReadFunctions(container.FunctionTable, container.StringTable);
-            IList<ScriptJump> jumps = ReadJumps(container.JumpTable, container.StringTable);
-            IList<ScriptInstruction> instructions = ReadInstructions(container.InstructionTable);
-            IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, container.StringTable);
+            if (!TryDetectPointerLength(container, out PointerLength? length))
+                throw new InvalidOperationException("Could not detect pointer length.");
+
+            IList<ScriptFunction> functions = ReadFunctions(container.FunctionTable, container.StringTable, length!.Value);
+            IList<ScriptJump> jumps = ReadJumps(container.JumpTable, container.StringTable, length!.Value);
+            IList<ScriptInstruction> instructions = ReadInstructions(container.InstructionTable, length!.Value);
+            IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, container.StringTable, length!.Value);
 
             return new ScriptFile
             {
                 Functions = functions,
                 Jumps = jumps,
                 Instructions = instructions,
-                Arguments = arguments
+                Arguments = arguments,
+
+                Length = length.Value
             };
         }
 
         public IList<ScriptFunction> ReadFunctions(ScriptTable functionTable, ScriptStringTable? stringTable)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(functionTable.Stream, true);
+            if (!TryDetectTablePointerLength(functionTable, _entrySizeProvider.GetFunctionEntrySize, out PointerLength? length))
+                throw new InvalidOperationException("Could not detect pointer length.");
 
-            IReadOnlyList<TFunction> functions = ReadFunctions(functionTable.Stream, functionTable.EntryCount);
-
-            return CreateFunctions(functions, stringTable);
+            return ReadFunctions(functionTable, stringTable, length!.Value);
         }
 
         public IList<ScriptJump> ReadJumps(ScriptTable jumpTable, ScriptStringTable? stringTable)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(jumpTable.Stream, true);
+            if (!TryDetectTablePointerLength(jumpTable, _entrySizeProvider.GetJumpEntrySize, out PointerLength? length))
+                throw new InvalidOperationException("Could not detect pointer length.");
 
-            IReadOnlyList<TJump> jumps = ReadJumps(jumpTable.Stream, jumpTable.EntryCount);
-
-            return CreateJumps(jumps, stringTable);
+            return ReadJumps(jumpTable, stringTable, length!.Value);
         }
 
         public IList<ScriptInstruction> ReadInstructions(ScriptTable instructionTable)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(instructionTable.Stream, true);
+            if (!TryDetectTablePointerLength(instructionTable, _entrySizeProvider.GetInstructionEntrySize, out PointerLength? length))
+                throw new InvalidOperationException("Could not detect pointer length.");
 
-            IReadOnlyList<TInstruction> instructions = ReadInstructions(instructionTable.Stream, instructionTable.EntryCount);
-
-            return CreateInstructions(instructions);
+            return ReadInstructions(instructionTable, length!.Value);
         }
 
         public IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptStringTable? stringTable)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(argumentTable.Stream, true);
+            if (!TryDetectTablePointerLength(argumentTable, _entrySizeProvider.GetArgumentEntrySize, out PointerLength? length))
+                throw new InvalidOperationException("Could not detect pointer length.");
 
-            IReadOnlyList<TArgument> arguments = ReadArguments(argumentTable.Stream, argumentTable.EntryCount);
-
-            return CreateArguments(arguments, stringTable);
+            return ReadArguments(argumentTable, stringTable, length!.Value);
         }
 
-        public abstract IReadOnlyList<TFunction> ReadFunctions(Stream functionStream, int entryCount);
-        public abstract IReadOnlyList<TJump> ReadJumps(Stream jumpStream, int entryCount);
-        public abstract IReadOnlyList<TInstruction> ReadInstructions(Stream instructionStream, int entryCount);
-        public abstract IReadOnlyList<TArgument> ReadArguments(Stream argumentStream, int entryCount);
+        public abstract IReadOnlyList<TFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length);
+        public abstract IReadOnlyList<TJump> ReadJumps(Stream jumpStream, int entryCount, PointerLength length);
+        public abstract IReadOnlyList<TInstruction> ReadInstructions(Stream instructionStream, int entryCount, PointerLength length);
+        public abstract IReadOnlyList<TArgument> ReadArguments(Stream argumentStream, int entryCount, PointerLength length);
 
-        protected IList<ScriptFunction> CreateFunctions(IReadOnlyList<TFunction> functions, ScriptStringTable? stringTable)
+        public IList<ScriptFunction> CreateFunctions(IReadOnlyList<TFunction> functions, ScriptStringTable? stringTable)
         {
             using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
 
@@ -97,7 +95,7 @@ namespace Logic.Domain.Level5.Script
             return result;
         }
 
-        protected IList<ScriptJump> CreateJumps(IReadOnlyList<TJump> jumps, ScriptStringTable? stringTable = null)
+        public IList<ScriptJump> CreateJumps(IReadOnlyList<TJump> jumps, ScriptStringTable? stringTable = null)
         {
             using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
 
@@ -110,7 +108,7 @@ namespace Logic.Domain.Level5.Script
             return result;
         }
 
-        protected IList<ScriptInstruction> CreateInstructions(IReadOnlyList<TInstruction> instructions)
+        public IList<ScriptInstruction> CreateInstructions(IReadOnlyList<TInstruction> instructions)
         {
             var result = new ScriptInstruction[instructions.Count];
 
@@ -121,7 +119,7 @@ namespace Logic.Domain.Level5.Script
             return result;
         }
 
-        protected IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, ScriptStringTable? stringTable = null)
+        public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, ScriptStringTable? stringTable = null)
         {
             using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
 
@@ -140,5 +138,91 @@ namespace Logic.Domain.Level5.Script
         protected abstract ScriptArgument CreateArgument(TArgument argument, IBinaryReaderX? stringReader);
 
         protected abstract IEnumerable<TFunction> OrderFunctions(IReadOnlyList<TFunction> functions);
+
+        private IList<ScriptFunction> ReadFunctions(ScriptTable functionTable, ScriptStringTable? stringTable, PointerLength length)
+        {
+            using IBinaryReaderX br = _binaryFactory.CreateReader(functionTable.Stream, true);
+
+            IReadOnlyList<TFunction> functions = ReadFunctions(functionTable.Stream, functionTable.EntryCount, length);
+
+            return CreateFunctions(functions, stringTable);
+        }
+
+        private IList<ScriptJump> ReadJumps(ScriptTable jumpTable, ScriptStringTable? stringTable, PointerLength length)
+        {
+            using IBinaryReaderX br = _binaryFactory.CreateReader(jumpTable.Stream, true);
+
+            IReadOnlyList<TJump> jumps = ReadJumps(jumpTable.Stream, jumpTable.EntryCount, length);
+
+            return CreateJumps(jumps, stringTable);
+        }
+
+        private IList<ScriptInstruction> ReadInstructions(ScriptTable instructionTable, PointerLength length)
+        {
+            using IBinaryReaderX br = _binaryFactory.CreateReader(instructionTable.Stream, true);
+
+            IReadOnlyList<TInstruction> instructions = ReadInstructions(instructionTable.Stream, instructionTable.EntryCount, length);
+
+            return CreateInstructions(instructions);
+        }
+
+        private IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptStringTable? stringTable, PointerLength length)
+        {
+            using IBinaryReaderX br = _binaryFactory.CreateReader(argumentTable.Stream, true);
+
+            IReadOnlyList<TArgument> arguments = ReadArguments(argumentTable.Stream, argumentTable.EntryCount, length);
+
+            return CreateArguments(arguments, stringTable);
+        }
+
+        private bool TryDetectPointerLength(ScriptContainer container, out PointerLength? length)
+        {
+            length = null;
+
+            for (var i = 0; i < 2; i++)
+            {
+                var localLength = (PointerLength)i;
+
+                int entrySize = _entrySizeProvider.GetFunctionEntrySize(localLength);
+                if (container.FunctionTable.EntryCount * entrySize != container.FunctionTable.Stream.Length)
+                    continue;
+
+                entrySize = _entrySizeProvider.GetJumpEntrySize(localLength);
+                if (container.JumpTable.EntryCount * entrySize != container.JumpTable.Stream.Length)
+                    continue;
+
+                entrySize = _entrySizeProvider.GetInstructionEntrySize(localLength);
+                if (container.InstructionTable.EntryCount * entrySize != container.InstructionTable.Stream.Length)
+                    continue;
+
+                entrySize = _entrySizeProvider.GetArgumentEntrySize(localLength);
+                if (container.ArgumentTable.EntryCount * entrySize != container.ArgumentTable.Stream.Length)
+                    continue;
+
+                length = localLength;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryDetectTablePointerLength(ScriptTable table, Func<PointerLength, int> getEntrySize, out PointerLength? length)
+        {
+            length = null;
+
+            for (var i = 0; i < 2; i++)
+            {
+                var localLength = (PointerLength)i;
+
+                int entrySize = getEntrySize(localLength);
+                if (table.EntryCount * entrySize != table.Stream.Length)
+                    continue;
+
+                length = localLength;
+                return true;
+            }
+
+            return false;
+        }
     }
 }

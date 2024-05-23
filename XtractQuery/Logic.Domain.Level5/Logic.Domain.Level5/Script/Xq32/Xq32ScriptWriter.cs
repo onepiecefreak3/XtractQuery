@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+﻿using System.Text;
 using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Kuriimu2.KryptographyAdapter.Contract;
 using Logic.Domain.Level5.Contract.Compression.DataClasses;
@@ -20,26 +14,24 @@ namespace Logic.Domain.Level5.Script.Xq32
     {
         private readonly IXq32ScriptCompressor _compressor;
         private readonly IBinaryFactory _binaryFactory;
-        private readonly IBinaryTypeWriter _typeWriter;
         private readonly IChecksum<uint> _checksum;
         private readonly Encoding _sjisEncoding;
 
-        public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IBinaryFactory binaryFactory, IBinaryTypeWriter typeWriter, IChecksumFactory checksumFactory)
+        public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IBinaryFactory binaryFactory, IChecksumFactory checksumFactory)
         {
             _compressor = compressor;
             _binaryFactory = binaryFactory;
-            _typeWriter = typeWriter;
             _checksum = checksumFactory.CreateCrc32();
 
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
         }
 
-        public void Write(ScriptFile script, Stream output)
+        public void Write(ScriptFile script, Stream output, bool hasCompression)
         {
             ScriptContainer container = CreateContainer(script);
 
-            Write(container, output);
+            Write(container, output, hasCompression);
         }
 
         public void Write(ScriptFile script, Stream output, CompressionType compressionType)
@@ -49,9 +41,9 @@ namespace Logic.Domain.Level5.Script.Xq32
             Write(container, output, compressionType);
         }
 
-        public void Write(ScriptContainer container, Stream output)
+        public void Write(ScriptContainer container, Stream output, bool hasCompression)
         {
-            _compressor.Compress(container, output);
+            _compressor.Compress(container, output, hasCompression);
         }
 
         public void Write(ScriptContainer container, Stream output, CompressionType compressionType)
@@ -59,59 +51,36 @@ namespace Logic.Domain.Level5.Script.Xq32
             _compressor.Compress(container, output, compressionType);
         }
 
-        public void WriteFunctions(IReadOnlyList<Xq32Function> functions, Stream output)
+        public void WriteFunctions(IReadOnlyList<Xq32Function> functions, Stream output, PointerLength length)
         {
             using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
 
             foreach (Xq32Function function in functions)
-            {
-                bw.Write(function.nameOffset);
-                bw.Write(function.crc32);
-                bw.Write(function.instructionOffset);
-                bw.Write(function.instructionEndOffset);
-                bw.Write(function.jumpOffset);
-                bw.Write(function.jumpCount);
-                bw.Write(function.localCount);
-                bw.Write(function.objectCount);
-                bw.Write(function.parameterCount);
-            }
+                WriteFunction(function, bw, length);
         }
 
-        public void WriteJumps(IReadOnlyList<Xq32Jump> jumps, Stream output)
+        public void WriteJumps(IReadOnlyList<Xq32Jump> jumps, Stream output, PointerLength length)
         {
             using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
 
             foreach (Xq32Jump jump in jumps)
-            {
-                bw.Write(jump.nameOffset);
-                bw.Write(jump.crc32);
-                bw.Write(jump.instructionIndex);
-            }
+                WriteJump(jump, bw, length);
         }
 
-        public void WriteInstructions(IReadOnlyList<Xq32Instruction> instructions, Stream output)
+        public void WriteInstructions(IReadOnlyList<Xq32Instruction> instructions, Stream output, PointerLength length)
         {
             using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
 
             foreach (Xq32Instruction instruction in instructions)
-            {
-                bw.Write(instruction.argOffset);
-                bw.Write(instruction.argCount);
-                bw.Write(instruction.returnParameter);
-                bw.Write(instruction.instructionType);
-                bw.Write(instruction.zero0);
-            }
+                WriteInstruction(instruction, bw, length);
         }
 
-        public void WriteArguments(IReadOnlyList<Xq32Argument> arguments, Stream output)
+        public void WriteArguments(IReadOnlyList<Xq32Argument> arguments, Stream output, PointerLength length)
         {
             using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
 
             foreach (Xq32Argument argument in arguments)
-            {
-                bw.Write(argument.type);
-                bw.Write(argument.value);
-            }
+                WriteArgument(argument, bw, length);
         }
 
         private ScriptContainer CreateContainer(ScriptFile script)
@@ -124,8 +93,8 @@ namespace Logic.Domain.Level5.Script.Xq32
 
             Stream functionStream = WriteFunctions(script, stringWriter, writtenNames, hashedNames);
             Stream jumpStream = WriteJumps(script, stringWriter, writtenNames, hashedNames);
-            Stream instructionStream = WriteInstructions(script.Instructions);
-            Stream argumentStream = WriteArguments(script.Arguments, stringWriter, writtenNames, hashedNames);
+            Stream instructionStream = WriteInstructions(script);
+            Stream argumentStream = WriteArguments(script, stringWriter, writtenNames, hashedNames);
 
             stringStream.Position = 0;
             return new ScriptContainer
@@ -209,7 +178,7 @@ namespace Logic.Domain.Level5.Script.Xq32
                     objectCount = function.ObjectCount < 0 ? CalculateObjectVariableCount(script, function) : function.ObjectCount
                 };
 
-                _typeWriter.Write(nativeFunction, functionWriter);
+                WriteFunction(nativeFunction, functionWriter, script.Length);
             }
 
             functionStream.Position = 0;
@@ -238,7 +207,7 @@ namespace Logic.Domain.Level5.Script.Xq32
                         instructionIndex = jump.InstructionIndex
                     };
 
-                    _typeWriter.Write(nativeJump, jumpWriter);
+                    WriteJump(nativeJump, jumpWriter, script.Length);
                 }
             }
 
@@ -246,12 +215,12 @@ namespace Logic.Domain.Level5.Script.Xq32
             return jumpStream;
         }
 
-        private Stream WriteInstructions(IList<ScriptInstruction> instructions)
+        private Stream WriteInstructions(ScriptFile script)
         {
             Stream instructionStream = new MemoryStream();
             using IBinaryWriterX instructionWriter = _binaryFactory.CreateWriter(instructionStream, true);
 
-            foreach (ScriptInstruction instruction in instructions)
+            foreach (ScriptInstruction instruction in script.Instructions)
             {
                 var nativeInstruction = new Xq32Instruction
                 {
@@ -262,23 +231,23 @@ namespace Logic.Domain.Level5.Script.Xq32
                     instructionType = instruction.Type
                 };
 
-                _typeWriter.Write(nativeInstruction, instructionWriter);
+                WriteInstruction(nativeInstruction, instructionWriter, script.Length);
             }
 
             instructionStream.Position = 0;
             return instructionStream;
         }
 
-        private Stream WriteArguments(IList<ScriptArgument> arguments, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
+        private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
         {
             Stream argumentStream = new MemoryStream();
             using IBinaryWriterX argumentWriter = _binaryFactory.CreateWriter(argumentStream, true);
 
-            foreach (ScriptArgument argument in arguments)
+            foreach (ScriptArgument argument in script.Arguments)
             {
                 Xq32Argument nativeArgument = CreateArgument(argument, stringWriter, writtenNames, hashedNames);
 
-                _typeWriter.Write(nativeArgument, argumentWriter);
+                WriteArgument(nativeArgument, argumentWriter, script.Length);
             }
 
             argumentStream.Position = 0;
@@ -350,6 +319,103 @@ namespace Logic.Domain.Level5.Script.Xq32
             stringWriter.WriteString(value, _sjisEncoding, false);
 
             return nameOffset;
+        }
+
+        private void WriteFunction(Xq32Function function, IBinaryWriterX bw, PointerLength length)
+        {
+            switch (length)
+            {
+                case PointerLength.Int:
+                    bw.Write((int)function.nameOffset);
+                    bw.Write(function.crc32);
+                    bw.Write(function.instructionOffset);
+                    bw.Write(function.instructionEndOffset);
+                    bw.Write(function.jumpOffset);
+                    bw.Write(function.jumpCount);
+                    bw.Write(function.localCount);
+                    bw.Write(function.objectCount);
+                    bw.Write(function.parameterCount);
+                    break;
+
+                case PointerLength.Long:
+                    bw.Write(function.nameOffset);
+                    bw.Write(function.crc32);
+                    bw.Write(function.instructionOffset);
+                    bw.Write(function.instructionEndOffset);
+                    bw.Write(function.jumpOffset);
+                    bw.Write(function.jumpCount);
+                    bw.Write(function.localCount);
+                    bw.Write(function.objectCount);
+                    bw.Write(function.parameterCount);
+                    bw.WritePadding(4);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown pointer length {length}.");
+            }
+        }
+
+        private void WriteJump(Xq32Jump jump, IBinaryWriterX bw, PointerLength length)
+        {
+            switch (length)
+            {
+                case PointerLength.Int:
+                    bw.Write((int)jump.nameOffset);
+                    break;
+
+                case PointerLength.Long:
+                    bw.Write(jump.nameOffset);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown pointer length {length}.");
+            }
+
+            bw.Write(jump.crc32);
+            bw.Write(jump.instructionIndex);
+        }
+
+        private void WriteInstruction(Xq32Instruction instruction, IBinaryWriterX bw, PointerLength length)
+        {
+            bw.Write(instruction.argOffset);
+            bw.Write(instruction.argCount);
+            bw.Write(instruction.returnParameter);
+            bw.Write(instruction.instructionType);
+
+            switch (length)
+            {
+                case PointerLength.Int:
+                    bw.WritePadding(4);
+                    break;
+
+                case PointerLength.Long:
+                    bw.WritePadding(8);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown pointer length {length}.");
+            }
+        }
+
+        private void WriteArgument(Xq32Argument argument, IBinaryWriterX bw, PointerLength length)
+        {
+            switch (length)
+            {
+                case PointerLength.Int:
+                    bw.Write(argument.type);
+                    bw.Write(argument.value);
+                    break;
+
+                case PointerLength.Long:
+                    bw.Write(argument.type);
+                    bw.BaseStream.Position += 4;
+                    bw.Write(argument.value);
+                    bw.WritePadding(4);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown pointer length {length}.");
+            }
         }
 
         private void CacheStrings(string value, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)

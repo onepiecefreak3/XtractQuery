@@ -13,6 +13,6 @@ namespace Logic.Business.Level5ScriptManagement.InternalContract
     [MapException(typeof(Level5SyntaxTreeConverterException))]
     public interface ILevel5CodeUnitConverter
     {
-        ScriptFile CreateScriptFile(CodeUnitSyntax tree, ScriptType type);
+        ScriptFile CreateScriptFile(CodeUnitSyntax tree);
     }
 }

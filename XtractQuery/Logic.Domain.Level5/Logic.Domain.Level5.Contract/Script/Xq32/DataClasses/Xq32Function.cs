@@ -2,7 +2,7 @@
 {
     public struct Xq32Function
     {
-        public int nameOffset;
+        public long nameOffset;
         public uint crc32;
         public short instructionOffset;
         public short instructionEndOffset;

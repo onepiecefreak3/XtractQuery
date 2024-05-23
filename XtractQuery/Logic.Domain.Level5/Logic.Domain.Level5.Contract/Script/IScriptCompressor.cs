@@ -13,7 +13,7 @@ namespace Logic.Domain.Level5.Contract.Script
     [MapException(typeof(ScriptCompressorException))]
     public interface IScriptCompressor
     {
-        void Compress(ScriptContainer container, Stream output);
+        void Compress(ScriptContainer container, Stream output, bool hasCompression);
         void Compress(ScriptContainer container, Stream output, CompressionType compressionType);
     }
 }

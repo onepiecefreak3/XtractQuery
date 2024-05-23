@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script;
+﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.Level5.Contract.Script.Xseq;
 using Logic.Domain.Level5.Contract.Script.Xseq.DataClasses;
@@ -18,14 +11,15 @@ namespace Logic.Domain.Level5.Script.Xseq
         private readonly IBinaryFactory _binaryFactory;
         private readonly IXseqScriptHashStringCache _cache;
 
-        public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptHashStringCache cache, IBinaryFactory binaryFactory)
-            : base(decompressor, binaryFactory)
+        public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptHashStringCache cache,
+            IXseqScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
+            : base(decompressor, entrySizeProvider, binaryFactory)
         {
             _binaryFactory = binaryFactory;
             _cache = cache;
         }
 
-        public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount)
+        public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(functionStream, true);
 
@@ -33,9 +27,24 @@ namespace Logic.Domain.Level5.Script.Xseq
 
             for (var i = 0; i < entryCount; i++)
             {
+                long nameOffset;
+                switch (length)
+                {
+                    case PointerLength.Int:
+                        nameOffset = br.ReadInt32();
+                        break;
+
+                    case PointerLength.Long:
+                        nameOffset = br.ReadInt64();
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
+
                 result[i] = new XseqFunction
                 {
-                    nameOffset = br.ReadInt32(),
+                    nameOffset = nameOffset,
                     crc16 = br.ReadUInt16(),
                     instructionOffset = br.ReadInt16(),
                     instructionEndOffset = br.ReadInt16(),
@@ -50,7 +59,7 @@ namespace Logic.Domain.Level5.Script.Xseq
             return result;
         }
 
-        public override IReadOnlyList<XseqJump> ReadJumps(Stream jumpStream, int entryCount)
+        public override IReadOnlyList<XseqJump> ReadJumps(Stream jumpStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(jumpStream, true);
 
@@ -58,18 +67,36 @@ namespace Logic.Domain.Level5.Script.Xseq
 
             for (var i = 0; i < entryCount; i++)
             {
-                result[i] = new XseqJump
+                switch (length)
                 {
-                    nameOffset = br.ReadInt32(),
-                    crc16 = br.ReadUInt16(),
-                    instructionIndex = br.ReadInt16()
-                };
+                    case PointerLength.Int:
+                        result[i] = new XseqJump
+                        {
+                            nameOffset = br.ReadInt32(),
+                            crc16 = br.ReadUInt16(),
+                            instructionIndex = br.ReadInt16()
+                        };
+                        break;
+
+                    case PointerLength.Long:
+                        result[i] = new XseqJump
+                        {
+                            nameOffset = br.ReadInt64(),
+                            crc16 = br.ReadUInt16(),
+                            instructionIndex = br.ReadInt16()
+                        };
+                        br.BaseStream.Position += 4;
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
         }
 
-        public override IReadOnlyList<XseqInstruction> ReadInstructions(Stream instructionStream, int entryCount)
+        public override IReadOnlyList<XseqInstruction> ReadInstructions(Stream instructionStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(instructionStream, true);
 
@@ -82,15 +109,28 @@ namespace Logic.Domain.Level5.Script.Xseq
                     argOffset = br.ReadInt16(),
                     argCount = br.ReadInt16(),
                     returnParameter = br.ReadInt16(),
-                    instructionType = br.ReadInt16(),
-                    zero0 = br.ReadInt32()
+                    instructionType = br.ReadInt16()
                 };
+
+                switch (length)
+                {
+                    case PointerLength.Int:
+                        br.BaseStream.Position += 4;
+                        break;
+
+                    case PointerLength.Long:
+                        br.BaseStream.Position += 8;
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
         }
 
-        public override IReadOnlyList<XseqArgument> ReadArguments(Stream argumentStream, int entryCount)
+        public override IReadOnlyList<XseqArgument> ReadArguments(Stream argumentStream, int entryCount, PointerLength length)
         {
             using IBinaryReaderX br = _binaryFactory.CreateReader(argumentStream, true);
 
@@ -98,34 +138,35 @@ namespace Logic.Domain.Level5.Script.Xseq
 
             for (var i = 0; i < entryCount; i++)
             {
-                result[i] = new XseqArgument
+                switch (length)
                 {
-                    type = br.ReadInt32(),
-                    value = br.ReadUInt32()
-                };
+                    case PointerLength.Int:
+                        result[i] = new XseqArgument
+                        {
+                            type = br.ReadInt32(),
+                            value = br.ReadUInt32()
+                        };
+                        break;
+
+                    case PointerLength.Long:
+                        int type = br.ReadInt32();
+                        br.BaseStream.Position += 4;
+                        uint value = br.ReadUInt32();
+                        br.BaseStream.Position += 4;
+
+                        result[i] = new XseqArgument
+                        {
+                            type = type,
+                            value = value
+                        };
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unknown pointer length {length}.");
+                }
             }
 
             return result;
-        }
-
-        IList<ScriptFunction> IXseqScriptReader.CreateFunctions(IReadOnlyList<XseqFunction> functions, ScriptStringTable? stringTable)
-        {
-            return CreateFunctions(functions, stringTable);
-        }
-
-        IList<ScriptJump> IXseqScriptReader.ReadJumps(IReadOnlyList<XseqJump> jumps, ScriptStringTable? stringTable)
-        {
-            return CreateJumps(jumps, stringTable);
-        }
-
-        IList<ScriptInstruction> IXseqScriptReader.ReadInstructions(IReadOnlyList<XseqInstruction> instructions)
-        {
-            return CreateInstructions(instructions);
-        }
-
-        IList<ScriptArgument> IXseqScriptReader.ReadArguments(IReadOnlyList<XseqArgument> arguments, ScriptStringTable? stringTable)
-        {
-            return CreateArguments(arguments, stringTable);
         }
 
         protected override ScriptFunction CreateFunction(XseqFunction function, IBinaryReaderX? stringReader)
