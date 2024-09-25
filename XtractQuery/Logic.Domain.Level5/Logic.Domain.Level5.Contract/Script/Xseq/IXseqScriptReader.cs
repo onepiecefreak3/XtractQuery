@@ -16,6 +16,6 @@ namespace Logic.Domain.Level5.Contract.Script.Xseq
         IList<ScriptFunction> CreateFunctions(IReadOnlyList<XseqFunction> functions, ScriptStringTable? stringTable = null);
         IList<ScriptJump> CreateJumps(IReadOnlyList<XseqJump> jumps, ScriptStringTable? stringTable = null);
         IList<ScriptInstruction> CreateInstructions(IReadOnlyList<XseqInstruction> instructions);
-        IList<ScriptArgument> CreateArguments(IReadOnlyList<XseqArgument> arguments, ScriptStringTable? stringTable = null);
+        IList<ScriptArgument> CreateArguments(IReadOnlyList<XseqArgument> arguments, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? stringTable = null);
     }
 }

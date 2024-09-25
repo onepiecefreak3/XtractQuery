@@ -16,6 +16,6 @@ namespace Logic.Domain.Level5.Contract.Script.Xq32
         IList<ScriptFunction> CreateFunctions(IReadOnlyList<Xq32Function> functions, ScriptStringTable? stringTable = null);
         IList<ScriptJump> CreateJumps(IReadOnlyList<Xq32Jump> jumps, ScriptStringTable? stringTable = null);
         IList<ScriptInstruction> CreateInstructions(IReadOnlyList<Xq32Instruction> instructions);
-        IList<ScriptArgument> CreateArguments(IReadOnlyList<Xq32Argument> arguments, ScriptStringTable? stringTable = null);
+        IList<ScriptArgument> CreateArguments(IReadOnlyList<Xq32Argument> arguments, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? stringTable = null);
     }
 }

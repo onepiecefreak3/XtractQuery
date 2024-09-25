@@ -89,12 +89,11 @@ namespace Logic.Domain.Level5.Script.Xseq
             using IBinaryWriterX stringWriter = _binaryFactory.CreateWriter(stringStream, true);
 
             var writtenNames = new Dictionary<string, long>();
-            var hashedNames = new Dictionary<string, ushort>();
 
-            Stream functionStream = WriteFunctions(script, stringWriter, writtenNames, hashedNames);
-            Stream jumpStream = WriteJumps(script, stringWriter, writtenNames, hashedNames);
+            Stream functionStream = WriteFunctions(script, stringWriter, writtenNames);
+            Stream jumpStream = WriteJumps(script, stringWriter, writtenNames);
             Stream instructionStream = WriteInstructions(script);
-            Stream argumentStream = WriteArguments(script, stringWriter, writtenNames, hashedNames);
+            Stream argumentStream = WriteArguments(script, stringWriter, writtenNames);
 
             stringStream.Position = 0;
             return new ScriptContainer
@@ -121,15 +120,44 @@ namespace Logic.Domain.Level5.Script.Xseq
             return globalVariables.Max() - 3999;
         }
 
-        private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, ushort> hashedNames)
+        private short CalculateLocalVariableCount(ScriptFile script, ScriptFunction currentFunction)
+        {
+            ScriptInstruction[] instructions = script.Instructions.Skip(currentFunction.InstructionIndex).Take(currentFunction.InstructionCount).ToArray();
+            IEnumerable<ScriptArgument> arguments = instructions.SelectMany(x => script.Arguments.Skip(x.ArgumentIndex).Take(x.ArgumentCount));
+
+            IEnumerable<short> argumentVariables = arguments.Where(a => a.Type == ScriptArgumentType.Variable).Select(a => (short)(int)a.Value);
+            IEnumerable<short> instructionVariables = instructions.Select(i => i.ReturnParameter);
+
+            HashSet<short> localVariables = argumentVariables.Concat(instructionVariables).Where(v => v is >= 1001 and < 2000).ToHashSet();
+            if (localVariables.Count <= 0)
+                return 0;
+
+            return (short)(localVariables.Max() - 1000);
+        }
+
+        private short CalculateObjectVariableCount(ScriptFile script, ScriptFunction currentFunction)
+        {
+            ScriptInstruction[] instructions = script.Instructions.Skip(currentFunction.InstructionIndex).Take(currentFunction.InstructionCount).ToArray();
+            IEnumerable<ScriptArgument> arguments = instructions.SelectMany(x => script.Arguments.Skip(x.ArgumentIndex).Take(x.ArgumentCount));
+
+            IEnumerable<short> argumentVariables = arguments.Where(a => a.Type == ScriptArgumentType.Variable).Select(a => (short)(int)a.Value);
+            IEnumerable<short> instructionVariables = instructions.Select(i => i.ReturnParameter);
+
+            HashSet<short> objectVariables = argumentVariables.Concat(instructionVariables).Where(v => v is >= 2000 and < 3000).ToHashSet();
+            if (objectVariables.Count <= 0)
+                return 0;
+
+            return (short)(objectVariables.Max() - 1999);
+        }
+
+        private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream functionStream = new MemoryStream();
             using IBinaryWriterX functionWriter = _binaryFactory.CreateWriter(functionStream, true);
-
+            
             foreach ((ScriptFunction function, ushort nameHash) in script.Functions.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
             {
                 long nameOffset = WriteString(function.Name, stringWriter, writtenNames);
-                hashedNames[function.Name] = nameHash;
 
                 var nativeFunction = new XseqFunction
                 {
@@ -144,8 +172,8 @@ namespace Logic.Domain.Level5.Script.Xseq
 
                     parameterCount = (short)function.ParameterCount,
 
-                    localCount = function.LocalCount,
-                    objectCount = function.ObjectCount
+                    localCount = function.LocalCount < 0 ? CalculateLocalVariableCount(script, function) : function.LocalCount,
+                    objectCount = function.ObjectCount < 0 ? CalculateObjectVariableCount(script, function) : function.ObjectCount
                 };
 
                 WriteFunction(nativeFunction, functionWriter, script.Length);
@@ -155,7 +183,7 @@ namespace Logic.Domain.Level5.Script.Xseq
             return functionStream;
         }
 
-        private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, ushort> hashedNames)
+        private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream jumpStream = new MemoryStream();
             using IBinaryWriterX jumpWriter = _binaryFactory.CreateWriter(jumpStream, true);
@@ -167,7 +195,6 @@ namespace Logic.Domain.Level5.Script.Xseq
                 foreach ((ScriptJump jump, ushort nameHash) in jumps.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
                 {
                     long nameOffset = WriteString(jump.Name, stringWriter, writtenNames);
-                    hashedNames[jump.Name] = nameHash;
 
                     var nativeJump = new XseqJump
                     {
@@ -208,14 +235,14 @@ namespace Logic.Domain.Level5.Script.Xseq
             return instructionStream;
         }
 
-        private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, ushort> hashedNames)
+        private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream argumentStream = new MemoryStream();
             using IBinaryWriterX argumentWriter = _binaryFactory.CreateWriter(argumentStream, true);
 
             foreach (ScriptArgument argument in script.Arguments)
             {
-                XseqArgument nativeArgument = CreateArgument(argument, stringWriter, writtenNames, hashedNames);
+                XseqArgument nativeArgument = CreateArgument(argument, stringWriter, writtenNames);
 
                 WriteArgument(nativeArgument, argumentWriter, script.Length);
             }
@@ -224,7 +251,8 @@ namespace Logic.Domain.Level5.Script.Xseq
             return argumentStream;
         }
 
-        private XseqArgument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, ushort> hashedNames)
+        private XseqArgument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter,
+            IDictionary<string, long> writtenNames)
         {
             int type;
             uint value;
@@ -239,12 +267,7 @@ namespace Logic.Domain.Level5.Script.Xseq
                 case ScriptArgumentType.StringHash:
                     type = 2;
                     if (argument.Value is string stringValue)
-                    {
-                        if (!hashedNames.TryGetValue(stringValue, out ushort hash))
-                            hash = _checksum.ComputeValue(stringValue);
-
-                        value = hash;
-                    }
+                        value = _checksum.ComputeValue(stringValue);
                     else
                         value = (uint)argument.Value;
 
@@ -263,7 +286,7 @@ namespace Logic.Domain.Level5.Script.Xseq
                 case ScriptArgumentType.String:
                     long nameOffset = WriteString((string)argument.Value, stringWriter, writtenNames);
 
-                    type = argument.RawArgumentType;
+                    type = argument.RawArgumentType <= 0 ? 24 : argument.RawArgumentType;
                     value = (uint)nameOffset;
                     break;
 

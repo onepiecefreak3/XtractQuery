@@ -19,7 +19,7 @@ namespace Logic.Domain.Level5.Script.Xq32
         private readonly IChecksum<uint> _checksum;
 
         private readonly Encoding _sjis;
-        private readonly IDictionary<uint, string> _hashLookup;
+        private readonly IDictionary<uint, IList<string>> _hashLookup;
 
         private long _streamPosition;
 
@@ -30,7 +30,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             _checksum = checksumFactory.CreateCrc32();
 
             _sjis = Encoding.GetEncoding("SJIS");
-            _hashLookup = new Dictionary<uint, string>();
+            _hashLookup = new Dictionary<uint, IList<string>>();
 
             _streamPosition = _baseStream.Position;
 
@@ -45,7 +45,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             _checksum = checksumFactory.CreateCrc32();
 
             _sjis = Encoding.GetEncoding("SJIS");
-            _hashLookup = new Dictionary<uint, string>();
+            _hashLookup = new Dictionary<uint, IList<string>>();
 
             _streamPosition = 0;
         }
@@ -75,7 +75,12 @@ namespace Logic.Domain.Level5.Script.Xq32
             _baseStream.Position = _streamPosition;
 
             _writer.WriteString(value, _sjis, false);
-            _hashLookup[ComputeHash(value)] = value;
+
+            var hash = (ushort)ComputeHash(value);
+            if (!_hashLookup.TryGetValue(hash, out IList<string>? values))
+                _hashLookup[hash] = values = new List<string>();
+
+            values.Add(value);
 
             long valuePos = _streamPosition;
             _streamPosition = _baseStream.Position;
@@ -84,12 +89,12 @@ namespace Logic.Domain.Level5.Script.Xq32
             return (int)valuePos;
         }
 
-        public string GetByHash(uint hash)
+        public IList<string> GetByHash(uint hash)
         {
-            if (_hashLookup.TryGetValue(hash, out string? value))
-                return value;
+            if (_hashLookup.TryGetValue(hash, out IList<string>? values))
+                return values;
 
-            return string.Empty;
+            return Array.Empty<string>();
         }
 
         public uint ComputeHash(string value)
@@ -104,7 +109,10 @@ namespace Logic.Domain.Level5.Script.Xq32
                 string value = _reader.ReadCStringSJIS();
                 uint checksum = _checksum.ComputeValue(value);
 
-                _hashLookup[checksum] = value;
+                if (!_hashLookup.TryGetValue(checksum, out IList<string>? values))
+                    _hashLookup[checksum] = values = new List<string>();
+
+                values.Add(value);
             }
         }
     }

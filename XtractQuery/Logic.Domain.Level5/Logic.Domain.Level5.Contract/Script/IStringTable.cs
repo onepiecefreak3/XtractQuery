@@ -16,7 +16,7 @@ namespace Logic.Domain.Level5.Contract.Script
         string Read(long offset);
         long Write(string value);
 
-        string GetByHash(uint hash);
+        IList<string> GetByHash(uint hash);
         uint ComputeHash(string value);
     }
 }

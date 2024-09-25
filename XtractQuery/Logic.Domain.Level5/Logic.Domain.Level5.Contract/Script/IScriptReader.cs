@@ -13,6 +13,6 @@ namespace Logic.Domain.Level5.Contract.Script
         IList<ScriptFunction> ReadFunctions(ScriptTable functionTable, ScriptStringTable? stringTable);
         IList<ScriptJump> ReadJumps(ScriptTable jumpTable, ScriptStringTable? stringTable);
         IList<ScriptInstruction> ReadInstructions(ScriptTable instructionTable);
-        IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptStringTable? stringTable);
+        IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptTable instructionTable, ScriptStringTable? stringTable);
     }
 }

@@ -89,12 +89,11 @@ namespace Logic.Domain.Level5.Script.Xq32
             using IBinaryWriterX stringWriter = _binaryFactory.CreateWriter(stringStream, true);
 
             var writtenNames = new Dictionary<string, long>();
-            var hashedNames = new Dictionary<string, uint>();
 
-            Stream functionStream = WriteFunctions(script, stringWriter, writtenNames, hashedNames);
-            Stream jumpStream = WriteJumps(script, stringWriter, writtenNames, hashedNames);
+            Stream functionStream = WriteFunctions(script, stringWriter, writtenNames);
+            Stream jumpStream = WriteJumps(script, stringWriter, writtenNames);
             Stream instructionStream = WriteInstructions(script);
-            Stream argumentStream = WriteArguments(script, stringWriter, writtenNames, hashedNames);
+            Stream argumentStream = WriteArguments(script, stringWriter, writtenNames);
 
             stringStream.Position = 0;
             return new ScriptContainer
@@ -151,7 +150,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             return (short)(objectVariables.Max() - 1999);
         }
 
-        private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
+        private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream functionStream = new MemoryStream();
             using IBinaryWriterX functionWriter = _binaryFactory.CreateWriter(functionStream, true);
@@ -159,7 +158,6 @@ namespace Logic.Domain.Level5.Script.Xq32
             foreach ((ScriptFunction function, uint nameHash) in script.Functions.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
             {
                 long nameOffset = WriteString(function.Name, stringWriter, writtenNames);
-                hashedNames[function.Name] = nameHash;
 
                 var nativeFunction = new Xq32Function
                 {
@@ -185,7 +183,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             return functionStream;
         }
 
-        private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
+        private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream jumpStream = new MemoryStream();
             using IBinaryWriterX jumpWriter = _binaryFactory.CreateWriter(jumpStream, true);
@@ -197,7 +195,6 @@ namespace Logic.Domain.Level5.Script.Xq32
                 foreach ((ScriptJump jump, uint nameHash) in jumps.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
                 {
                     long nameOffset = WriteString(jump.Name, stringWriter, writtenNames);
-                    hashedNames[jump.Name] = nameHash;
 
                     var nativeJump = new Xq32Jump
                     {
@@ -238,14 +235,14 @@ namespace Logic.Domain.Level5.Script.Xq32
             return instructionStream;
         }
 
-        private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
+        private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             Stream argumentStream = new MemoryStream();
             using IBinaryWriterX argumentWriter = _binaryFactory.CreateWriter(argumentStream, true);
 
             foreach (ScriptArgument argument in script.Arguments)
             {
-                Xq32Argument nativeArgument = CreateArgument(argument, stringWriter, writtenNames, hashedNames);
+                Xq32Argument nativeArgument = CreateArgument(argument, stringWriter, writtenNames);
 
                 WriteArgument(nativeArgument, argumentWriter, script.Length);
             }
@@ -254,7 +251,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             return argumentStream;
         }
 
-        private Xq32Argument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames, IDictionary<string, uint> hashedNames)
+        private Xq32Argument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
         {
             int type;
             uint value;
@@ -269,12 +266,7 @@ namespace Logic.Domain.Level5.Script.Xq32
                 case ScriptArgumentType.StringHash:
                     type = 2;
                     if (argument.Value is string stringValue)
-                    {
-                        if (!hashedNames.TryGetValue(stringValue, out uint hash))
-                            hash = _checksum.ComputeValue(stringValue);
-
-                        value = hash;
-                    }
+                        value = _checksum.ComputeValue(stringValue);
                     else
                         value = (uint)argument.Value;
 

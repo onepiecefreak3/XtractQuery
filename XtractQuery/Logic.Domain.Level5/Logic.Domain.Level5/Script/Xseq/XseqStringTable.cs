@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Kuriimu2.KryptographyAdapter.Contract;
 using Logic.Domain.Level5.Cryptography.InternalContract;
@@ -19,7 +14,7 @@ namespace Logic.Domain.Level5.Script.Xseq
         private readonly IChecksum<ushort> _checksum;
 
         private readonly Encoding _sjis;
-        private readonly IDictionary<ushort, string> _hashLookup;
+        private readonly IDictionary<ushort, IList<string>> _hashLookup;
 
         private long _streamPosition;
 
@@ -30,7 +25,7 @@ namespace Logic.Domain.Level5.Script.Xseq
             _checksum = checksumFactory.CreateCrc16();
 
             _sjis = Encoding.GetEncoding("SJIS");
-            _hashLookup = new Dictionary<ushort, string>();
+            _hashLookup = new Dictionary<ushort, IList<string>>();
 
             _streamPosition = _baseStream.Position;
 
@@ -45,7 +40,7 @@ namespace Logic.Domain.Level5.Script.Xseq
             _checksum = checksumFactory.CreateCrc16();
 
             _sjis = Encoding.GetEncoding("SJIS");
-            _hashLookup = new Dictionary<ushort, string>();
+            _hashLookup = new Dictionary<ushort, IList<string>>();
 
             _streamPosition = 0;
         }
@@ -75,7 +70,12 @@ namespace Logic.Domain.Level5.Script.Xseq
             _baseStream.Position = _streamPosition;
 
             _writer.WriteString(value, _sjis, false);
-            _hashLookup[(ushort)ComputeHash(value)] = value;
+
+            var hash = (ushort)ComputeHash(value);
+            if (!_hashLookup.TryGetValue(hash, out IList<string>? values))
+                _hashLookup[hash] = values = new List<string>();
+
+            values.Add(value);
 
             long valuePos = _streamPosition;
             _streamPosition = _baseStream.Position;
@@ -84,12 +84,12 @@ namespace Logic.Domain.Level5.Script.Xseq
             return (int)valuePos;
         }
 
-        public string GetByHash(uint hash)
+        public IList<string> GetByHash(uint hash)
         {
-            if (_hashLookup.TryGetValue((ushort)hash, out string? value))
-                return value;
+            if (_hashLookup.TryGetValue((ushort)hash, out IList<string>? values))
+                return values;
 
-            return string.Empty;
+            return Array.Empty<string>();
         }
 
         public uint ComputeHash(string value)
@@ -104,7 +104,10 @@ namespace Logic.Domain.Level5.Script.Xseq
                 string value = _reader.ReadCStringSJIS();
                 ushort checksum = _checksum.ComputeValue(value);
 
-                _hashLookup[checksum] = value;
+                if (!_hashLookup.TryGetValue(checksum, out IList<string>? values))
+                    _hashLookup[checksum] = values = new List<string>();
+
+                values.Add(value);
             }
         }
     }

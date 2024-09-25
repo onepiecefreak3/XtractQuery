@@ -2,7 +2,11 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": "-h"
+      "commandLineArgs": "-o e -f D:\\Users\\Kirito\\Desktop\\new_strinput_original.xq.txt.xq"
+    },
+    "Profil \"1\"": {
+      "commandName": "Project",
+      "commandLineArgs": "-o e "
     }
   }
 }

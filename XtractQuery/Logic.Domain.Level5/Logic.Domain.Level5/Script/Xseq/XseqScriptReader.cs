@@ -9,14 +9,16 @@ namespace Logic.Domain.Level5.Script.Xseq
     internal class XseqScriptReader : ScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
     {
         private readonly IBinaryFactory _binaryFactory;
-        private readonly IXseqScriptHashStringCache _cache;
+        private readonly Dictionary<ushort, IList<string>> _functionCache;
+        private readonly Dictionary<ushort, IList<string>> _jumpCache;
 
-        public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptHashStringCache cache,
-            IXseqScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
+        public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider,
+            IBinaryFactory binaryFactory)
             : base(decompressor, entrySizeProvider, binaryFactory)
         {
             _binaryFactory = binaryFactory;
-            _cache = cache;
+            _functionCache = new Dictionary<ushort, IList<string>>();
+            _jumpCache = new Dictionary<ushort, IList<string>>();
         }
 
         public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
@@ -177,7 +179,10 @@ namespace Logic.Domain.Level5.Script.Xseq
                 stringReader.BaseStream.Position = function.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                _cache.Set(function.crc16, name);
+                if (!_functionCache.TryGetValue(function.crc16, out IList<string>? functionNames))
+                    _functionCache[function.crc16] = functionNames = new List<string>();
+
+                functionNames.Add(name);
             }
 
             return new ScriptFunction
@@ -205,7 +210,10 @@ namespace Logic.Domain.Level5.Script.Xseq
                 stringReader.BaseStream.Position = jump.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                _cache.Set(jump.crc16, name);
+                if (!_jumpCache.TryGetValue(jump.crc16, out IList<string>? jumpNames))
+                    _jumpCache[jump.crc16] = jumpNames = new List<string>();
+
+                jumpNames.Add(name);
             }
 
             return new ScriptJump
@@ -229,7 +237,7 @@ namespace Logic.Domain.Level5.Script.Xseq
             };
         }
 
-        protected override ScriptArgument CreateArgument(XseqArgument argument, IBinaryReaderX? stringReader)
+        protected override ScriptArgument CreateArgument(XseqArgument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader)
         {
             int rawType = -1;
             ScriptArgumentType type;
@@ -246,8 +254,36 @@ namespace Logic.Domain.Level5.Script.Xseq
                     type = ScriptArgumentType.StringHash;
                     value = argument.value;
 
-                    if (_cache.TryGet((ushort)argument.value, out string name))
-                        value = name;
+                    if (argumentIndex != 0)
+                    {
+                        if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names)
+                            || _jumpCache.TryGetValue((ushort)argument.value, out names))
+                            value = names.First();
+                        break;
+                    }
+
+                    switch (instructionType)
+                    {
+                        case 20:
+                            if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names))
+                                value = names.First();
+                            break;
+
+                        case 30:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+
+                        case 31:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+
+                        case 33:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+                    }
 
                     break;
 
@@ -271,6 +307,7 @@ namespace Logic.Domain.Level5.Script.Xseq
 
                     type = ScriptArgumentType.String;
                     value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+
                     break;
 
                 default:

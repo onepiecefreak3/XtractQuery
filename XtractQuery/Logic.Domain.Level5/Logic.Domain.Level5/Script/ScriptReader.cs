@@ -32,7 +32,7 @@ namespace Logic.Domain.Level5.Script
             IList<ScriptFunction> functions = ReadFunctions(container.FunctionTable, container.StringTable, length!.Value);
             IList<ScriptJump> jumps = ReadJumps(container.JumpTable, container.StringTable, length!.Value);
             IList<ScriptInstruction> instructions = ReadInstructions(container.InstructionTable, length!.Value);
-            IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, container.StringTable, length!.Value);
+            IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, instructions.AsReadOnly(), container.StringTable, length!.Value);
 
             return new ScriptFile
             {
@@ -69,12 +69,12 @@ namespace Logic.Domain.Level5.Script
             return ReadInstructions(instructionTable, length!.Value);
         }
 
-        public IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptStringTable? stringTable)
+        public IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptTable instructionTable, ScriptStringTable? stringTable)
         {
             if (!TryDetectTablePointerLength(argumentTable, _entrySizeProvider.GetArgumentEntrySize, out PointerLength? length))
                 throw new InvalidOperationException("Could not detect pointer length.");
 
-            return ReadArguments(argumentTable, stringTable, length!.Value);
+            return ReadArguments(argumentTable, instructionTable, stringTable, length!.Value);
         }
 
         public abstract IReadOnlyList<TFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length);
@@ -119,15 +119,25 @@ namespace Logic.Domain.Level5.Script
             return result;
         }
 
-        public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, ScriptStringTable? stringTable = null)
+        public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? stringTable = null)
         {
             using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
 
             var result = new ScriptArgument[arguments.Count];
 
+            var instructionTypes = new (int, int)[arguments.Count];
+            foreach (ScriptInstruction instruction in instructions)
+            {
+                for (var i = 0; i < instruction.ArgumentCount; i++)
+                    instructionTypes[instruction.ArgumentIndex + i] = (instruction.Type, i);
+            }
+
             var counter = 0;
             foreach (TArgument argument in arguments)
-                result[counter++] = CreateArgument(argument, stringReader);
+            {
+                (int instructionType, int argumentIndex) = instructionTypes[counter];
+                result[counter++] = CreateArgument(argument, instructionType, argumentIndex, stringReader);
+            }
 
             return result;
         }
@@ -135,14 +145,12 @@ namespace Logic.Domain.Level5.Script
         protected abstract ScriptFunction CreateFunction(TFunction function, IBinaryReaderX? stringReader);
         protected abstract ScriptJump CreateJump(TJump jump, IBinaryReaderX? stringReader);
         protected abstract ScriptInstruction CreateInstruction(TInstruction instruction);
-        protected abstract ScriptArgument CreateArgument(TArgument argument, IBinaryReaderX? stringReader);
+        protected abstract ScriptArgument CreateArgument(TArgument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader);
 
         protected abstract IEnumerable<TFunction> OrderFunctions(IReadOnlyList<TFunction> functions);
 
         private IList<ScriptFunction> ReadFunctions(ScriptTable functionTable, ScriptStringTable? stringTable, PointerLength length)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(functionTable.Stream, true);
-
             IReadOnlyList<TFunction> functions = ReadFunctions(functionTable.Stream, functionTable.EntryCount, length);
 
             return CreateFunctions(functions, stringTable);
@@ -150,8 +158,6 @@ namespace Logic.Domain.Level5.Script
 
         private IList<ScriptJump> ReadJumps(ScriptTable jumpTable, ScriptStringTable? stringTable, PointerLength length)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(jumpTable.Stream, true);
-
             IReadOnlyList<TJump> jumps = ReadJumps(jumpTable.Stream, jumpTable.EntryCount, length);
 
             return CreateJumps(jumps, stringTable);
@@ -159,20 +165,23 @@ namespace Logic.Domain.Level5.Script
 
         private IList<ScriptInstruction> ReadInstructions(ScriptTable instructionTable, PointerLength length)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(instructionTable.Stream, true);
-
             IReadOnlyList<TInstruction> instructions = ReadInstructions(instructionTable.Stream, instructionTable.EntryCount, length);
 
             return CreateInstructions(instructions);
         }
 
-        private IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptStringTable? stringTable, PointerLength length)
+        private IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, ScriptTable instructionTable, ScriptStringTable? stringTable, PointerLength length)
         {
-            using IBinaryReaderX br = _binaryFactory.CreateReader(argumentTable.Stream, true);
+            IList<ScriptInstruction> instructions = ReadInstructions(instructionTable, length);
 
+            return ReadArguments(argumentTable, instructions.AsReadOnly(), stringTable, length);
+        }
+
+        private IList<ScriptArgument> ReadArguments(ScriptTable argumentTable, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? stringTable, PointerLength length)
+        {
             IReadOnlyList<TArgument> arguments = ReadArguments(argumentTable.Stream, argumentTable.EntryCount, length);
 
-            return CreateArguments(arguments, stringTable);
+            return CreateArguments(arguments, instructions, stringTable);
         }
 
         private bool TryDetectPointerLength(ScriptContainer container, out PointerLength? length)

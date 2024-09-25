@@ -9,14 +9,16 @@ namespace Logic.Domain.Level5.Script.Xq32
     internal class Xq32ScriptReader : ScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>, IXq32ScriptReader
     {
         private readonly IBinaryFactory _binaryFactory;
-        private readonly IXq32ScriptHashStringCache _cache;
+        private readonly Dictionary<uint, IList<string>> _functionCache;
+        private readonly Dictionary<uint, IList<string>> _jumpCache;
 
-        public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptHashStringCache cache,
-            IXq32ScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
+        public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider, 
+            IBinaryFactory binaryFactory)
             : base(decompressor, entrySizeProvider, binaryFactory)
         {
             _binaryFactory = binaryFactory;
-            _cache = cache;
+            _functionCache = new Dictionary<uint, IList<string>>();
+            _jumpCache = new Dictionary<uint, IList<string>>();
         }
 
         public override IReadOnlyList<Xq32Function> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
@@ -183,7 +185,10 @@ namespace Logic.Domain.Level5.Script.Xq32
                 stringReader.BaseStream.Position = function.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                _cache.Set(function.crc32, name);
+                if (!_functionCache.TryGetValue(function.crc32, out IList<string>? functionNames))
+                    _functionCache[function.crc32] = functionNames = new List<string>();
+
+                functionNames.Add(name);
             }
 
             return new ScriptFunction
@@ -211,7 +216,10 @@ namespace Logic.Domain.Level5.Script.Xq32
                 stringReader.BaseStream.Position = jump.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                _cache.Set(jump.crc32, name);
+                if (!_jumpCache.TryGetValue(jump.crc32, out IList<string>? jumpNames))
+                    _jumpCache[jump.crc32] = jumpNames = new List<string>();
+
+                jumpNames.Add(name);
             }
 
             return new ScriptJump
@@ -235,7 +243,7 @@ namespace Logic.Domain.Level5.Script.Xq32
             };
         }
 
-        protected override ScriptArgument CreateArgument(Xq32Argument argument, IBinaryReaderX? stringReader)
+        protected override ScriptArgument CreateArgument(Xq32Argument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader)
         {
             int rawType = -1;
             ScriptArgumentType type;
@@ -252,8 +260,36 @@ namespace Logic.Domain.Level5.Script.Xq32
                     type = ScriptArgumentType.StringHash;
                     value = argument.value;
 
-                    if (_cache.TryGet(argument.value, out string name))
-                        value = name;
+                    if (argumentIndex != 0)
+                    {
+                        if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names)
+                            || _jumpCache.TryGetValue((ushort)argument.value, out names))
+                            value = names.First();
+                        break;
+                    }
+
+                    switch (instructionType)
+                    {
+                        case 20:
+                            if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names))
+                                value = names.First();
+                            break;
+
+                        case 30:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+
+                        case 31:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+
+                        case 33:
+                            if (_jumpCache.TryGetValue((ushort)argument.value, out names))
+                                value = names.First();
+                            break;
+                    }
 
                     break;
 

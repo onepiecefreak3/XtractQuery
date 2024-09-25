@@ -63,7 +63,6 @@ namespace Logic.Domain.Level5
             kernel.Register<IXq32ScriptReader, Xq32ScriptReader>();
             kernel.Register<IXq32ScriptWriter, Xq32ScriptWriter>();
             kernel.Register<IXq32ScriptEntrySizeProvider, Xq32ScriptEntrySizeProvider>();
-            kernel.Register<IXq32ScriptHashStringCache, Xq32ScriptHashStringCache>(ActivationScope.Unique);
 
             kernel.Register<IXseqScriptDecompressor, XseqScriptDecompressor>();
             kernel.Register<IXseqScriptCompressor, XseqScriptCompressor>();
@@ -71,7 +70,6 @@ namespace Logic.Domain.Level5
             kernel.Register<IXseqScriptReader, XseqScriptReader>();
             kernel.Register<IXseqScriptWriter, XseqScriptWriter>();
             kernel.Register<IXseqScriptEntrySizeProvider, XseqScriptEntrySizeProvider>();
-            kernel.Register<IXseqScriptHashStringCache, XseqScriptHashStringCache>(ActivationScope.Unique);
 
             kernel.RegisterConfiguration<Level5Configuration>();
         }

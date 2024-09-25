@@ -71,16 +71,16 @@ namespace Logic.Domain.Level5.Script.Xseq
             long functionOffset = output.Position = 0x20;
             functionStream.CopyTo(output);
 
-            long jumpOffset = output.Position + 3 & ~3;
+            long jumpOffset = output.Position = output.Position + 3 & ~3;
             jumpStream.CopyTo(output);
 
-            long instructionOffset = output.Position + 3 & ~3;
+            long instructionOffset = output.Position = output.Position + 3 & ~3;
             instructionStream.CopyTo(output);
 
-            long argumentOffset = output.Position + 3 & ~3;
+            long argumentOffset = output.Position = output.Position + 3 & ~3;
             argumentStream.CopyTo(output);
 
-            long stringOffset = output.Position + 3 & ~3;
+            long stringOffset = output.Position = output.Position + 3 & ~3;
             stringStream.CopyTo(output);
 
             using IBinaryWriterX writer = _binaryFactory.CreateWriter(output);

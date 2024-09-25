@@ -279,10 +279,10 @@ namespace Logic.Business.Level5ScriptManagement
             Console.WriteLine("Following commands exist:");
             Console.WriteLine("  -h, --help\t\tShows this help message.");
             Console.WriteLine("  -o, --operation\tThe operation to take on the file");
+            Console.WriteLine("    Valid operations are: e for extraction, c for creation, d for decompression");
             Console.WriteLine("  -t, --type\t\tThe type of file given");
             Console.WriteLine("    Valid types are: xq32, xseq");
             Console.WriteLine("    The type is automatically detected when extracting; This argument will not have any effect on operation 'e'");
-            Console.WriteLine("    Valid operations are: e for extraction, c for creation, d for decompression");
             Console.WriteLine("  -f, --file\t\tThe file to process");
             Console.WriteLine("  -n, --no-compression\t[Optional] If the file uses a compression layer");
             Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e'");
