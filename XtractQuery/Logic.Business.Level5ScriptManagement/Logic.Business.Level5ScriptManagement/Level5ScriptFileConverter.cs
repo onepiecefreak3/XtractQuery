@@ -692,9 +692,10 @@ namespace Logic.Business.Level5ScriptManagement
         private MethodInvocationExpressionSyntax CreateMethodInvocationExpression(ScriptInstruction instruction, ScriptFile script)
         {
             SyntaxToken identifier = CreateMethodNameIdentifier(instruction, script);
+            var metadata = CreateMethodInvocationMetadata(instruction, script);
             var parameters = CreateMethodInvocationExpressionParameters(instruction, script);
 
-            return new MethodInvocationExpressionSyntax(identifier, parameters);
+            return new MethodInvocationExpressionSyntax(identifier, metadata, parameters);
         }
 
         private SyntaxToken CreateMethodNameIdentifier(ScriptInstruction instruction, ScriptFile script)
@@ -709,6 +710,21 @@ namespace Logic.Business.Level5ScriptManagement
             }
 
             return _syntaxFactory.Identifier($"sub{instruction.Type}");
+        }
+
+        private MethodInvocationMetadataSyntax? CreateMethodInvocationMetadata(ScriptInstruction instruction, ScriptFile script)
+        {
+            if (!IsMethodNameTransfer(instruction, script))
+                return null;
+
+            if (script.Arguments[instruction.ArgumentIndex].RawArgumentType < 0)
+                return null;
+
+            SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+            var value = CreateLiteralExpression(script.Arguments[instruction.ArgumentIndex].RawArgumentType, ScriptArgumentType.Int);
+            SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+
+            return new MethodInvocationMetadataSyntax(relSmaller, value, relBigger);
         }
 
         private MethodInvocationExpressionParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, ScriptFile script)
@@ -759,7 +775,7 @@ namespace Logic.Business.Level5ScriptManagement
             ExpressionSyntax parameter = CreateArgumentExpression(value, argumentType);
 
             ValueMetadataParametersSyntax? parameters = null;
-            if (rawArgumentType > 0)
+            if (rawArgumentType >= 0)
                 parameters = CreateValueMetadataParameters(rawArgumentType);
 
             return new ValueExpressionSyntax(parameter, parameters);

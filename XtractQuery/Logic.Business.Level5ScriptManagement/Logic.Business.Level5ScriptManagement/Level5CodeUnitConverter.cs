@@ -471,8 +471,33 @@ namespace Logic.Business.Level5ScriptManagement
                             throw CreateException($"Invalid binary expression operation {(SyntaxTokenKind)binaryExpression.Operation.RawKind}.", expression.Location);
                     }
 
+                    if (binaryExpression is
+                        {
+                            Left: ValueExpressionSyntax { Value: VariableExpressionSyntax },
+                            Right: ValueExpressionSyntax
+                            {
+                                Value: LiteralExpressionSyntax
+                                {
+                                    Literal: { RawKind: (int)SyntaxTokenKind.NumericLiteral, Text: "1" }
+                                }
+                            }
+                        })
+                    {
+                        switch (binaryExpression.Operation.RawKind)
+                        {
+                            case (int)SyntaxTokenKind.Plus:
+                                instructionType = 140;
+                                break;
+
+                            case (int)SyntaxTokenKind.Minus:
+                                instructionType = 141;
+                                break;
+                        }
+                    }
+
                     AddExpression(result, binaryExpression.Left, out _);
-                    AddExpression(result, binaryExpression.Right, out _);
+                    if (instructionType is not 140 and not 141)
+                        AddExpression(result, binaryExpression.Right, out _);
                     break;
 
                 case SwitchExpressionSyntax switchExpression:
@@ -513,7 +538,17 @@ namespace Logic.Business.Level5ScriptManagement
                     instructionType = GetInstructionType(methodInvocation.Identifier, out bool isMethodTransfer);
 
                     if (isMethodTransfer)
-                        AddArgument(result, ScriptArgumentType.StringHash, methodInvocation.Identifier.Text);
+                    {
+                        int rawArgumentType = -1;
+                        var argumentType = ScriptArgumentType.StringHash;
+                        if (methodInvocation.Metadata != null)
+                        {
+                            rawArgumentType = GetNumericLiteral(methodInvocation.Metadata.Parameter);
+                            argumentType = ScriptArgumentType.String;
+                        }
+
+                        AddArgument(result, argumentType, methodInvocation.Identifier.Text, rawArgumentType);
+                    }
 
                     if (methodInvocation.Parameters.ParameterList != null)
                         foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)

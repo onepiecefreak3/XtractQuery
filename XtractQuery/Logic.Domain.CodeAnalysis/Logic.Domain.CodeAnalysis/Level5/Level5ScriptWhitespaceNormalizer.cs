@@ -389,7 +389,7 @@ namespace Logic.Domain.CodeAnalysis.Level5
             returnStatement.SetReturn(newReturnKeyword, false);
             returnStatement.SetSemicolon(newSemicolon, false);
 
-            if (returnStatement.ValueExpression == null) 
+            if (returnStatement.ValueExpression == null)
                 return;
 
             ctx.IsFirstElement = true;
@@ -690,7 +690,21 @@ namespace Logic.Domain.CodeAnalysis.Level5
 
             invocation.SetIdentifier(newIdentifier, false);
 
+            NormalizeMethodInvocationMetadata(invocation.Metadata, ctx);
             NormalizeMethodInvocationExpressionParameters(invocation.Parameters, ctx);
+        }
+
+        private void NormalizeMethodInvocationMetadata(MethodInvocationMetadataSyntax? metadata, WhitespaceNormalizeContext ctx)
+        {
+            if (metadata == null)
+                return;
+
+            SyntaxToken newRelSmaller = metadata.RelSmaller.WithNoTrivia();
+            SyntaxToken newRelBigger = metadata.RelBigger.WithNoTrivia();
+
+            metadata.SetRelSmaller(newRelSmaller, false);
+            NormalizeLiteralExpression(metadata.Parameter, ctx);
+            metadata.SetRelBigger(newRelBigger, false);
         }
 
         private void NormalizeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters, WhitespaceNormalizeContext ctx)

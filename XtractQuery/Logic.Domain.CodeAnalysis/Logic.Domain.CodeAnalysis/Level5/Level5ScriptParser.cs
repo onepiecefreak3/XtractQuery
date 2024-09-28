@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract;
+﻿using Logic.Domain.CodeAnalysis.Contract;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
@@ -421,7 +416,8 @@ namespace Logic.Domain.CodeAnalysis.Level5
             if (IsUnaryExpression(buffer))
                 return ParseUnaryExpression(buffer);
 
-            if (HasTokenKind(buffer, SyntaxTokenKind.Identifier) && HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen))
+            if (HasTokenKind(buffer, SyntaxTokenKind.Identifier) 
+                && (HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen) || HasTokenKind(buffer, 1, SyntaxTokenKind.Smaller)))
                 return ParseMethodInvocationExpression(buffer);
 
             ExpressionSyntax left;
@@ -696,9 +692,22 @@ namespace Logic.Domain.CodeAnalysis.Level5
         private MethodInvocationExpressionSyntax ParseMethodInvocationExpression(IBuffer<Level5SyntaxToken> buffer)
         {
             SyntaxToken identifier = ParseIdentifierToken(buffer);
+            var metadata = ParseMethodInvocationMetadata(buffer);
             var methodInvocationParameters = ParseMethodInvocationExpressionParameters(buffer);
 
-            return new MethodInvocationExpressionSyntax(identifier, methodInvocationParameters);
+            return new MethodInvocationExpressionSyntax(identifier, metadata, methodInvocationParameters);
+        }
+
+        private MethodInvocationMetadataSyntax? ParseMethodInvocationMetadata(IBuffer<Level5SyntaxToken> buffer)
+        {
+            if (!HasTokenKind(buffer, SyntaxTokenKind.Smaller))
+                return null;
+
+            SyntaxToken relSmallerToken = ParseSmallerToken(buffer);
+            var parameter = ParseNumericLiteralExpression(buffer);
+            SyntaxToken relBiggerToken = ParseGreaterToken(buffer);
+
+            return new MethodInvocationMetadataSyntax(relSmallerToken, parameter, relBiggerToken);
         }
 
         private MethodInvocationExpressionParametersSyntax ParseMethodInvocationExpressionParameters(IBuffer<Level5SyntaxToken> buffer)

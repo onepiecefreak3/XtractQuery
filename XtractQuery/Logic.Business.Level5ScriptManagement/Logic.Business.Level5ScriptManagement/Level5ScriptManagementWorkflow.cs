@@ -282,10 +282,10 @@ namespace Logic.Business.Level5ScriptManagement
             Console.WriteLine("    Valid operations are: e for extraction, c for creation, d for decompression");
             Console.WriteLine("  -t, --type\t\tThe type of file given");
             Console.WriteLine("    Valid types are: xq32, xseq");
-            Console.WriteLine("    The type is automatically detected when extracting; This argument will not have any effect on operation 'e'");
+            Console.WriteLine("    The type is automatically detected when extracting; This argument will not have any effect on operation 'e' and 'd'");
             Console.WriteLine("  -f, --file\t\tThe file to process");
-            Console.WriteLine("  -n, --no-compression\t[Optional] If the file uses a compression layer");
-            Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e'");
+            Console.WriteLine("  -nc, --no-compression\t[Optional] If the file should use a compression layer");
+            Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e' and 'd'");
             Console.WriteLine("  -l, --length\t\t[Optional]The pointer length given");
             Console.WriteLine("    Valid lengths are: int, long");
             Console.WriteLine("    Default value is 'int'");

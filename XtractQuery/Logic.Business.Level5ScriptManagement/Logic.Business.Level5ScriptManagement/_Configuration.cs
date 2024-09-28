@@ -16,7 +16,7 @@ namespace Logic.Business.Level5ScriptManagement
         [ConfigMap("CommandLine", new[] { "l", "length" })]
         public virtual string Length { get; set; } = "int";
 
-        [ConfigMap("CommandLine", new[] { "n", "no-compression" })]
+        [ConfigMap("CommandLine", new[] { "nc", "no-compression" })]
         public virtual bool WithoutCompression { get; set; } = false;
 
         [ConfigMap("CommandLine", new[] { "f", "file" })]

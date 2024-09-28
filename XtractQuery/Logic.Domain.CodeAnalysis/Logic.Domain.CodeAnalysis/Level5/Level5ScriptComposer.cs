@@ -1,13 +1,7 @@
 ﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Logic.Domain.CodeAnalysis.Level5
 {
@@ -477,7 +471,18 @@ namespace Logic.Domain.CodeAnalysis.Level5
         private void ComposeMethodInvocationExpression(MethodInvocationExpressionSyntax invocation, StringBuilder sb)
         {
             ComposeSyntaxToken(invocation.Identifier, sb);
+            ComposeMethodInvocationMetadata(invocation.Metadata, sb);
             ComposeMethodInvocationExpressionParameters(invocation.Parameters, sb);
+        }
+
+        private void ComposeMethodInvocationMetadata(MethodInvocationMetadataSyntax? metadata, StringBuilder sb)
+        {
+            if (metadata == null)
+                return;
+
+            ComposeSyntaxToken(metadata.RelSmaller, sb);
+            ComposeLiteralExpression(metadata.Parameter, sb);
+            ComposeSyntaxToken(metadata.RelBigger, sb);
         }
 
         private void ComposeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters, StringBuilder sb)
