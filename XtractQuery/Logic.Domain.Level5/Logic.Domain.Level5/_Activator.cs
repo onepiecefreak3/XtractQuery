@@ -57,19 +57,21 @@ namespace Logic.Domain.Level5
             kernel.Register<IScriptWriterFactory, ScriptWriterFactory>(ActivationScope.Unique);
             kernel.Register<IScriptEntrySizeProviderFactory, ScriptEntrySizeProviderFactory>(ActivationScope.Unique);
 
-            kernel.Register<IXq32ScriptDecompressor, Xq32ScriptDecompressor>();
-            kernel.Register<IXq32ScriptCompressor, Xq32ScriptCompressor>();
-            kernel.Register<IXq32StringTable, Xq32StringTable>();
-            kernel.Register<IXq32ScriptReader, Xq32ScriptReader>();
-            kernel.Register<IXq32ScriptWriter, Xq32ScriptWriter>();
-            kernel.Register<IXq32ScriptEntrySizeProvider, Xq32ScriptEntrySizeProvider>();
+            kernel.Register<IXq32ScriptDecompressor, Xq32ScriptDecompressor>(ActivationScope.Unique);
+            kernel.Register<IXq32ScriptCompressor, Xq32ScriptCompressor>(ActivationScope.Unique);
+            kernel.Register<IXq32ScriptReader, Xq32ScriptReader>(ActivationScope.Unique);
+            kernel.Register<IXq32ScriptWriter, Xq32ScriptWriter>(ActivationScope.Unique);
+            kernel.Register<IXq32ScriptEntrySizeProvider, Xq32ScriptEntrySizeProvider>(ActivationScope.Unique);
 
-            kernel.Register<IXseqScriptDecompressor, XseqScriptDecompressor>();
-            kernel.Register<IXseqScriptCompressor, XseqScriptCompressor>();
+            kernel.Register<IXq32StringTable, Xq32StringTable>();
+
+            kernel.Register<IXseqScriptDecompressor, XseqScriptDecompressor>(ActivationScope.Unique);
+            kernel.Register<IXseqScriptCompressor, XseqScriptCompressor>(ActivationScope.Unique);
+            kernel.Register<IXseqScriptReader, XseqScriptReader>(ActivationScope.Unique);
+            kernel.Register<IXseqScriptWriter, XseqScriptWriter>(ActivationScope.Unique);
+            kernel.Register<IXseqScriptEntrySizeProvider, XseqScriptEntrySizeProvider>(ActivationScope.Unique);
+
             kernel.Register<IXseqStringTable, XseqStringTable>();
-            kernel.Register<IXseqScriptReader, XseqScriptReader>();
-            kernel.Register<IXseqScriptWriter, XseqScriptWriter>();
-            kernel.Register<IXseqScriptEntrySizeProvider, XseqScriptEntrySizeProvider>();
 
             kernel.RegisterConfiguration<Level5Configuration>();
         }

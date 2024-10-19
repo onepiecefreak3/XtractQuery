@@ -35,7 +35,7 @@ namespace CrossCutting.Core.Configuration.File
 
         private string GetConfigPath()
         {
-            return Path.Combine(Environment.ProcessPath!, "config.json");
+            return Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "config.json");
         }
     }
 }

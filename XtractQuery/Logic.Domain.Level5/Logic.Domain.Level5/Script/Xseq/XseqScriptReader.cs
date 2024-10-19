@@ -9,16 +9,16 @@ namespace Logic.Domain.Level5.Script.Xseq
     internal class XseqScriptReader : ScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
     {
         private readonly IBinaryFactory _binaryFactory;
-        private readonly Dictionary<ushort, IList<string>> _functionCache;
-        private readonly Dictionary<ushort, IList<string>> _jumpCache;
+        private readonly Dictionary<ushort, HashSet<string>> _functionCache;
+        private readonly Dictionary<ushort, HashSet<string>> _jumpCache;
 
         public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider,
             IBinaryFactory binaryFactory)
             : base(decompressor, entrySizeProvider, binaryFactory)
         {
             _binaryFactory = binaryFactory;
-            _functionCache = new Dictionary<ushort, IList<string>>();
-            _jumpCache = new Dictionary<ushort, IList<string>>();
+            _functionCache = new Dictionary<ushort, HashSet<string>>();
+            _jumpCache = new Dictionary<ushort, HashSet<string>>();
         }
 
         public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
@@ -179,8 +179,8 @@ namespace Logic.Domain.Level5.Script.Xseq
                 stringReader.BaseStream.Position = function.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                if (!_functionCache.TryGetValue(function.crc16, out IList<string>? functionNames))
-                    _functionCache[function.crc16] = functionNames = new List<string>();
+                if (!_functionCache.TryGetValue(function.crc16, out HashSet<string>? functionNames))
+                    _functionCache[function.crc16] = functionNames = new HashSet<string>();
 
                 functionNames.Add(name);
             }
@@ -210,8 +210,8 @@ namespace Logic.Domain.Level5.Script.Xseq
                 stringReader.BaseStream.Position = jump.nameOffset;
                 name = stringReader.ReadCStringSJIS();
 
-                if (!_jumpCache.TryGetValue(jump.crc16, out IList<string>? jumpNames))
-                    _jumpCache[jump.crc16] = jumpNames = new List<string>();
+                if (!_jumpCache.TryGetValue(jump.crc16, out HashSet<string>? jumpNames))
+                    _jumpCache[jump.crc16] = jumpNames = new HashSet<string>();
 
                 jumpNames.Add(name);
             }
@@ -256,7 +256,7 @@ namespace Logic.Domain.Level5.Script.Xseq
 
                     if (argumentIndex != 0)
                     {
-                        if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names)
+                        if (_functionCache.TryGetValue((ushort)argument.value, out HashSet<string>? names)
                             || _jumpCache.TryGetValue((ushort)argument.value, out names))
                             value = names.First();
                         break;
@@ -265,7 +265,7 @@ namespace Logic.Domain.Level5.Script.Xseq
                     switch (instructionType)
                     {
                         case 20:
-                            if (_functionCache.TryGetValue((ushort)argument.value, out IList<string>? names))
+                            if (_functionCache.TryGetValue((ushort)argument.value, out HashSet<string>? names))
                                 value = names.First();
                             break;
 
