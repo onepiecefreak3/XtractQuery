@@ -1,59 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class ValueExpressionSyntax : ExpressionSyntax
 {
-    public class ValueExpressionSyntax : ExpressionSyntax
+    public ExpressionSyntax Value { get; private set; }
+    public ValueMetadataParametersSyntax? MetadataParameters { get; private set; }
+
+    public override SyntaxLocation Location => Value.Location;
+    public override SyntaxSpan Span => new(Value.Span.Position, MetadataParameters?.Span.EndPosition ?? Value.Span.EndPosition);
+
+    public ValueExpressionSyntax(ExpressionSyntax value, ValueMetadataParametersSyntax? metadataParameters = null)
     {
-        public ExpressionSyntax Value { get; private set; }
-        public ValueMetadataParametersSyntax? MetadataParameters { get; private set; }
+        value.Parent = this;
+        if (metadataParameters != null)
+            metadataParameters.Parent = this;
 
-        public override SyntaxLocation Location => Value.Location;
-        public override SyntaxSpan Span => new(Value.Span.Position, MetadataParameters?.Span.EndPosition ?? Value.Span.EndPosition);
+        Value = value;
+        MetadataParameters = metadataParameters;
 
-        public ValueExpressionSyntax(ExpressionSyntax value, ValueMetadataParametersSyntax? metadataParameters = null)
-        {
-            value.Parent = this;
-            if (metadataParameters != null)
-                metadataParameters.Parent = this;
+        Root.Update();
+    }
 
-            Value = value;
-            MetadataParameters = metadataParameters;
+    public void SetValue(ExpressionSyntax value, bool updatePosition = true)
+    {
+        value.Parent = this;
+        Value = value;
 
+        if (updatePosition)
             Root.Update();
-        }
+    }
 
-        public void SetValue(ExpressionSyntax value, bool updatePosition = true)
-        {
-            value.Parent = this;
-            Value = value;
+    public void SetMetadataParameters(ValueMetadataParametersSyntax? metadataParameters, bool updatePosition = true)
+    {
+        if (metadataParameters != null)
+            metadataParameters.Parent = this;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        MetadataParameters = metadataParameters;
 
-        public void SetMetadataParameters(ValueMetadataParametersSyntax? metadataParameters, bool updatePosition = true)
-        {
-            if (metadataParameters != null)
-                metadataParameters.Parent = this;
+        if (updatePosition)
+            Root.Update();
+    }
 
-            MetadataParameters = metadataParameters;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        position = Value.UpdatePosition(position, ref line, ref column);
+        if (MetadataParameters != null)
+            position = MetadataParameters.UpdatePosition(position, ref line, ref column);
 
-            if (updatePosition)
-                Root.Update();
-        }
-
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            position = Value.UpdatePosition(position, ref line, ref column);
-            if (MetadataParameters != null)
-                position = MetadataParameters.UpdatePosition(position, ref line, ref column);
-
-            return position;
-        }
+        return position;
     }
 }

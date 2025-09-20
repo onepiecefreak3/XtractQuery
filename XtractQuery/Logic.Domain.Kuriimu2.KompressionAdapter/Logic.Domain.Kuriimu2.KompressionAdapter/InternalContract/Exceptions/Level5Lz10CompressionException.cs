@@ -1,30 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Serialization;
 
-namespace Logic.Domain.Kuriimu2.KompressionAdapter.InternalContract.Exceptions
+namespace Logic.Domain.Kuriimu2.KompressionAdapter.InternalContract.Exceptions;
+
+internal class Level5Lz10CompressionException:Exception
 {
-    internal class Level5Lz10CompressionException:Exception
+    public Level5Lz10CompressionException()
     {
-        public Level5Lz10CompressionException()
-        {
-        }
+    }
 
-        public Level5Lz10CompressionException(string message) : base(message)
-        {
-        }
+    public Level5Lz10CompressionException(string message) : base(message)
+    {
+    }
 
-        public Level5Lz10CompressionException(string message, Exception inner) : base(message, inner)
-        {
-        }
+    public Level5Lz10CompressionException(string message, Exception inner) : base(message, inner)
+    {
+    }
 
-        protected Level5Lz10CompressionException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
-        {
-        }
+    protected Level5Lz10CompressionException(
+        SerializationInfo info,
+        StreamingContext context) : base(info, context)
+    {
     }
 }

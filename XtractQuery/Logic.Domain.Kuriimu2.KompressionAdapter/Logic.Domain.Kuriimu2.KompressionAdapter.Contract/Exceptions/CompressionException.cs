@@ -1,31 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Serialization;
 
-namespace Logic.Domain.Kuriimu2.KompressionAdapter.Contract.Exceptions
+namespace Logic.Domain.Kuriimu2.KompressionAdapter.Contract.Exceptions;
+
+[Serializable]
+public class CompressionException : Exception
 {
-    [Serializable]
-    public class CompressionException : Exception
+    public CompressionException()
     {
-        public CompressionException()
-        {
-        }
+    }
 
-        public CompressionException(string message) : base(message)
-        {
-        }
+    public CompressionException(string message) : base(message)
+    {
+    }
 
-        public CompressionException(string message, Exception inner) : base(message, inner)
-        {
-        }
+    public CompressionException(string message, Exception inner) : base(message, inner)
+    {
+    }
 
-        protected CompressionException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
-        {
-        }
+    protected CompressionException(
+        SerializationInfo info,
+        StreamingContext context) : base(info, context)
+    {
     }
 }

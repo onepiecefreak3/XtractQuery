@@ -1,78 +1,71 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class ReturnStatementSyntax : StatementSyntax
 {
-    public class ReturnStatementSyntax : StatementSyntax
+    public SyntaxToken Return { get; private set; }
+    public ValueExpressionSyntax? ValueExpression { get; private set; }
+    public SyntaxToken Semicolon { get; private set; }
+
+    public override SyntaxLocation Location => Return.FullLocation;
+    public override SyntaxSpan Span => new(Return.FullSpan.Position, Semicolon.FullSpan.EndPosition);
+
+    public ReturnStatementSyntax(SyntaxToken returnToken, ValueExpressionSyntax? valueExpression, SyntaxToken semicolon)
     {
-        public SyntaxToken Return { get; private set; }
-        public ValueExpressionSyntax? ValueExpression { get; private set; }
-        public SyntaxToken Semicolon { get; private set; }
+        returnToken.Parent = this;
+        if (valueExpression != null)
+            valueExpression.Parent = this;
+        semicolon.Parent = this;
 
-        public override SyntaxLocation Location => Return.FullLocation;
-        public override SyntaxSpan Span => new(Return.FullSpan.Position, Semicolon.FullSpan.EndPosition);
+        Return = returnToken;
+        ValueExpression = valueExpression;
+        Semicolon = semicolon;
 
-        public ReturnStatementSyntax(SyntaxToken returnToken, ValueExpressionSyntax? valueExpression, SyntaxToken semicolon)
-        {
-            returnToken.Parent = this;
-            if (valueExpression != null)
-                valueExpression.Parent = this;
-            semicolon.Parent = this;
+        Root.Update();
+    }
 
-            Return = returnToken;
-            ValueExpression = valueExpression;
-            Semicolon = semicolon;
+    public void SetReturn(SyntaxToken returnToken, bool updatePositions = true)
+    {
+        returnToken.Parent = this;
+        Return = returnToken;
 
+        if (updatePositions)
             Root.Update();
-        }
+    }
 
-        public void SetReturn(SyntaxToken returnToken, bool updatePositions = true)
-        {
-            returnToken.Parent = this;
-            Return = returnToken;
+    public void SetValue(ValueExpressionSyntax? valueExpression, bool updatePositions = true)
+    {
+        if (valueExpression != null)
+            valueExpression.Parent = this;
+        ValueExpression = valueExpression;
 
-            if (updatePositions)
-                Root.Update();
-        }
+        if (updatePositions)
+            Root.Update();
+    }
 
-        public void SetValue(ValueExpressionSyntax? valueExpression, bool updatePositions = true)
-        {
-            if (valueExpression != null)
-                valueExpression.Parent = this;
-            ValueExpression = valueExpression;
+    public void SetSemicolon(SyntaxToken semicolon, bool updatePositions = true)
+    {
+        semicolon.Parent = this;
+        Semicolon = semicolon;
 
-            if (updatePositions)
-                Root.Update();
-        }
+        if (updatePositions)
+            Root.Update();
+    }
 
-        public void SetSemicolon(SyntaxToken semicolon, bool updatePositions = true)
-        {
-            semicolon.Parent = this;
-            Semicolon = semicolon;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        SyntaxToken returnToken = Return;
+        SyntaxToken semicolon = Semicolon;
 
-            if (updatePositions)
-                Root.Update();
-        }
+        position = returnToken.UpdatePosition(position, ref line, ref column);
+        if (ValueExpression != null)
+            position = ValueExpression.UpdatePosition(position, ref line, ref column);
+        position = semicolon.UpdatePosition(position, ref line, ref column);
 
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            SyntaxToken returnToken = Return;
-            SyntaxToken semicolon = Semicolon;
+        Return = returnToken;
+        Semicolon = semicolon;
 
-            position = returnToken.UpdatePosition(position, ref line, ref column);
-            if (ValueExpression != null)
-                position = ValueExpression.UpdatePosition(position, ref line, ref column);
-            position = semicolon.UpdatePosition(position, ref line, ref column);
-
-            Return = returnToken;
-            Semicolon = semicolon;
-
-            return position;
-        }
+        return position;
     }
 }

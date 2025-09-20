@@ -23,51 +23,50 @@ using Logic.Domain.Kuriimu2.KompressionAdapter;
 using Logic.Domain.Kuriimu2.KryptographyAdapter;
 using Logic.Domain.Level5;
 
-namespace Mappings.XtractQuery
+namespace Mappings.XtractQuery;
+
+public class KernelInitializer : IKernelInitializer
 {
-    public class KernelInitializer : IKernelInitializer
+    private IKernelContainer _kernelContainer;
+
+    public IKernelContainer CreateKernelContainer()
     {
-        private IKernelContainer _kernelContainer;
-
-        public IKernelContainer CreateKernelContainer()
+        if (_kernelContainer == null)
         {
-            if (_kernelContainer == null)
-            {
-                _kernelContainer = new KernelContainer();
-            }
-            return _kernelContainer;
+            _kernelContainer = new KernelContainer();
         }
+        return _kernelContainer;
+    }
 
-        public void Initialize()
-        {
-            RegisterCoreComponents(_kernelContainer.Kernel);
-            ActivateComponents(_kernelContainer.Kernel);
-        }
+    public void Initialize()
+    {
+        RegisterCoreComponents(_kernelContainer.Kernel);
+        ActivateComponents(_kernelContainer.Kernel);
+    }
 
-        private void RegisterCoreComponents(ICoCoKernel kernel)
-        {
-            kernel.Register<IBootstrapper, Bootstrapper>(ActivationScope.Unique);
-            kernel.Register<IEventBroker, EventBroker>(ActivationScope.Unique);
-            kernel.Register<IConfigurationRepository, FileConfigurationRepository>();
-            kernel.Register<IConfigurationRepository, CommandLineConfigurationRepository>();
-            kernel.Register<IConfigurator, Configurator>(ActivationScope.Unique);
-            kernel.Register<IConfigObjectProvider, ConfigObjectProvider>(ActivationScope.Unique);
-            kernel.Register<ILogger, Logger>(ActivationScope.Unique);
-            kernel.Register<ISerializer, JsonSerializer>();
-            kernel.Register<IScheduler, Scheduler>(ActivationScope.Unique);
-        }
+    private void RegisterCoreComponents(ICoCoKernel kernel)
+    {
+        kernel.Register<IBootstrapper, Bootstrapper>(ActivationScope.Unique);
+        kernel.Register<IEventBroker, EventBroker>(ActivationScope.Unique);
+        kernel.Register<IConfigurationRepository, FileConfigurationRepository>();
+        kernel.Register<IConfigurationRepository, CommandLineConfigurationRepository>();
+        kernel.Register<IConfigurator, Configurator>(ActivationScope.Unique);
+        kernel.Register<IConfigObjectProvider, ConfigObjectProvider>(ActivationScope.Unique);
+        kernel.Register<ILogger, Logger>(ActivationScope.Unique);
+        kernel.Register<ISerializer, JsonSerializer>();
+        kernel.Register<IScheduler, Scheduler>(ActivationScope.Unique);
+    }
 
-        private void ActivateComponents(ICoCoKernel kernel)
-        {
-            // Add own components
-            kernel.RegisterComponent<Level5ScriptManagementActivator>();
-            kernel.RegisterComponent<Level5Activator>();
+    private void ActivateComponents(ICoCoKernel kernel)
+    {
+        // Add own components
+        kernel.RegisterComponent<Level5ScriptManagementActivator>();
+        kernel.RegisterComponent<Level5Activator>();
 
-            kernel.RegisterComponent<CodeAnalysisActivator>();
+        kernel.RegisterComponent<CodeAnalysisActivator>();
 
-            kernel.RegisterComponent<Kuriimu2KompressionActivator>();
-            kernel.RegisterComponent<Kuriimu2KomponentActivator>();
-            kernel.RegisterComponent<Kuriimu2KryptographyActivator>();
-        }
+        kernel.RegisterComponent<Kuriimu2KompressionActivator>();
+        kernel.RegisterComponent<Kuriimu2KomponentActivator>();
+        kernel.RegisterComponent<Kuriimu2KryptographyActivator>();
     }
 }

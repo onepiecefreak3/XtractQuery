@@ -1,94 +1,88 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Kuriimu2.KomponentAdapter.InternalContract;
 
-namespace Logic.Domain.Kuriimu2.KomponentAdapter
+namespace Logic.Domain.Kuriimu2.KomponentAdapter;
+
+internal class ValueStorage : IValueStorage
 {
-    internal class ValueStorage : IValueStorage
+    private readonly IValueStorageFactory _storageFactory;
+
+    private readonly string? _scope;
+    private readonly IDictionary<string, object> _values;
+
+    public ValueStorage(IValueStorageFactory storageFactory)
     {
-        private readonly IValueStorageFactory _storageFactory;
+        _storageFactory = storageFactory;
 
-        private readonly string? _scope;
-        private readonly IDictionary<string, object> _values;
+        _values = new Dictionary<string, object>();
+    }
 
-        public ValueStorage(IValueStorageFactory storageFactory)
+    public ValueStorage(IValueStorageFactory storageFactory, IDictionary<string, object> store, string scope)
+    {
+        _storageFactory = storageFactory;
+
+        _scope = scope;
+        _values = store;
+    }
+
+    public bool Exists(string fieldName)
+    {
+        return _values.ContainsKey(GetValueName(fieldName));
+    }
+
+    public object Get(string fieldName)
+    {
+        return _values[GetValueName(fieldName)];
+    }
+
+    public void Set(string fieldName, object value)
+    {
+        _values[GetValueName(fieldName)] = value;
+    }
+
+    public IValueStorage CreateScope(string fieldName)
+    {
+        return _storageFactory.CreateScoped(_values, GetValueName(fieldName));
+    }
+
+    private string GetValueName(string? fieldName)
+    {
+        if (fieldName == null)
+            return _scope ?? string.Empty;
+
+        // Shortcut: Return normal concatenated string, if no back references exist
+        if (!fieldName.Contains(".."))
         {
-            _storageFactory = storageFactory;
+            var nestedName = fieldName;
+            if (!string.IsNullOrEmpty(_scope))
+                nestedName = _scope + "." + fieldName;
 
-            _values = new Dictionary<string, object>();
+            return nestedName;
         }
 
-        public ValueStorage(IValueStorageFactory storageFactory, IDictionary<string, object> store, string scope)
+        // Remove optional starting dot, which would reference current scope
+        if (fieldName.StartsWith("."))
+            fieldName = fieldName[1..];
+
+        // Otherwise resolve back references
+        var validParts = new List<string>();
+
+        string[] nestedNameParts = string.IsNullOrEmpty(_scope) ? Array.Empty<string>() : _scope.Split('.');
+        foreach (string part in nestedNameParts.Concat(fieldName.Split('.')))
         {
-            _storageFactory = storageFactory;
-
-            _scope = scope;
-            _values = store;
-        }
-
-        public bool Exists(string fieldName)
-        {
-            return _values.ContainsKey(GetValueName(fieldName));
-        }
-
-        public object Get(string fieldName)
-        {
-            return _values[GetValueName(fieldName)];
-        }
-
-        public void Set(string fieldName, object value)
-        {
-            _values[GetValueName(fieldName)] = value;
-        }
-
-        public IValueStorage CreateScope(string fieldName)
-        {
-            return _storageFactory.CreateScoped(_values, GetValueName(fieldName));
-        }
-
-        private string GetValueName(string? fieldName)
-        {
-            if (fieldName == null)
-                return _scope ?? string.Empty;
-
-            // Shortcut: Return normal concatenated string, if no back references exist
-            if (!fieldName.Contains(".."))
+            if (string.IsNullOrEmpty(part))
             {
-                var nestedName = fieldName;
-                if (!string.IsNullOrEmpty(_scope))
-                    nestedName = _scope + "." + fieldName;
+                if (validParts.Count <= 0)
+                    throw new InvalidOperationException("Value is not deep enough.");
 
-                return nestedName;
+                validParts.RemoveAt(validParts.Count - 1);
+                continue;
             }
 
-            // Remove optional starting dot, which would reference current scope
-            if (fieldName.StartsWith("."))
-                fieldName = fieldName[1..];
-
-            // Otherwise resolve back references
-            var validParts = new List<string>();
-
-            string[] nestedNameParts = string.IsNullOrEmpty(_scope) ? Array.Empty<string>() : _scope.Split('.');
-            foreach (string part in nestedNameParts.Concat(fieldName.Split('.')))
-            {
-                if (string.IsNullOrEmpty(part))
-                {
-                    if (validParts.Count <= 0)
-                        throw new InvalidOperationException("Value is not deep enough.");
-
-                    validParts.RemoveAt(validParts.Count - 1);
-                    continue;
-                }
-
-                validParts.Add(part);
-            }
-
-            // And join all valid parts
-            return string.Join(".", validParts);
+            validParts.Add(part);
         }
+
+        // And join all valid parts
+        return string.Join(".", validParts);
     }
 }

@@ -1,8 +1,7 @@
-﻿namespace Logic.Domain.Level5.Contract.Script.DataClasses
+﻿namespace Logic.Domain.Level5.Contract.Script.DataClasses;
+
+public enum PointerLength
 {
-    public enum PointerLength
-    {
-        Int,
-        Long
-    }
+    Int,
+    Long
 }

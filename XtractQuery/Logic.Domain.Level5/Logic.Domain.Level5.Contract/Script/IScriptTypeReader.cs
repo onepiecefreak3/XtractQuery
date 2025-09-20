@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Exceptions;
+﻿using Logic.Domain.Level5.Contract.Script.DataClasses;
 
-namespace Logic.Domain.Level5.Contract.Script
+namespace Logic.Domain.Level5.Contract.Script;
+
+public interface IScriptTypeReader
 {
-    [MapException(typeof(ScriptTypeReaderException))]
-    public interface IScriptTypeReader
-    {
-        ScriptType Read(Stream stream);
-        ScriptType Peek(Stream stream);
-    }
+    ScriptType Read(Stream stream);
+    ScriptType Peek(Stream stream);
 }

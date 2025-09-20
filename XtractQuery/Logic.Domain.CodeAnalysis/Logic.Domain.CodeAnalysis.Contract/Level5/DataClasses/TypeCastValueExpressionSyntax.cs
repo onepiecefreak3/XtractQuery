@@ -1,57 +1,51 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class TypeCastValueExpressionSyntax : ExpressionSyntax
 {
-    public class TypeCastValueExpressionSyntax : ExpressionSyntax
+    public TypeCastExpressionSyntax TypeCast { get; private set; }
+    public ValueExpressionSyntax Value { get; private set; }
+
+    public override SyntaxLocation Location => TypeCast.Location;
+    public override SyntaxSpan Span => new(TypeCast.Span.Position, Value.Span.EndPosition);
+
+    public TypeCastValueExpressionSyntax(TypeCastExpressionSyntax typeCast, ValueExpressionSyntax value)
     {
-        public TypeCastExpressionSyntax TypeCast { get; private set; }
-        public ValueExpressionSyntax Value { get; private set; }
+        typeCast.Parent = this;
+        value.Parent = this;
 
-        public override SyntaxLocation Location => TypeCast.Location;
-        public override SyntaxSpan Span => new(TypeCast.Span.Position, Value.Span.EndPosition);
+        TypeCast = typeCast;
+        Value = value;
 
-        public TypeCastValueExpressionSyntax(TypeCastExpressionSyntax typeCast, ValueExpressionSyntax value)
-        {
-            typeCast.Parent = this;
-            value.Parent = this;
+        Root.Update();
+    }
 
-            TypeCast = typeCast;
-            Value = value;
+    public void SetTypeCast(TypeCastExpressionSyntax typeCast, bool updatePositions = true)
+    {
+        typeCast.Parent = this;
 
+        TypeCast = typeCast;
+
+        if (updatePositions)
             Root.Update();
-        }
+    }
 
-        public void SetTypeCast(TypeCastExpressionSyntax typeCast, bool updatePositions = true)
-        {
-            typeCast.Parent = this;
+    public void SetValue(ValueExpressionSyntax value, bool updatePositions = true)
+    {
+        value.Parent = this;
 
-            TypeCast = typeCast;
+        Value = value;
 
-            if (updatePositions)
-                Root.Update();
-        }
+        if (updatePositions)
+            Root.Update();
+    }
 
-        public void SetValue(ValueExpressionSyntax value, bool updatePositions = true)
-        {
-            value.Parent = this;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        position = TypeCast.UpdatePosition(position, ref line,ref column);
+        position = Value.UpdatePosition(position, ref line, ref column);
 
-            Value = value;
-
-            if (updatePositions)
-                Root.Update();
-        }
-
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            position = TypeCast.UpdatePosition(position, ref line,ref column);
-            position = Value.UpdatePosition(position, ref line, ref column);
-
-            return position;
-        }
+        return position;
     }
 }

@@ -1,52 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class PostfixUnaryExpressionSyntax : ExpressionSyntax
 {
-    public class PostfixUnaryExpressionSyntax : ExpressionSyntax
+    public ExpressionSyntax Value { get; private set; }
+    public SyntaxToken Operation { get; private set; }
+
+    public override SyntaxLocation Location => Value.Location;
+    public override SyntaxSpan Span => new(Value.Span.Position, Operation.FullSpan.EndPosition);
+
+    public PostfixUnaryExpressionSyntax(ExpressionSyntax value, SyntaxToken operation)
     {
-        public ExpressionSyntax Value { get; private set; }
-        public SyntaxToken Operation { get; private set; }
+        value.Parent = this;
+        operation.Parent = this;
 
-        public override SyntaxLocation Location => Value.Location;
-        public override SyntaxSpan Span => new(Value.Span.Position, Operation.FullSpan.EndPosition);
+        Value = value;
+        Operation = operation;
 
-        public PostfixUnaryExpressionSyntax(ExpressionSyntax value, SyntaxToken operation)
-        {
-            value.Parent = this;
-            operation.Parent = this;
+        Root.Update();
+    }
 
-            Value = value;
-            Operation = operation;
+    public void SetOperation(SyntaxToken operation, bool updatePositions = true)
+    {
+        operation.Parent = this;
 
+        Operation = operation;
+
+        if (updatePositions)
             Root.Update();
-        }
+    }
 
-        public void SetOperation(SyntaxToken operation, bool updatePositions = true)
-        {
-            operation.Parent = this;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        SyntaxToken operation = Operation;
 
-            Operation = operation;
+        position = Value.UpdatePosition(position, ref line, ref column);
+        position = operation.UpdatePosition(position, ref line, ref column);
 
-            if (updatePositions)
-                Root.Update();
-        }
+        Operation = operation;
 
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            SyntaxToken operation = Operation;
-
-            position = Value.UpdatePosition(position, ref line, ref column);
-            position = operation.UpdatePosition(position, ref line, ref column);
-
-            Operation = operation;
-
-            return position;
-        }
+        return position;
     }
 }

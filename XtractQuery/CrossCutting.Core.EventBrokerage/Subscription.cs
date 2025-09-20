@@ -1,16 +1,15 @@
 ﻿using System;
 
-namespace CrossCutting.Core.EventBrokerage
-{
-    public class Subscription
-    {
-        public Delegate Filter { get; set; }
-        public Delegate Handler { get; set; }
-        public Type HandlerType { get; set; }
+namespace CrossCutting.Core.EventBrokerage;
 
-        public Subscription(Delegate handler)
-        {
-            Handler = handler;
-        }
+public class Subscription
+{
+    public Delegate Filter { get; set; }
+    public Delegate Handler { get; set; }
+    public Type HandlerType { get; set; }
+
+    public Subscription(Delegate handler)
+    {
+        Handler = handler;
     }
 }

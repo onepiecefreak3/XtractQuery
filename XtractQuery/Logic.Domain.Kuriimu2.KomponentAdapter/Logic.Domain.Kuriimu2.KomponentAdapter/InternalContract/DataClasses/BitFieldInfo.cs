@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract.DataClasses;
+﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract.DataClasses;
 
-namespace Logic.Domain.Kuriimu2.KomponentAdapter.InternalContract.DataClasses
+namespace Logic.Domain.Kuriimu2.KomponentAdapter.InternalContract.DataClasses;
+
+public class BitFieldInfo
 {
-    public class BitFieldInfo
-    {
-        public int BlockSize = 4;
-        public BitOrder BitOrder = BitOrder.Default;
-    }
+    public int BlockSize = 4;
+    public BitOrder BitOrder = BitOrder.Default;
 }

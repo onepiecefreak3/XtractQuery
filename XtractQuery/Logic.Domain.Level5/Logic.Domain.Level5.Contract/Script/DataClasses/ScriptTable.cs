@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
+﻿using Logic.Domain.Level5.Contract.Compression.DataClasses;
 
-namespace Logic.Domain.Level5.Contract.Script.DataClasses
+namespace Logic.Domain.Level5.Contract.Script.DataClasses;
+
+public class ScriptTable
 {
-    public class ScriptTable
-    {
-        public int EntryCount { get; set; }
-        public CompressionType? CompressionType { get; set; }
-        public Stream Stream { get; set; }
-    }
+    public int EntryCount { get; set; }
+    public CompressionType? CompressionType { get; set; }
+    public Stream Stream { get; set; }
 }

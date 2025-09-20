@@ -1,13 +1,3 @@
-﻿using CrossCutting.Core.Contract.Configuration.DataClasses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Logic.Domain.Kuriimu2.KryptographyAdapter;
 
-namespace Logic.Domain.Kuriimu2.KryptographyAdapter
-{
-    public class Kuriimu2KryptographyConfiguration
-    {
-    }
-}
+public class Kuriimu2KryptographyConfiguration;

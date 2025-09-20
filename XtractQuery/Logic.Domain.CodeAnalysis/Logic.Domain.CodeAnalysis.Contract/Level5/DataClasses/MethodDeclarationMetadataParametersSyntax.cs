@@ -1,76 +1,68 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class MethodDeclarationMetadataParametersSyntax : SyntaxNode
 {
-    public class MethodDeclarationMetadataParametersSyntax : SyntaxNode
+    public SyntaxToken RelSmaller { get; private set; }
+    public MethodDeclarationMetadataParameterListSyntax List { get; private set; }
+    public SyntaxToken RelBigger { get; private set; }
+
+    public override SyntaxLocation Location => RelSmaller.FullLocation;
+    public override SyntaxSpan Span => new(RelSmaller.FullSpan.Position, RelBigger.FullSpan.EndPosition);
+
+    public MethodDeclarationMetadataParametersSyntax(SyntaxToken relSmaller, MethodDeclarationMetadataParameterListSyntax list, SyntaxToken relBigger)
     {
-        public SyntaxToken RelSmaller { get; private set; }
-        public MethodDeclarationMetadataParameterListSyntax List { get; private set; }
-        public SyntaxToken RelBigger { get; private set; }
+        relSmaller.Parent = this;
+        list.Parent = this;
+        relBigger.Parent = this;
 
-        public override SyntaxLocation Location => RelSmaller.FullLocation;
-        public override SyntaxSpan Span => new(RelSmaller.FullSpan.Position, RelBigger.FullSpan.EndPosition);
+        RelSmaller = relSmaller;
+        List = list;
+        RelBigger = relBigger;
 
-        public MethodDeclarationMetadataParametersSyntax(SyntaxToken relSmaller, MethodDeclarationMetadataParameterListSyntax list, SyntaxToken relBigger)
-        {
-            relSmaller.Parent = this;
-            list.Parent = this;
-            relBigger.Parent = this;
+        Root.Update();
+    }
 
-            RelSmaller = relSmaller;
-            List = list;
-            RelBigger = relBigger;
+    public void SetRelSmaller(SyntaxToken relSmaller, bool updatePosition = true)
+    {
+        relSmaller.Parent = this;
+        RelSmaller = relSmaller;
 
+        if (updatePosition)
             Root.Update();
-        }
+    }
 
-        public void SetRelSmaller(SyntaxToken relSmaller, bool updatePosition = true)
-        {
-            relSmaller.Parent = this;
-            RelSmaller = relSmaller;
+    public void SetList(MethodDeclarationMetadataParameterListSyntax list, bool updatePosition = true)
+    {
+        list.Parent = this;
+        List = list;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        if (updatePosition)
+            Root.Update();
+    }
 
-        public void SetList(MethodDeclarationMetadataParameterListSyntax list, bool updatePosition = true)
-        {
-            list.Parent = this;
-            List = list;
+    public void SetRelBigger(SyntaxToken relBigger, bool updatePosition = true)
+    {
+        relBigger.Parent = this;
+        RelBigger = relBigger;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        if (updatePosition)
+            Root.Update();
+    }
 
-        public void SetRelBigger(SyntaxToken relBigger, bool updatePosition = true)
-        {
-            relBigger.Parent = this;
-            RelBigger = relBigger;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        SyntaxToken relSmaller = RelSmaller;
+        SyntaxToken relBigger = RelBigger;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        position = relSmaller.UpdatePosition(position, ref line, ref column);
+        position = List.UpdatePosition(position, ref line, ref column);
+        position = relBigger.UpdatePosition(position, ref line, ref column);
 
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            SyntaxToken relSmaller = RelSmaller;
-            SyntaxToken relBigger = RelBigger;
+        RelSmaller = relSmaller;
+        RelBigger = relBigger;
 
-            position = relSmaller.UpdatePosition(position, ref line, ref column);
-            position = List.UpdatePosition(position, ref line, ref column);
-            position = relBigger.UpdatePosition(position, ref line, ref column);
-
-            RelSmaller = relSmaller;
-            RelBigger = relBigger;
-
-            return position;
-        }
+        return position;
     }
 }

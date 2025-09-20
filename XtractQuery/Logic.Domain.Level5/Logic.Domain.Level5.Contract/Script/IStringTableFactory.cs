@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Exceptions;
+﻿using Logic.Domain.Level5.Contract.Script.DataClasses;
 
-namespace Logic.Domain.Level5.Contract.Script
+namespace Logic.Domain.Level5.Contract.Script;
+
+public interface IStringTableFactory
 {
-    [MapException(typeof(StringTableFactoryException))]
-    public interface IStringTableFactory
-    {
-        IStringTable Create(Stream input, ScriptType type);
-        IStringTable Create(ScriptType scriptType);
-    }
+    IStringTable Create(Stream input, ScriptType type);
+    IStringTable Create(ScriptType scriptType);
 }

@@ -1,6 +1,3 @@
-﻿namespace CrossCutting.Core.Contract.Messages
-{
-    public class InitializeApplicationMessage
-    {
-    }
-}
+﻿namespace CrossCutting.Core.Contract.Messages;
+
+public class InitializeApplicationMessage;

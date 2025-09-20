@@ -1,9 +1,8 @@
-﻿namespace CrossCutting.Core.Contract.Serialization
-{
-    public interface ISerializer
-    {
-        string Serialize<T>(T obj);
+﻿namespace CrossCutting.Core.Contract.Serialization;
 
-        T Deserialize<T>(string serializedText);
-    }
+public interface ISerializer
+{
+    string Serialize<T>(T obj);
+
+    T Deserialize<T>(string serializedText);
 }

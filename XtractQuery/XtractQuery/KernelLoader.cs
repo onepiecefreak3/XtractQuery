@@ -5,50 +5,49 @@ using CrossCutting.Core.Contract.DependencyInjection;
 using CrossCutting.Core.Contract.EventBrokerage;
 using Mappings.XtractQuery;
 
-namespace XtractQuery
+namespace XtractQuery;
+
+internal class KernelLoader
 {
-    internal class KernelLoader
+    private ICoCoKernel _kernel;
+    private IBootstrapper _bootstrapper;
+
+    public KernelLoader()
     {
-        private ICoCoKernel _kernel;
-        private IBootstrapper _bootstrapper;
-
-        public KernelLoader()
+        AssemblyLoadContext.Default.Unloading += (a) =>
         {
-            AssemblyLoadContext.Default.Unloading += (a) =>
-            {
-                _bootstrapper?.DeactivatingAll();
-                _bootstrapper?.DeactivatedAll();
-            };
-        }
+            _bootstrapper?.DeactivatingAll();
+            _bootstrapper?.DeactivatedAll();
+        };
+    }
 
-        public ICoCoKernel Initialize()
-        {
-            KernelInitializer kernelInitializer = new KernelInitializer();
-            IKernelContainer kernelContainer = kernelInitializer.CreateKernelContainer();
-            _kernel = kernelContainer.Kernel;
+    public ICoCoKernel Initialize()
+    {
+        KernelInitializer kernelInitializer = new KernelInitializer();
+        IKernelContainer kernelContainer = kernelInitializer.CreateKernelContainer();
+        _kernel = kernelContainer.Kernel;
 
-            kernelInitializer.Initialize();
-            _kernel.Build("Bootstrap");
+        kernelInitializer.Initialize();
+        _kernel.Build("Bootstrap");
 
-            ActivateComponents();
-            _kernel.Build("Components");
+        ActivateComponents();
+        _kernel.Build("Components");
 
-            return _kernel;
-        }
+        return _kernel;
+    }
 
-        private void ActivateComponents()
-        {
-            IConfigurator configurator = _kernel.Get<IConfigurator>();
+    private void ActivateComponents()
+    {
+        IConfigurator configurator = _kernel.Get<IConfigurator>();
 
-            _bootstrapper = _kernel.Get<IBootstrapper>();
-            _bootstrapper.ConfigureAll(configurator);
-            _bootstrapper.ActivatingAll();
-            _bootstrapper.ActivatedAll();
-            _bootstrapper.RegisterAll(_kernel);
+        _bootstrapper = _kernel.Get<IBootstrapper>();
+        _bootstrapper.ConfigureAll(configurator);
+        _bootstrapper.ActivatingAll();
+        _bootstrapper.ActivatedAll();
+        _bootstrapper.RegisterAll(_kernel);
 
-            IEventBroker eventBroker = _kernel.Get<IEventBroker>();
-            eventBroker.SetResolverCallback(t => _kernel.Get(t));
-            _bootstrapper.AddAllMessageSubscriptions(eventBroker);
-        }
+        IEventBroker eventBroker = _kernel.Get<IEventBroker>();
+        eventBroker.SetResolverCallback(t => _kernel.Get(t));
+        _bootstrapper.AddAllMessageSubscriptions(eventBroker);
     }
 }

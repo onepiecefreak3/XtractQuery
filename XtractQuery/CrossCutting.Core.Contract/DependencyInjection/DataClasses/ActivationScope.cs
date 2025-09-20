@@ -1,9 +1,8 @@
-﻿namespace CrossCutting.Core.Contract.DependencyInjection.DataClasses
+﻿namespace CrossCutting.Core.Contract.DependencyInjection.DataClasses;
+
+public enum ActivationScope
 {
-    public enum ActivationScope
-    {
-        Dependency,
-        Request,
-        Unique
-    }
+    Dependency,
+    Request,
+    Unique
 }

@@ -1,62 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class UnaryExpressionSyntax : ExpressionSyntax
 {
-    public class UnaryExpressionSyntax : ExpressionSyntax
+    public SyntaxToken Operation { get; private set; }
+    public ValueExpressionSyntax Value { get; private set; }
+
+    public override SyntaxLocation Location => Operation.FullLocation;
+    public override SyntaxSpan Span => new(Operation.FullSpan.Position, Value.Span.EndPosition);
+
+    public UnaryExpressionSyntax(SyntaxToken operation, ValueExpressionSyntax value)
     {
-        public SyntaxToken Operation { get; private set; }
-        public ValueExpressionSyntax Value { get; private set; }
+        operation.Parent = this;
+        value.Parent = this;
 
-        public override SyntaxLocation Location => Operation.FullLocation;
-        public override SyntaxSpan Span => new(Operation.FullSpan.Position, Value.Span.EndPosition);
+        Operation = operation;
+        Value = value;
 
-        public UnaryExpressionSyntax(SyntaxToken operation, ValueExpressionSyntax value)
-        {
-            operation.Parent = this;
-            value.Parent = this;
+        Root.Update();
+    }
 
-            Operation = operation;
-            Value = value;
+    public void SetOperation(SyntaxToken operation, bool updatePositions = true)
+    {
+        operation.Parent = this;
 
+        Operation = operation;
+
+        if (updatePositions)
             Root.Update();
-        }
+    }
 
-        public void SetOperation(SyntaxToken operation, bool updatePositions = true)
-        {
-            operation.Parent = this;
+    public void SetValue(ValueExpressionSyntax value, bool updatePositions = true)
+    {
+        value.Parent = this;
 
-            Operation = operation;
+        Value = value;
 
-            if (updatePositions)
-                Root.Update();
-        }
+        if (updatePositions)
+            Root.Update();
+    }
 
-        public void SetValue(ValueExpressionSyntax value, bool updatePositions = true)
-        {
-            value.Parent = this;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        SyntaxToken operation = Operation;
 
-            Value = value;
+        position = operation.UpdatePosition(position, ref line, ref column);
+        position = Value.UpdatePosition(position, ref line, ref column);
 
-            if (updatePositions)
-                Root.Update();
-        }
+        Operation = operation;
 
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            SyntaxToken operation = Operation;
-
-            position = operation.UpdatePosition(position, ref line, ref column);
-            position = Value.UpdatePosition(position, ref line, ref column);
-
-            Operation = operation;
-
-            return position;
-        }
+        return position;
     }
 }

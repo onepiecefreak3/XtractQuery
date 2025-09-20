@@ -10,5 +10,5 @@ ICoCoKernel kernel = loader.Initialize();
 var eventBroker = kernel.Get<IEventBroker>();
 eventBroker.Raise(new InitializeApplicationMessage());
 
-var mainLogic = kernel.Get <ILevel5ScriptManagementWorkflow>();
+var mainLogic = kernel.Get <IScriptManagementWorkflow>();
 return mainLogic.Execute();

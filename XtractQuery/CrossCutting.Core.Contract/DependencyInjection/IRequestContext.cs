@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace CrossCutting.Core.Contract.DependencyInjection
+namespace CrossCutting.Core.Contract.DependencyInjection;
+
+public interface IRequestContext
 {
-    public interface IRequestContext
-    {
-        void ChangeParameters(Dictionary<string, object> parameter);
-    }
+    void ChangeParameters(Dictionary<string, object> parameter);
 }

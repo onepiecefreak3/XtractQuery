@@ -1,13 +1,12 @@
-﻿namespace CrossCutting.Core.Contract.Scheduling
+﻿namespace CrossCutting.Core.Contract.Scheduling;
+
+public enum SchedulerIntervalUnit
 {
-    public enum SchedulerIntervalUnit
-    {
-        Milliseconds,
-        Seconds,
-        Minutes,
-        Hours,
-        Days,
-        Weeks,
-        Months
-    }
+    Milliseconds,
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+    Weeks,
+    Months
 }

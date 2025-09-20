@@ -1,9 +1,8 @@
-﻿namespace CrossCutting.Core.Contract.Configuration.DataClasses
+﻿namespace CrossCutting.Core.Contract.Configuration.DataClasses;
+
+public enum ChangeReason
 {
-    public enum ChangeReason
-    {
-        Changed,
-        FirstLoad,
-        Reloaded
-    }
+    Changed,
+    FirstLoad,
+    Reloaded
 }

@@ -1,28 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CrossCutting.Core.Contract.Aspects;
+﻿using CrossCutting.Core.Contract.Aspects;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5
+namespace Logic.Domain.CodeAnalysis.Contract.Level5;
+
+[MapException(typeof(Level5SyntaxFactoryException))]
+public interface ILevel5SyntaxFactory
 {
-    [MapException(typeof(Level5SyntaxFactoryException))]
-    public interface ILevel5SyntaxFactory
-    {
-        SyntaxToken Create(string text, int rawKind, SyntaxTokenTrivia? leadingTrivia = null, SyntaxTokenTrivia? trailingTrivia = null);
+    SyntaxToken Create(string text, int rawKind, SyntaxTokenTrivia? leadingTrivia = null, SyntaxTokenTrivia? trailingTrivia = null);
 
-        SyntaxToken Token(SyntaxTokenKind kind);
+    SyntaxToken Token(SyntaxTokenKind kind);
 
-        SyntaxToken NumericLiteral(long value);
-        SyntaxToken HashNumericLiteral(ulong value);
-        SyntaxToken HashStringLiteral(string text);
-        SyntaxToken FloatingNumericLiteral(float value);
-        SyntaxToken StringLiteral(string text);
-        SyntaxToken Identifier(string text);
-        SyntaxToken Variable(string name, uint slot);
-    }
+    SyntaxToken NumericLiteral(long value);
+    SyntaxToken HashNumericLiteral(ulong value);
+    SyntaxToken HashStringLiteral(string text);
+    SyntaxToken FloatingNumericLiteral(float value);
+    SyntaxToken StringLiteral(string text);
+    SyntaxToken Identifier(string text);
+    SyntaxToken Variable(string name, uint slot);
 }

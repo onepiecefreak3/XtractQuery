@@ -1,30 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Serialization;
 
-namespace Logic.Domain.Kuriimu2.KomponentAdapter.Contract.Exceptions
+namespace Logic.Domain.Kuriimu2.KomponentAdapter.Contract.Exceptions;
+
+public class BinaryFactoryException : Exception
 {
-    public class BinaryFactoryException : Exception
+    public BinaryFactoryException()
     {
-        public BinaryFactoryException()
-        {
-        }
+    }
 
-        public BinaryFactoryException(string message) : base(message)
-        {
-        }
+    public BinaryFactoryException(string message) : base(message)
+    {
+    }
 
-        public BinaryFactoryException(string message, Exception inner) : base(message, inner)
-        {
-        }
+    public BinaryFactoryException(string message, Exception inner) : base(message, inner)
+    {
+    }
 
-        protected BinaryFactoryException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
-        {
-        }
+    protected BinaryFactoryException(
+        SerializationInfo info,
+        StreamingContext context) : base(info, context)
+    {
     }
 }

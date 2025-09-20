@@ -1,80 +1,72 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses
+namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
+
+public class MethodDeclarationBodySyntax : SyntaxNode
 {
-    public class MethodDeclarationBodySyntax : SyntaxNode
+    public SyntaxToken CurlyOpen { get; private set; }
+    public IReadOnlyList<StatementSyntax> Expressions { get; private set; }
+    public SyntaxToken CurlyClose { get; private set; }
+
+    public override SyntaxLocation Location => CurlyOpen.FullLocation;
+    public override SyntaxSpan Span => new(CurlyOpen.FullSpan.Position, CurlyClose.FullSpan.EndPosition);
+
+    public MethodDeclarationBodySyntax(SyntaxToken curlyOpen, IReadOnlyList<StatementSyntax>? expressions, SyntaxToken curlyClose)
     {
-        public SyntaxToken CurlyOpen { get; private set; }
-        public IReadOnlyList<StatementSyntax> Expressions { get; private set; }
-        public SyntaxToken CurlyClose { get; private set; }
+        curlyOpen.Parent = this;
+        curlyClose.Parent = this;
 
-        public override SyntaxLocation Location => CurlyOpen.FullLocation;
-        public override SyntaxSpan Span => new(CurlyOpen.FullSpan.Position, CurlyClose.FullSpan.EndPosition);
+        CurlyOpen = curlyOpen;
+        Expressions = expressions ?? new List<StatementSyntax>();
+        CurlyClose = curlyClose;
 
-        public MethodDeclarationBodySyntax(SyntaxToken curlyOpen, IReadOnlyList<StatementSyntax>? expressions, SyntaxToken curlyClose)
-        {
-            curlyOpen.Parent = this;
-            curlyClose.Parent = this;
+        foreach (StatementSyntax expression in Expressions)
+            expression.Parent = this;
 
-            CurlyOpen = curlyOpen;
-            Expressions = expressions ?? new List<StatementSyntax>();
-            CurlyClose = curlyClose;
+        Root.Update();
+    }
 
-            foreach (StatementSyntax expression in Expressions)
-                expression.Parent = this;
+    public void SetCurlyOpen(SyntaxToken curlyOpen, bool updatePosition = true)
+    {
+        curlyOpen.Parent = this;
+        CurlyOpen = curlyOpen;
 
+        if (updatePosition)
             Root.Update();
-        }
+    }
 
-        public void SetCurlyOpen(SyntaxToken curlyOpen, bool updatePosition = true)
-        {
-            curlyOpen.Parent = this;
-            CurlyOpen = curlyOpen;
+    public void SetExpressions(IReadOnlyList<StatementSyntax> expressions, bool updatePosition = true)
+    {
+        Expressions = expressions;
+        foreach (StatementSyntax expression in Expressions)
+            expression.Parent = this;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        if (updatePosition)
+            Root.Update();
+    }
 
-        public void SetExpressions(IReadOnlyList<StatementSyntax> expressions, bool updatePosition = true)
-        {
-            Expressions = expressions;
-            foreach (StatementSyntax expression in Expressions)
-                expression.Parent = this;
+    public void SetCurlyClose(SyntaxToken curlyClose, bool updatePosition = true)
+    {
+        curlyClose.Parent = this;
+        CurlyClose = curlyClose;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        if (updatePosition)
+            Root.Update();
+    }
 
-        public void SetCurlyClose(SyntaxToken curlyClose, bool updatePosition = true)
-        {
-            curlyClose.Parent = this;
-            CurlyClose = curlyClose;
+    internal override int UpdatePosition(int position, ref int line, ref int column)
+    {
+        SyntaxToken curlyOpen = CurlyOpen;
+        SyntaxToken curlyClose = CurlyClose;
 
-            if (updatePosition)
-                Root.Update();
-        }
+        position = curlyOpen.UpdatePosition(position, ref line, ref column);
+        foreach (StatementSyntax expression in Expressions)
+            position = expression.UpdatePosition(position, ref line, ref column);
+        position = curlyClose.UpdatePosition(position, ref line, ref column);
 
-        internal override int UpdatePosition(int position, ref int line, ref int column)
-        {
-            SyntaxToken curlyOpen = CurlyOpen;
-            SyntaxToken curlyClose = CurlyClose;
+        CurlyOpen = curlyOpen;
+        CurlyClose = curlyClose;
 
-            position = curlyOpen.UpdatePosition(position, ref line, ref column);
-            foreach (StatementSyntax expression in Expressions)
-                position = expression.UpdatePosition(position, ref line, ref column);
-            position = curlyClose.UpdatePosition(position, ref line, ref column);
-
-            CurlyOpen = curlyOpen;
-            CurlyClose = curlyClose;
-
-            return position;
-        }
+        return position;
     }
 }

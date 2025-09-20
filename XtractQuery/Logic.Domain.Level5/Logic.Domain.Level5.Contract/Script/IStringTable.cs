@@ -1,22 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.Level5.Contract.Script.Exceptions;
+﻿namespace Logic.Domain.Level5.Contract.Script;
 
-namespace Logic.Domain.Level5.Contract.Script
+public interface IStringTable
 {
-    [MapException(typeof(StringTableException))]
-    public interface IStringTable
-    {
-        Stream GetStream();
+    Stream GetStream();
 
-        string Read(long offset);
-        long Write(string value);
+    string Read(long offset);
+    long Write(string value);
 
-        IList<string> GetByHash(uint hash);
-        uint ComputeHash(string value);
-    }
+    IList<string> GetByHash(uint hash);
+    uint ComputeHash(string value);
 }
