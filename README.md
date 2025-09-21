@@ -1,7 +1,8 @@
 # XtractQuery
 
 ## Description
-A command line tool to de- and recompile .xq files from various 3DS games by Level5.<br>
+
+A command line tool to de- and recompile .xq files from various 3DS games by Level5 and .cq files from various NDS games by Level5.<br>
 It supports all known format specifications.
 
 ## Usage
@@ -12,7 +13,7 @@ Various options have to be set to properly use the command line tool.
 | - | - |
 | -h | Shows a help text explaining all the options listed here and examples on how to use use them. |
 | -o | The operation to execute. Has to be followed by either:<br>`d` to decompress a script<br>`e` to extract a script to human readable code<br>`c` to create a scripot from human readable code |
-| -t | The type of .xq file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq` |
+| -t | The type of .xq or .cq file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`gss1` |
 | -f | The file or directory to execute the operation on. |
 
 ### Method name mapping
@@ -24,11 +25,13 @@ If an unknown instruction type has no corresponding mapping, its name will be se
 
 ### Reference scripts
 
-.xq scripts can call methods from within themselves and other .xq scripts currently loaded in the engine. Normally, those calls happen via the CRC32/CRC16 of the function name to invoke them.<br>
-To resolve those checksums back into human readable names, reference .xq scripts can be placed in the folder `reference` next to the command line tool.
+Scripts can call methods from within themselves and other scripts currently loaded in the engine. Normally, those calls happen via the CRC32-B or CRC16-X25 of the function name to invoke them.<br>
+To resolve those checksums back into human readable names, reference scripts can be placed in the folder `reference` next to the command line tool.
 
-It is recommended to put every .xq script of a game in the references to have the highest probability of properly resolving all checksums.<br>
+It is recommended to put every script of a game in the references to have the highest probability of properly resolving all checksums.<br>
 However, there is no guarantee that a checksum will be resolved.
+
+Only scripts of the same type as the processed script will be used for reference.
 
 ## Examples
 
