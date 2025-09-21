@@ -1,4 +1,4 @@
-# XQ32/XSEQ Script Specification
+# XQ32/XSEQ/GSS1 Script Specification
 
 ## Introduction
 
@@ -75,7 +75,7 @@ Everything after the number will be ignored for compilation and follows no speci
 #### Calls
 | Type | Description |
 | - | - |
-| 20 | Calls any function from any currently loaded script in the engine, either by name or by its CRC32/CRC16 checksum.<br>```$local1 = call("MyOtherFunction"h, arg1, arg2, ...);```<br>```$local1 = call("MyOtherFunction", arg1, arg2, ...);```<br>```$local1 = MyOtherFunction(arg1, arg2, ...);``` |
+| 20 | Calls any function from any currently loaded script in the engine, either by name or by its CRC32-B or CRC16-X25 checksum.<br>```$local1 = call("MyOtherFunction"h, arg1, arg2, ...);```<br>```$local1 = call("MyOtherFunction", arg1, arg2, ...);```<br>```$local1 = MyOtherFunction(arg1, arg2, ...);``` |
 
 #### Jumps
 | Type | Description |
@@ -181,7 +181,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 510 | Gets the amount of parameters into the function.<br>```$local1 = parameter_count();``` |
-| 520 | Gets a random value from 0 to a mximum defined by a literal value or variable and sets to another variable.<br>```$local1 = random(5);```<br>```$local1 = random($local2);``` |
+| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets to another variable.<br>```$local1 = random(5);```<br>```$local1 = random($local2);``` |
 | 521 | Gets the CRC32 from a literal value or variable and sets to another variable.<br>```$local1 = crc32($local2);``` |
 | 522 | Gets the CRC16 from a literal value or variable and sets to another variable.<br>```$local1 = crc16($local2);``` |
 | 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
