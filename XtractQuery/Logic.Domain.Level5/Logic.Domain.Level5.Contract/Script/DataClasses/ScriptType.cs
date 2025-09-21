@@ -3,5 +3,6 @@
 public enum ScriptType
 {
     Xq32,
-    Xseq
+    Xseq,
+    Gss1
 }

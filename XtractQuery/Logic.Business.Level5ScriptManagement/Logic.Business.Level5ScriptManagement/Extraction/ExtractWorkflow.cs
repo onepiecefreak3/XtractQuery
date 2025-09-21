@@ -9,7 +9,8 @@ class ExtractWorkflow(
     ScriptManagementConfiguration config,
     IScriptTypeReader typeReader,
     IExtractXq32Workflow extractXq32Workflow,
-    IExtractXseqWorkflow extractXseqWorkflow)
+    IExtractXseqWorkflow extractXseqWorkflow,
+    IExtractGss1Workflow extractGss1Workflow)
     : IExtractWorkflow
 {
     public void Extract()
@@ -68,6 +69,11 @@ class ExtractWorkflow(
                 case ScriptType.Xseq:
                     extractXseqWorkflow.Prepare();
                     extractXseqWorkflow.Extract(input, output);
+                    break;
+
+                case ScriptType.Gss1:
+                    extractGss1Workflow.Prepare();
+                    extractGss1Workflow.Extract(input, output);
                     break;
             }
         }

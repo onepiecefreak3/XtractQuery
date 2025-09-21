@@ -6,7 +6,7 @@ using Logic.Domain.Level5.Script.Xseq.InternalContract;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqScriptReader : ScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
+internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
 {
     private readonly IBinaryFactory _binaryFactory;
     private readonly Dictionary<ushort, HashSet<string>> _functionCache;

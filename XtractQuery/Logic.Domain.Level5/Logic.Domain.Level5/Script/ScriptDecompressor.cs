@@ -56,7 +56,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return GetGlobalVariableCount(header);
     }
 
-    public ScriptTable DecompressFunctions(Stream input)
+    public CompressedScriptTable DecompressFunctions(Stream input)
     {
         THeader header = ReadHeader(input);
 
@@ -67,7 +67,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return ReadTable(input, functionTable, jumpTable.offset, hasCompression);
     }
 
-    public ScriptTable DecompressJumps(Stream input)
+    public CompressedScriptTable DecompressJumps(Stream input)
     {
         THeader header = ReadHeader(input);
             
@@ -78,7 +78,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return ReadTable(input, jumpTable, instructionTable.offset, hasCompression);
     }
 
-    public ScriptTable DecompressInstructions(Stream input)
+    public CompressedScriptTable DecompressInstructions(Stream input)
     {
         THeader header = ReadHeader(input);
 
@@ -89,7 +89,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return ReadTable(input, instructionTable, argumentTable.offset, hasCompression);
     }
 
-    public ScriptTable DecompressArguments(Stream input)
+    public CompressedScriptTable DecompressArguments(Stream input)
     {
         THeader header = ReadHeader(input);
 
@@ -100,7 +100,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return ReadTable(input, argumentTable, stringOffset, hasCompression);
     }
 
-    public ScriptStringTable DecompressStrings(Stream input)
+    public CompressedScriptStringTable DecompressStrings(Stream input)
     {
         THeader header = ReadHeader(input);
 
@@ -159,12 +159,12 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return true;
     }
 
-    private ScriptTable ReadTable(Stream input, TableData tableData, long nextOffset, bool hasCompression)
+    private CompressedScriptTable ReadTable(Stream input, TableData tableData, long nextOffset, bool hasCompression)
     {
         if (hasCompression)
             return DecompressTable(input, tableData);
 
-        return new ScriptTable
+        return new CompressedScriptTable
         {
             EntryCount = tableData.count,
             CompressionType = null,
@@ -172,11 +172,11 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         };
     }
 
-    private ScriptTable DecompressTable(Stream input, TableData tableData)
+    private CompressedScriptTable DecompressTable(Stream input, TableData tableData)
     {
         Stream decompressedStream = Decompress(input, tableData.offset, out CompressionType compressionType);
 
-        return new ScriptTable
+        return new CompressedScriptTable
         {
             EntryCount = tableData.count,
             CompressionType = compressionType,
@@ -184,26 +184,28 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         };
     }
 
-    private ScriptStringTable ReadStringTable(Stream input, int offset, bool hasCompression)
+    private CompressedScriptStringTable ReadStringTable(Stream input, int offset, bool hasCompression)
     {
         if (hasCompression)
             return DecompressStringTable(input, offset);
 
-        return new ScriptStringTable
+        return new CompressedScriptStringTable
         {
             CompressionType = null,
-            Stream = _streamFactory.CreateSubStream(input, offset, input.Length - offset)
+            Stream = _streamFactory.CreateSubStream(input, offset, input.Length - offset),
+            BaseOffset = 0
         };
     }
 
-    private ScriptStringTable DecompressStringTable(Stream input, int offset)
+    private CompressedScriptStringTable DecompressStringTable(Stream input, int offset)
     {
         Stream decompressedStream = Decompress(input, offset, out CompressionType compressionType);
 
-        return new ScriptStringTable
+        return new CompressedScriptStringTable
         {
             CompressionType = compressionType,
-            Stream = decompressedStream
+            Stream = decompressedStream,
+            BaseOffset = 0
         };
     }
 

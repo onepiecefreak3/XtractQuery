@@ -3,15 +3,16 @@ using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 
-namespace Logic.Business.Level5ScriptManagement;
+namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal class Level5ScriptFileConverter : ILevel5ScriptFileConverter
+internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 {
     private readonly IMethodNameMapper _methodNameMapper;
     private readonly ILevel5SyntaxFactory _syntaxFactory;
 
-    public Level5ScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
+    public Xq32ScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
     {
         _methodNameMapper = methodNameMapper;
         _syntaxFactory = syntaxFactory;

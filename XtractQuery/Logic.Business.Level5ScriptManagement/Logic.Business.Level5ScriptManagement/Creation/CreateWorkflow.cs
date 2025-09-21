@@ -7,7 +7,8 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateWorkflow(
     ScriptManagementConfiguration config,
     ICreateXq32Workflow createXq32Workflow,
-    ICreateXseqWorkflow createXseqWorkflow)
+    ICreateXseqWorkflow createXseqWorkflow,
+    ICreateGss1Workflow createGss1Workflow)
     : ICreateWorkflow
 {
     public void Create()
@@ -66,6 +67,11 @@ class CreateWorkflow(
                     using (Stream outputStream = File.Create(filePath + ".xq"))
                         createXseqWorkflow.Create(inputStream, outputStream);
                     break;
+
+                case ScriptType.Gss1:
+                    using (Stream outputStream = File.Create(filePath + ".cq"))
+                        createGss1Workflow.Create(inputStream, outputStream);
+                    break;
             }
         }
         catch (Exception e)
@@ -89,6 +95,10 @@ class CreateWorkflow(
 
             case "xseq":
                 scriptType = ScriptType.Xseq;
+                break;
+
+            case "gss1":
+                scriptType = ScriptType.Gss1;
                 break;
 
             default:

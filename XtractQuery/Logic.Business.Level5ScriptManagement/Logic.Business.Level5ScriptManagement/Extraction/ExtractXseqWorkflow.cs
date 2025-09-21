@@ -1,10 +1,10 @@
-﻿using Logic.Business.Level5ScriptManagement.InternalContract;
-using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
+﻿using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.Level5.Contract.Script.Xseq;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 
 namespace Logic.Business.Level5ScriptManagement.Extraction;
 
@@ -13,7 +13,7 @@ class ExtractXseqWorkflow(
     IScriptTypeReader typeReader,
     IXseqScriptDecompressor scriptDecompressor,
     IXseqScriptReader scriptReader,
-    ILevel5ScriptFileConverter scriptConverter,
+    IXseqScriptFileConverter scriptConverter,
     ILevel5ScriptWhitespaceNormalizer whiteSpaceNormalizer,
     ILevel5ScriptComposer scriptComposer)
     : IExtractXseqWorkflow
@@ -67,8 +67,8 @@ class ExtractXseqWorkflow(
             if (type is not ScriptType.Xseq)
                 continue;
 
-            ScriptTable functionTable = scriptDecompressor.DecompressFunctions(scriptStream);
-            ScriptStringTable stringTable = scriptDecompressor.DecompressStrings(scriptStream);
+            CompressedScriptTable functionTable = scriptDecompressor.DecompressFunctions(scriptStream);
+            CompressedScriptStringTable stringTable = scriptDecompressor.DecompressStrings(scriptStream);
 
             scriptReader.ReadFunctions(functionTable, stringTable);
         }

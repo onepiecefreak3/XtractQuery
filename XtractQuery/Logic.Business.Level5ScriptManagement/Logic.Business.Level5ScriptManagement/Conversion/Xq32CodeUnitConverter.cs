@@ -4,15 +4,16 @@ using Logic.Domain.Level5.Contract.Script.DataClasses;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 
-namespace Logic.Business.Level5ScriptManagement;
+namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal class Level5CodeUnitConverter : ILevel5CodeUnitConverter
+internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
 {
     private readonly Regex _subPattern = new("^sub[0-9]+$", RegexOptions.Compiled);
     private readonly IMethodNameMapper _methodNameMapper;
 
-    public Level5CodeUnitConverter(IMethodNameMapper methodNameMapper)
+    public Xq32CodeUnitConverter(IMethodNameMapper methodNameMapper)
     {
         _methodNameMapper = methodNameMapper;
     }

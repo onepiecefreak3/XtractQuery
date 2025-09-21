@@ -99,11 +99,11 @@ internal class XseqScriptWriter : IXseqScriptWriter
         {
             GlobalVariableCount = CalculateGlobalVariableCount(script.Instructions, script.Arguments),
 
-            FunctionTable = new ScriptTable { Stream = functionStream, EntryCount = script.Functions.Count },
-            JumpTable = new ScriptTable { Stream = jumpStream, EntryCount = script.Jumps.Count },
-            InstructionTable = new ScriptTable { Stream = instructionStream, EntryCount = script.Instructions.Count },
-            ArgumentTable = new ScriptTable { Stream = argumentStream, EntryCount = script.Arguments.Count },
-            StringTable = new ScriptStringTable { Stream = stringStream }
+            FunctionTable = new CompressedScriptTable { Stream = functionStream, EntryCount = script.Functions.Count },
+            JumpTable = new CompressedScriptTable { Stream = jumpStream, EntryCount = script.Jumps.Count },
+            InstructionTable = new CompressedScriptTable { Stream = instructionStream, EntryCount = script.Instructions.Count },
+            ArgumentTable = new CompressedScriptTable { Stream = argumentStream, EntryCount = script.Arguments.Count },
+            StringTable = new CompressedScriptStringTable { Stream = stringStream, BaseOffset = 0 }
         };
     }
 
@@ -153,7 +153,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
     {
         Stream functionStream = new MemoryStream();
         using IBinaryWriterX functionWriter = _binaryFactory.CreateWriter(functionStream, true);
-            
+
         foreach ((ScriptFunction function, ushort nameHash) in script.Functions.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
         {
             long nameOffset = WriteString(function.Name, stringWriter, writtenNames);

@@ -8,9 +8,9 @@ public interface IScriptDecompressor
 
     int GetGlobalVariableCount(Stream input);
 
-    ScriptTable DecompressFunctions(Stream input);
-    ScriptTable DecompressJumps(Stream input);
-    ScriptTable DecompressInstructions(Stream input);
-    ScriptTable DecompressArguments(Stream input);
-    ScriptStringTable DecompressStrings(Stream input);
+    CompressedScriptTable DecompressFunctions(Stream input);
+    CompressedScriptTable DecompressJumps(Stream input);
+    CompressedScriptTable DecompressInstructions(Stream input);
+    CompressedScriptTable DecompressArguments(Stream input);
+    CompressedScriptStringTable DecompressStrings(Stream input);
 }

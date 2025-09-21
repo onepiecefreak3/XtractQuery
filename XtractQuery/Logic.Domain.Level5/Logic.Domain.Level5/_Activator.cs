@@ -7,6 +7,7 @@ using Logic.Domain.Level5.Compression;
 using Logic.Domain.Level5.Compression.InternalContract;
 using Logic.Domain.Level5.Script;
 using Logic.Domain.Level5.Contract.Script;
+using Logic.Domain.Level5.Contract.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Domain.Level5.Contract.Script.Xseq;
 using Logic.Domain.Level5.Cryptography;
@@ -15,6 +16,7 @@ using Logic.Domain.Level5.Script.Xq32.InternalContract;
 using Logic.Domain.Level5.Script.Xseq.InternalContract;
 using Logic.Domain.Level5.Script.Xq32;
 using Logic.Domain.Level5.Script.Xseq;
+using Logic.Domain.Level5.Script.Gss1;
 
 namespace Logic.Domain.Level5;
 
@@ -63,6 +65,11 @@ public class Level5Activator : IComponentActivator
         kernel.Register<IXseqScriptEntrySizeProvider, XseqScriptEntrySizeProvider>(ActivationScope.Unique);
 
         kernel.Register<IXseqStringTable, XseqStringTable>();
+
+        kernel.Register<IGss1ScriptReader, Gss1ScriptReader>(ActivationScope.Unique);
+        kernel.Register<IGss1ScriptParser, Gss1ScriptParser>(ActivationScope.Unique);
+        kernel.Register<IGss1ScriptComposer, Gss1ScriptComposer>(ActivationScope.Unique);
+        kernel.Register<IGss1ScriptWriter, Gss1ScriptWriter>(ActivationScope.Unique);
 
         kernel.RegisterConfiguration<Level5Configuration>();
     }

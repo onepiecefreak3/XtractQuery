@@ -38,7 +38,13 @@ class DecompressWorkflow(
 
         if (!TryPeekType(inputStream, out ScriptType? type))
         {
-            Console.WriteLine("Unsupported script type.");
+            Console.WriteLine("Unknown script type.");
+            return;
+        }
+
+        if (type.Value is ScriptType.Gss1)
+        {
+            Console.WriteLine("GSS1 scripts have no compression.");
             return;
         }
 

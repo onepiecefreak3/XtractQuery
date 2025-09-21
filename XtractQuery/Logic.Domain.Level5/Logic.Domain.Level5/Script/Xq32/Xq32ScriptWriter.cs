@@ -99,11 +99,11 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         {
             GlobalVariableCount = CalculateGlobalVariableCount(script.Instructions, script.Arguments),
 
-            FunctionTable = new ScriptTable { Stream = functionStream, EntryCount = script.Functions.Count },
-            JumpTable = new ScriptTable { Stream = jumpStream, EntryCount = script.Jumps.Count },
-            InstructionTable = new ScriptTable { Stream = instructionStream, EntryCount = script.Instructions.Count },
-            ArgumentTable = new ScriptTable { Stream = argumentStream, EntryCount = script.Arguments.Count },
-            StringTable = new ScriptStringTable { Stream = stringStream }
+            FunctionTable = new CompressedScriptTable { Stream = functionStream, EntryCount = script.Functions.Count },
+            JumpTable = new CompressedScriptTable { Stream = jumpStream, EntryCount = script.Jumps.Count },
+            InstructionTable = new CompressedScriptTable { Stream = instructionStream, EntryCount = script.Instructions.Count },
+            ArgumentTable = new CompressedScriptTable { Stream = argumentStream, EntryCount = script.Arguments.Count },
+            StringTable = new CompressedScriptStringTable { Stream = stringStream, BaseOffset = 0 }
         };
     }
 

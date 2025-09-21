@@ -6,7 +6,7 @@ using Logic.Domain.Level5.Script.Xq32.InternalContract;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
-internal class Xq32ScriptReader : ScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>, IXq32ScriptReader
+internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>, IXq32ScriptReader
 {
     private readonly IBinaryFactory _binaryFactory;
     private readonly Dictionary<uint, HashSet<string>> _functionCache;
