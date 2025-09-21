@@ -15,7 +15,7 @@ internal class ChecksumFactory : IChecksumFactory
 
     public IChecksum<uint> CreateCrc32()
     {
-        return _crcFactory.CreateCrc32(Crc32Type.Standard);
+        return _crcFactory.CreateCrc32(Crc32Type.Crc32B);
     }
 
     public IChecksum<ushort> CreateCrc16()
