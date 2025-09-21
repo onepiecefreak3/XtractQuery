@@ -13,6 +13,7 @@ These are the data types of data units as they will appear in this documentation
 
 | Type | Size in bytes | Notes |
 | - | - | - |
+| byte | 1 | |
 | short | 2 | |
 | ushort | 2 | Unsigned |
 | int | 4 | |
