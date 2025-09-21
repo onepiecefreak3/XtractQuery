@@ -1,8 +1,8 @@
-# XQ32/XSEQ Format Specification
+# XQ32/XSEQ/GSS1 Format Specification
 
 ## Introduction
 
-XQ32 (and in extension XSEQ) is a script format used in 3DS Level5 games to script any sort of flow or high level behaviour.
+XQ32, XSEQ, and GSS1 are script formats used in NDS and 3DS Level5 games to script any sort of flow or high level behaviour.
 It is used to describe menu construction and behaviour, as well as environment management, and other similar tasks.
 The main motivation for this script format seems to be to elevate as much logic as possible out of the compiled executable of the game.
 It may have been helpful in debugging and hot switching behaviour in development.
@@ -18,16 +18,18 @@ These are the data types of data units as they will appear in this documentation
 | int | 4 | |
 | uint | 4 | Unsigned |
 | float | 4 | |
-| string[n] | n | Encoded as ASCII, if not stated otherwise |
+| string[n] | n | Encoded as SJIS, if not stated otherwise |
 
 ## Container
 
-This script format defines 4 tables and a string blob to store an arbitrary amount of methods of arbitrary length, callable through the games engine or the script itself.
+This script format defines 4 tables and a string blob to store an arbitrary amount of methods of arbitrary length, invokable through the games engine or the script itself.
 It is unknown what exactly the entry point into the script is or if it is even a set method to invoke the scripts logic.
 
 ## Compression
 
-Each table is compressed by Level5's own container specification, and borrows pre-existing compression schemes by Nintendo from their SDK.
+GSS1 does not employ compression for its tables or string blob.
+
+In XQ32 and XSEQ each table is compressed by Level5's own container specification, and borrows pre-existing compression schemes by Nintendo from their SDK.
 Read the first 4 bytes of a table in little endian as an int. It assumes the name 'methodSize'.
 Decompress the table from the 4th byte onwards until the end, according to the method portion of 'methodSize'.
 
@@ -38,7 +40,7 @@ decompressedSize = methodSize >> 3
 The methods map to the following compressions:
 | Method | Compression |
 | - | - |
-| 0 | None |
+| 0 | Uncompressed |
 | 1 | LZ10 |
 | 2 | Huffman 4Bit |
 | 3 | Huffman 8Bit |
@@ -59,7 +61,7 @@ The absolute offset to a table or the string blob can be calculated by left shif
 
 | Datatype | Name | Default value |
 | - | - | - |
-| string[4] | magic | "XQ32" |
+| string[4] | magic | "XQ32", "XSEQ", or "GSS1" |
 | short | functionCount | |
 | short | functionOffset | 0x20 >> 2 |
 | short | jumpOffset | |
@@ -77,7 +79,7 @@ The function structure declares one function of the script.
 It declares the instructions and jumps used in this function, by giving the offset into the instruction and jump table and how many of them to read for this function.
 It declares the parameter count, the amount of values that are passed into the method from an external caller.
 It declares the amount of local and object values used in the function. Those values are used to allocate memory for the stack used in the function.
-It declares its own name, by giving the offset into the string blob and its CRC32/CRC16 checksum.
+It declares its own name, by giving the offset into the string blob and its CRC32-B or CRC16-X25 checksum.
 
 #### Xq32Function
 
@@ -107,10 +109,24 @@ It declares its own name, by giving the offset into the string blob and its CRC3
 | short | objectVariableCount |
 | int | parameterCount |
 
+#### Gss1Function
+
+| Datatype | Name |
+| - | - |
+| int | nameOffset |
+| ushort | crc16 |
+| short | instructionIndex |
+| short | instructionEndIndex |
+| short | jumpIndex |
+| short | jumpCount |
+| short | localVariableCount |
+| short | objectVariableCount |
+| int | parameterCount |
+
 ### Jump
 
 The jump structure declares one jump to another instruction inside the instruction table by index.
-It declares its own name, by giving the offset into the string blob and its CRC32/CRC16 checksum.
+It declares its own name, by giving the offset into the string blob and its CRC32-B or CRC16-X25 checksum.
 A function invokes a jump by checksum or name. It's common to use the checksum for performance.
 A jump can only be performed in the current function. Jumps referenced outside the function may not be executed.
 
@@ -123,6 +139,14 @@ A jump can only be performed in the current function. Jumps referenced outside t
 | int | instructionIndex |
 
 #### XseqJump
+
+| Datatype | Name |
+| - | - |
+| int | nameOffset |
+| ushort | crc16 |
+| int | instructionIndex |
+
+#### Gss1Jump
 
 | Datatype | Name |
 | - | - |
@@ -151,9 +175,25 @@ The argument structure declares one argument in an instruction.
 It declares its data type and the corresponding value.
 The base type of an argument can be calculated by taking its 4 least significant bits.
 
+#### Xq32Argument
+
 | Datatype | Name |
 | - | - |
 | int | type |
+| uint | value |
+
+#### XseqArgument
+
+| Datatype | Name |
+| - | - |
+| int | type |
+| uint | value |
+
+#### Gss1Argument
+
+| Datatype | Name |
+| - | - |
+| byte | type |
 | uint | value |
 
 Base types of arguments typically found in scripts:
@@ -163,7 +203,7 @@ Base types of arguments typically found in scripts:
 | 2 | uint | An unsigned integer value |
 | 3 | float | A floating point value |
 | 4 | int | An index to a stack value (see "Variables") |
-| 8 | int | An absolute offset into the string blob. Normally SJIS-encoded. Null-terminated. |
+| 24<br />25 | int | An absolute offset into the string blob. Null-terminated.<br />In GSS1 is an absolute offset into the file, starting at the beginning of the string table. |
 
 ## Variables
 
