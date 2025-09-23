@@ -2,7 +2,7 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": "-o e -f D:\\Users\\Kirito\\Desktop\\test\\n001.cq.txt.cq -t gss1"
+      "commandLineArgs": "-o e -f D:\\Users\\Kirito\\Desktop\\pl4_research\\n001.cq -t gss1"
     },
     "Profil \"1\"": {
       "commandName": "Project",

@@ -46,7 +46,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         int functionSize = script.Functions.Count * 0x14;
         int jumpSize = script.Jumps.Count * 0x8;
         int instructionSize = script.Instructions.Count * 0xC;
-        int argumentSize = script.Arguments.Count * 0x5;
+        int argumentSize = (script.Arguments.Count * 0x5 + 3) & ~3;
 
         return functionSize + jumpSize + instructionSize + argumentSize + 0x20;
     }
@@ -173,7 +173,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         foreach (ScriptArgument argument in script.Arguments)
         {
             Gss1Argument nativeArgument = CreateArgument(argument, stringWriter, ref stringOffset, writtenNames);
-         
+
             result.Add(nativeArgument);
         }
 

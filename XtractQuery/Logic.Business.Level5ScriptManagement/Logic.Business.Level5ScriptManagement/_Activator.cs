@@ -60,6 +60,8 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IXseqCodeUnitConverter, XseqCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IGss1CodeUnitConverter, Gss1CodeUnitConverter>(ActivationScope.Unique);
 
+        kernel.Register<IGss1CodeUnitReducer, Gss1CodeUnitReducer>(ActivationScope.Unique);
+
         kernel.Register<IMethodNameMapper, MethodNameMapper>(ActivationScope.Unique);
 
         kernel.Register<IScriptManagementConfigurationValidator, ScriptManagementConfigurationValidator>(ActivationScope.Unique);
