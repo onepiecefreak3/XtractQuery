@@ -81,10 +81,18 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         invocation.Update();
     }
 
-    public void NormalizeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters)
+    public void NormalizeMethodInvocationStatement(MethodInvocationStatementSyntax invocation)
     {
         var ctx = new WhitespaceNormalizeContext();
-        NormalizeMethodInvocationExpressionParameters(invocationParameters, ctx);
+        NormalizeMethodInvocationStatement(invocation, ctx);
+
+        invocation.Update();
+    }
+
+    public void NormalizeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters)
+    {
+        var ctx = new WhitespaceNormalizeContext();
+        NormalizeMethodInvocationParameters(invocationParameters, ctx);
 
         invocationParameters.Update();
     }
@@ -256,6 +264,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
             case AssignmentStatementSyntax assignmentStatement:
                 NormalizeAssignmentStatement(assignmentStatement, ctx);
+                break;
+
+            case MethodInvocationStatementSyntax methodInvocationStatement:
+                NormalizeMethodInvocationStatement(methodInvocationStatement, ctx);
                 break;
         }
     }
@@ -686,7 +698,30 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         invocation.SetIdentifier(newIdentifier, false);
 
         NormalizeMethodInvocationMetadata(invocation.Metadata, ctx);
-        NormalizeMethodInvocationExpressionParameters(invocation.Parameters, ctx);
+        NormalizeMethodInvocationParameters(invocation.Parameters, ctx);
+    }
+
+    private void NormalizeMethodInvocationStatement(MethodInvocationStatementSyntax invocation, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newIdentifier = invocation.Identifier.WithNoTrivia();
+        SyntaxToken newSemicolon = invocation.Semicolon.WithNoTrivia();
+
+        if (ctx.ShouldLineBreak)
+            newSemicolon = newSemicolon.WithTrailingTrivia("\r\n");
+
+        string? leadingTrivia = null;
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            leadingTrivia = new string('\t', ctx.Indent);
+
+        newIdentifier = newIdentifier.WithLeadingTrivia(leadingTrivia);
+
+        invocation.SetIdentifier(newIdentifier, false);
+        invocation.SetSemicolon(newSemicolon, false);
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        NormalizeMethodInvocationMetadata(invocation.Metadata, ctx);
+        NormalizeMethodInvocationParameters(invocation.Parameters, ctx);
     }
 
     private void NormalizeMethodInvocationMetadata(MethodInvocationMetadataSyntax? metadata, WhitespaceNormalizeContext ctx)
@@ -702,7 +737,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         metadata.SetRelBigger(newRelBigger, false);
     }
 
-    private void NormalizeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters, WhitespaceNormalizeContext ctx)
+    private void NormalizeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters, WhitespaceNormalizeContext ctx)
     {
         SyntaxToken parenOpen = invocationParameters.ParenOpen.WithNoTrivia();
         SyntaxToken parenClose = invocationParameters.ParenClose.WithNoTrivia();

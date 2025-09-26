@@ -16,7 +16,7 @@ public interface ILevel5ScriptWhitespaceNormalizer
     void NormalizeGotoLabelStatement(GotoLabelStatementSyntax gotoLabelStatement);
     void NormalizeReturnStatement(ReturnStatementSyntax returnStatement);
     void NormalizeMethodInvocationExpression(MethodInvocationExpressionSyntax invocation);
-    void NormalizeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters);
+    void NormalizeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters);
     void NormalizeValueList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList);
     void NormalizeValue(ValueExpressionSyntax valueExpression);
     void NormalizeValueMetadataParameters(ValueMetadataParametersSyntax valueMetadataParameters);

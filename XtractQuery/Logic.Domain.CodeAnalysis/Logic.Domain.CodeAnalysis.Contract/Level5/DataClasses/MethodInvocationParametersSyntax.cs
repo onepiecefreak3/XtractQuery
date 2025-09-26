@@ -2,7 +2,7 @@
 
 namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 
-public class MethodInvocationExpressionParametersSyntax : SyntaxNode
+public class MethodInvocationParametersSyntax : SyntaxNode
 {
     public SyntaxToken ParenOpen { get; private set; }
     public CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParameterList { get; private set; }
@@ -11,7 +11,7 @@ public class MethodInvocationExpressionParametersSyntax : SyntaxNode
     public override SyntaxLocation Location => ParenOpen.FullLocation;
     public override SyntaxSpan Span => new(ParenOpen.FullSpan.Position, ParenClose.FullSpan.EndPosition);
 
-    public MethodInvocationExpressionParametersSyntax(SyntaxToken parenOpen,
+    public MethodInvocationParametersSyntax(SyntaxToken parenOpen,
         CommaSeparatedSyntaxList<ValueExpressionSyntax>? parameterList,
         SyntaxToken parenClose)
     {

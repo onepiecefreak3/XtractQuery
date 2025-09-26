@@ -8,7 +8,8 @@ class CreateWorkflow(
     ScriptManagementConfiguration config,
     ICreateXq32Workflow createXq32Workflow,
     ICreateXseqWorkflow createXseqWorkflow,
-    ICreateGss1Workflow createGss1Workflow)
+    ICreateGss1Workflow createGss1Workflow,
+    ICreateGsd1Workflow createGsd1Workflow)
     : ICreateWorkflow
 {
     public void Create()
@@ -72,6 +73,11 @@ class CreateWorkflow(
                     using (Stream outputStream = File.Create(filePath + ".cq"))
                         createGss1Workflow.Create(inputStream, outputStream);
                     break;
+
+                case ScriptType.Gsd1:
+                    using (Stream outputStream = File.Create(filePath + ".cq"))
+                        createGsd1Workflow.Create(inputStream, outputStream);
+                    break;
             }
         }
         catch (Exception e)
@@ -99,6 +105,10 @@ class CreateWorkflow(
 
             case "gss1":
                 scriptType = ScriptType.Gss1;
+                break;
+
+            case "gsd1":
+                scriptType = ScriptType.Gsd1;
                 break;
 
             default:

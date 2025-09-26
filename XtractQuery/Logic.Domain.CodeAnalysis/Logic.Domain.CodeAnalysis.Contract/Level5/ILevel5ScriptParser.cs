@@ -17,7 +17,8 @@ public interface ILevel5ScriptParser
     GotoLabelStatementSyntax ParseGotoLabelStatement(string text);
     ReturnStatementSyntax ParseReturnStatement(string text);
     MethodInvocationExpressionSyntax ParseMethodInvocationExpression(string text);
-    MethodInvocationExpressionParametersSyntax ParseMethodInvocationExpressionParameters(string text);
+    MethodInvocationStatementSyntax ParseMethodInvocationStatement(string text);
+    MethodInvocationParametersSyntax ParseMethodInvocationParameters(string text);
     CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(string text);
     ValueExpressionSyntax ParseValueExpression(string text);
     ValueMetadataParametersSyntax? ParseValueMetadataParameters(string text);

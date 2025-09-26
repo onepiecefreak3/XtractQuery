@@ -2,25 +2,28 @@
 
 namespace Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 
-public class MethodInvocationExpressionSyntax : ExpressionSyntax
+public class MethodInvocationStatementSyntax : StatementSyntax
 {
     public SyntaxToken Identifier { get; private set; }
     public MethodInvocationMetadataSyntax? Metadata { get; private set; }
     public MethodInvocationParametersSyntax Parameters { get; private set; }
+    public SyntaxToken Semicolon { get; private set; }
 
     public override SyntaxLocation Location => Identifier.FullLocation;
     public override SyntaxSpan Span => new(Identifier.FullSpan.Position, Parameters.Span.EndPosition);
 
-    public MethodInvocationExpressionSyntax(SyntaxToken identifier, MethodInvocationMetadataSyntax? metadata, MethodInvocationParametersSyntax parameters)
+    public MethodInvocationStatementSyntax(SyntaxToken identifier, MethodInvocationMetadataSyntax? metadata, MethodInvocationParametersSyntax parameters, SyntaxToken semicolon)
     {
         identifier.Parent = this;
         if (metadata != null)
             metadata.Parent = this;
         parameters.Parent = this;
+        semicolon.Parent = this;
 
         Identifier = identifier;
         Metadata = metadata;
         Parameters = parameters;
+        Semicolon = semicolon;
 
         Root.Update();
     }
@@ -53,16 +56,29 @@ public class MethodInvocationExpressionSyntax : ExpressionSyntax
             Root.Update();
     }
 
+    public void SetSemicolon(SyntaxToken semicolon, bool updatePositions = true)
+    {
+        semicolon.Parent = this;
+
+        Semicolon = semicolon;
+
+        if (updatePositions)
+            Root.Update();
+    }
+
     internal override int UpdatePosition(int position, ref int line, ref int column)
     {
         SyntaxToken identifier = Identifier;
+        SyntaxToken semicolon = Semicolon;
 
         position = identifier.UpdatePosition(position, ref line, ref column);
         if (Metadata != null)
             position = Metadata.UpdatePosition(position, ref line, ref column);
         position = Parameters.UpdatePosition(position, ref line, ref column);
+        position = semicolon.UpdatePosition(position, ref line, ref column);
 
         Identifier = identifier;
+        Semicolon = semicolon;
 
         return position;
     }

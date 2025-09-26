@@ -728,13 +728,13 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         return new MethodInvocationMetadataSyntax(relSmaller, value, relBigger);
     }
 
-    private MethodInvocationExpressionParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, ScriptFile script)
+    private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, ScriptFile script)
     {
         SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
         var parameterList = CreateValueList(instruction, script);
         SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
-        return new MethodInvocationExpressionParametersSyntax(parenOpen, parameterList, parenClose);
+        return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
 
     private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateValueList(ScriptInstruction instruction, ScriptFile script)

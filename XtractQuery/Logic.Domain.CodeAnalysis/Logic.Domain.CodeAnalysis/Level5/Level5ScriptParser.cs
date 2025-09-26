@@ -88,11 +88,18 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return ParseMethodInvocationExpression(buffer);
     }
 
-    public MethodInvocationExpressionParametersSyntax ParseMethodInvocationExpressionParameters(string text)
+    public MethodInvocationStatementSyntax ParseMethodInvocationStatement(string text)
     {
         IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
 
-        return ParseMethodInvocationExpressionParameters(buffer);
+        return ParseMethodInvocationStatement(buffer);
+    }
+
+    public MethodInvocationParametersSyntax ParseMethodInvocationParameters(string text)
+    {
+        IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
+
+        return ParseMethodInvocationParameters(buffer);
     }
 
     public CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(string text)
@@ -225,7 +232,14 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                HasTokenKind(buffer, SyntaxTokenKind.YieldKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.ExitKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.GotoKeyword) ||
-               HasTokenKind(buffer, SyntaxTokenKind.IfKeyword);
+               HasTokenKind(buffer, SyntaxTokenKind.IfKeyword) ||
+               IsMethodInvocation(buffer);
+    }
+
+    private bool IsMethodInvocation(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return HasTokenKind(buffer, SyntaxTokenKind.Identifier) &&
+               HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen);
     }
 
     private StatementSyntax ParseStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -257,6 +271,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
             return ParseAssignmentStatement(buffer, value);
         }
+
+        if (IsMethodInvocation(buffer))
+            return ParseMethodInvocationStatement(buffer);
 
         throw CreateException(buffer, "Unknown statement.", SyntaxTokenKind.ReturnKeyword, SyntaxTokenKind.StringLiteral,
             SyntaxTokenKind.Variable, SyntaxTokenKind.YieldKeyword, SyntaxTokenKind.ExitKeyword);
@@ -416,7 +433,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (IsUnaryExpression(buffer))
             return ParseUnaryExpression(buffer);
 
-        if (HasTokenKind(buffer, SyntaxTokenKind.Identifier) 
+        if (HasTokenKind(buffer, SyntaxTokenKind.Identifier)
             && (HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen) || HasTokenKind(buffer, 1, SyntaxTokenKind.Smaller)))
             return ParseMethodInvocationExpression(buffer);
 
@@ -693,9 +710,19 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     {
         SyntaxToken identifier = ParseIdentifierToken(buffer);
         var metadata = ParseMethodInvocationMetadata(buffer);
-        var methodInvocationParameters = ParseMethodInvocationExpressionParameters(buffer);
+        var methodInvocationParameters = ParseMethodInvocationParameters(buffer);
 
         return new MethodInvocationExpressionSyntax(identifier, metadata, methodInvocationParameters);
+    }
+
+    private MethodInvocationStatementSyntax ParseMethodInvocationStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken identifier = ParseIdentifierToken(buffer);
+        var metadata = ParseMethodInvocationMetadata(buffer);
+        var methodInvocationParameters = ParseMethodInvocationParameters(buffer);
+        SyntaxToken semicolon = ParseSemicolonToken(buffer);
+
+        return new MethodInvocationStatementSyntax(identifier, metadata, methodInvocationParameters, semicolon);
     }
 
     private MethodInvocationMetadataSyntax? ParseMethodInvocationMetadata(IBuffer<Level5SyntaxToken> buffer)
@@ -710,13 +737,13 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return new MethodInvocationMetadataSyntax(relSmallerToken, parameter, relBiggerToken);
     }
 
-    private MethodInvocationExpressionParametersSyntax ParseMethodInvocationExpressionParameters(IBuffer<Level5SyntaxToken> buffer)
+    private MethodInvocationParametersSyntax ParseMethodInvocationParameters(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken parenOpen = ParseParenOpenToken(buffer);
         var parameters = ParseValueList(buffer);
         SyntaxToken parenClose = ParseParenCloseToken(buffer);
 
-        return new MethodInvocationExpressionParametersSyntax(parenOpen, parameters, parenClose);
+        return new MethodInvocationParametersSyntax(parenOpen, parameters, parenClose);
     }
 
     private CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(IBuffer<Level5SyntaxToken> buffer)

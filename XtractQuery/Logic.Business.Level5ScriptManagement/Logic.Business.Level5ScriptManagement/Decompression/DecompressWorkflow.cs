@@ -42,9 +42,9 @@ class DecompressWorkflow(
             return;
         }
 
-        if (type.Value is ScriptType.Gss1)
+        if (type.Value is ScriptType.Gss1 or ScriptType.Gsd1)
         {
-            Console.WriteLine("GSS1 scripts have no compression.");
+            Console.WriteLine("GSS1 and GSD1 scripts have no compression.");
             return;
         }
 

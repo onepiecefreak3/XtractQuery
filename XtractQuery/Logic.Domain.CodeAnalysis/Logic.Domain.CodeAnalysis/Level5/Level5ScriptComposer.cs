@@ -106,11 +106,11 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         return sb.ToString();
     }
 
-    public string ComposeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters)
+    public string ComposeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters)
     {
         var sb = new StringBuilder();
 
-        ComposeMethodInvocationExpressionParameters(invocationParameters, sb);
+        ComposeMethodInvocationParameters(invocationParameters, sb);
 
         return sb.ToString();
     }
@@ -244,7 +244,11 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 break;
 
             case AssignmentStatementSyntax assignmentStatement:
-                ComposeAssignmentExpression(assignmentStatement, sb);
+                ComposeAssignmentStatement(assignmentStatement, sb);
+                break;
+
+            case MethodInvocationStatementSyntax methodInvocationStatement:
+                ComposeMethodInvocationStatement(methodInvocationStatement, sb);
                 break;
         }
     }
@@ -302,12 +306,20 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeSyntaxToken(exitStatement.Semicolon, sb);
     }
 
-    private void ComposeAssignmentExpression(AssignmentStatementSyntax assignmentStatement, StringBuilder sb)
+    private void ComposeAssignmentStatement(AssignmentStatementSyntax assignmentStatement, StringBuilder sb)
     {
         ComposeExpression(assignmentStatement.Left, sb);
         ComposeSyntaxToken(assignmentStatement.EqualsOperator, sb);
         ComposeExpression(assignmentStatement.Right, sb);
         ComposeSyntaxToken(assignmentStatement.Semicolon, sb);
+    }
+
+    private void ComposeMethodInvocationStatement(MethodInvocationStatementSyntax invocation, StringBuilder sb)
+    {
+        ComposeSyntaxToken(invocation.Identifier, sb);
+        ComposeMethodInvocationMetadata(invocation.Metadata, sb);
+        ComposeMethodInvocationParameters(invocation.Parameters, sb);
+        ComposeSyntaxToken(invocation.Semicolon, sb);
     }
 
     private void ComposeExpression(ExpressionSyntax expression, StringBuilder sb)
@@ -472,7 +484,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     {
         ComposeSyntaxToken(invocation.Identifier, sb);
         ComposeMethodInvocationMetadata(invocation.Metadata, sb);
-        ComposeMethodInvocationExpressionParameters(invocation.Parameters, sb);
+        ComposeMethodInvocationParameters(invocation.Parameters, sb);
     }
 
     private void ComposeMethodInvocationMetadata(MethodInvocationMetadataSyntax? metadata, StringBuilder sb)
@@ -485,7 +497,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeSyntaxToken(metadata.RelBigger, sb);
     }
 
-    private void ComposeMethodInvocationExpressionParameters(MethodInvocationExpressionParametersSyntax invocationParameters, StringBuilder sb)
+    private void ComposeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters, StringBuilder sb)
     {
         ComposeSyntaxToken(invocationParameters.ParenOpen, sb);
         ComposeValueExpressions(invocationParameters.ParameterList, sb);

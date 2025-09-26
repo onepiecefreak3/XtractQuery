@@ -10,7 +10,8 @@ class ExtractWorkflow(
     IScriptTypeReader typeReader,
     IExtractXq32Workflow extractXq32Workflow,
     IExtractXseqWorkflow extractXseqWorkflow,
-    IExtractGss1Workflow extractGss1Workflow)
+    IExtractGss1Workflow extractGss1Workflow,
+    IExtractGsd1Workflow extractGsd1Workflow)
     : IExtractWorkflow
 {
     public void Extract()
@@ -35,13 +36,14 @@ class ExtractWorkflow(
         Console.Write($"Extract {filePath}... ");
 
         using Stream inputStream = File.OpenRead(filePath);
-        using Stream outputStream = File.Create(filePath + ".txt");
 
         if (!TryPeekType(inputStream, out ScriptType? type))
         {
             Console.WriteLine("Unsupported script type.");
             return;
         }
+
+        using Stream outputStream = File.Create(filePath + ".txt");
 
         bool wasSuccessful = TryExtractFile(inputStream, outputStream, type.Value, out Exception? error);
         if (wasSuccessful)
@@ -74,6 +76,10 @@ class ExtractWorkflow(
                 case ScriptType.Gss1:
                     extractGss1Workflow.Prepare();
                     extractGss1Workflow.Extract(input, output);
+                    break;
+
+                case ScriptType.Gsd1:
+                    extractGsd1Workflow.Extract(input, output);
                     break;
             }
         }

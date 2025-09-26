@@ -40,7 +40,7 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
             var instructionStartIndex = (short)result.Instructions.Count;
             var jumpStartIndex = (short)result.Jumps.Count;
 
-            AddExpressions(result, method.Body.Expressions);
+            AddStatements(result, method.Body.Expressions);
 
             result.Functions.Add(new ScriptFunction
             {
@@ -58,9 +58,9 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
         }
     }
 
-    private void AddExpressions(ScriptFile result, IReadOnlyList<StatementSyntax> expressions)
+    private void AddStatements(ScriptFile result, IReadOnlyList<StatementSyntax> statements)
     {
-        foreach (StatementSyntax statement in expressions)
+        foreach (StatementSyntax statement in statements)
         {
             switch (statement)
             {
@@ -99,6 +99,9 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
                 case PostfixUnaryStatementSyntax postfixUnaryStatement:
                     AddPostfixUnaryStatement(result, postfixUnaryStatement);
                     break;
+
+                case MethodInvocationStatementSyntax:
+                    throw CreateException("Method invocations can only be used with a variable assignment.", statement.Location);
 
                 default:
                     throw CreateException($"Unknown statement {statement.GetType().Name}.", statement.Location);

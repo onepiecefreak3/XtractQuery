@@ -729,13 +729,13 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         return new MethodInvocationMetadataSyntax(relSmaller, value, relBigger);
     }
 
-    private MethodInvocationExpressionParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, Gss1ScriptFile script)
+    private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, Gss1ScriptFile script)
     {
         SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
         var parameterList = CreateValueList(instruction, script);
         SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
-        return new MethodInvocationExpressionParametersSyntax(parenOpen, parameterList, parenClose);
+        return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
 
     private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateValueList(ScriptInstruction instruction, Gss1ScriptFile script)
