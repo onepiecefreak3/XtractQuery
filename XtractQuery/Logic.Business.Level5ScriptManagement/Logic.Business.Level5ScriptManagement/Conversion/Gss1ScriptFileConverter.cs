@@ -719,7 +719,8 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         if (!IsMethodNameTransfer(instruction, script))
             return null;
 
-        if (script.Arguments[instruction.ArgumentIndex].RawArgumentType < 0)
+        if (instruction.ArgumentIndex >= script.Arguments.Count ||
+            script.Arguments[instruction.ArgumentIndex].RawArgumentType < 0)
             return null;
 
         SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
