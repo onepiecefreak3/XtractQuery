@@ -48,6 +48,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<ICreateWorkflow, CreateWorkflow>(ActivationScope.Unique);
         kernel.Register<ICreateXq32Workflow, CreateXq32Workflow>(ActivationScope.Unique);
         kernel.Register<ICreateXseqWorkflow, CreateXseqWorkflow>(ActivationScope.Unique);
+        kernel.Register<ICreateXscrWorkflow, CreateXscrWorkflow>(ActivationScope.Unique);
         kernel.Register<ICreateGss1Workflow, CreateGss1Workflow>(ActivationScope.Unique);
         kernel.Register<ICreateGsd1Workflow, CreateGsd1Workflow>(ActivationScope.Unique);
 
@@ -64,6 +65,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
 
         kernel.Register<IXq32CodeUnitConverter, Xq32CodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IXseqCodeUnitConverter, XseqCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IXscrCodeUnitConverter, XscrCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IGss1CodeUnitConverter, Gss1CodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IGsd1CodeUnitConverter, Gsd1CodeUnitConverter>(ActivationScope.Unique);
 

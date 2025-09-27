@@ -84,6 +84,7 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
         stringStream.CopyTo(output);
 
         using IBinaryWriterX writer = _binaryFactory.CreateWriter(output);
+        writer.WriteAlignment(4);
 
         var header = new XseqHeader
         {

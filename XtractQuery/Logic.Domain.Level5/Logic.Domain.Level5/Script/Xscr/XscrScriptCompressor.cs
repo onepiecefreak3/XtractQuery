@@ -15,9 +15,9 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
         Stream argumentStream = container.ArgumentTable.Stream;
         Stream stringStream = container.StringTable.Stream;
 
-        instructionStream.Position = 0;
-        argumentStream.Position = 0;
-        stringStream.Position = 0;
+        instructionStream = compressor.Compress(instructionStream, container.InstructionTable.CompressionType ?? CompressionType.Lz10);
+        argumentStream = compressor.Compress(argumentStream, container.ArgumentTable.CompressionType ?? CompressionType.Lz10);
+        stringStream = compressor.Compress(stringStream, container.StringTable.CompressionType ?? CompressionType.Lz10);
 
         Write(container, output, instructionStream, argumentStream, stringStream);
     }
@@ -44,10 +44,12 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
 
         using IBinaryWriterX writer = binaryFactory.CreateWriter(output, true);
 
+        writer.WriteAlignment(4);
+
         var header = new XscrHeader
         {
             magic = "XSCR",
-            
+
             instructionEntryCount = (short)container.InstructionTable.EntryCount,
             instructionOffset = (ushort)(instructionOffset >> 2),
             argumentEntryCount = container.ArgumentTable.EntryCount,

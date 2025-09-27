@@ -84,6 +84,7 @@ internal class Xq32ScriptCompressor : IXq32ScriptCompressor
         stringStream.CopyTo(output);
 
         using IBinaryWriterX writer = _binaryFactory.CreateWriter(output);
+        writer.WriteAlignment(4);
 
         var header = new Xq32Header
         {

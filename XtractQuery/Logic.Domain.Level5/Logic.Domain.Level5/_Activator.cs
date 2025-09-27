@@ -84,6 +84,8 @@ public class Level5Activator : IComponentActivator
         kernel.Register<IXscrScriptCompressor, XscrScriptCompressor>(ActivationScope.Unique);
         kernel.Register<IXscrScriptReader, XscrScriptReader>(ActivationScope.Unique);
         kernel.Register<IXscrScriptParser, XscrScriptParser>(ActivationScope.Unique);
+        kernel.Register<IXscrScriptComposer, XscrScriptComposer>(ActivationScope.Unique);
+        kernel.Register<IXscrScriptWriter, XscrScriptWriter>(ActivationScope.Unique);
 
         kernel.RegisterConfiguration<Level5Configuration>();
     }
