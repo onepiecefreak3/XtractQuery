@@ -9,7 +9,8 @@ class DecompressWorkflow(
     ScriptManagementConfiguration config,
     IScriptTypeReader typeReader,
     IDecompressXq32Workflow decompressXq32Workflow,
-    IDecompressXseqWorkflow decompressXseqWorkflow)
+    IDecompressXseqWorkflow decompressXseqWorkflow,
+    IDecompressXscrWorkflow decompressXscrWorkflow)
     : IDecompressWorkflow
 {
     public void Decompress()
@@ -72,6 +73,10 @@ class DecompressWorkflow(
 
                 case ScriptType.Xseq:
                     decompressXseqWorkflow.Decompress(input, output);
+                    break;
+
+                case ScriptType.Xscr:
+                    decompressXscrWorkflow.Decompress(input, output);
                     break;
             }
         }

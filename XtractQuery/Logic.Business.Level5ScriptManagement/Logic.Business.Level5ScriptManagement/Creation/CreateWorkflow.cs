@@ -75,7 +75,7 @@ class CreateWorkflow(
                     break;
 
                 case ScriptType.Gsd1:
-                    using (Stream outputStream = File.Create(filePath + ".cq"))
+                    using (Stream outputStream = File.Create(filePath + ".lb"))
                         createGsd1Workflow.Create(inputStream, outputStream);
                     break;
             }

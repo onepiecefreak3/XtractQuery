@@ -53,6 +53,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IDecompressWorkflow, DecompressWorkflow>(ActivationScope.Unique);
         kernel.Register<IDecompressXq32Workflow, DecompressXq32Workflow>(ActivationScope.Unique);
         kernel.Register<IDecompressXseqWorkflow, DecompressXseqWorkflow>(ActivationScope.Unique);
+        kernel.Register<IDecompressXscrWorkflow, DecompressXscrWorkflow>(ActivationScope.Unique);
 
         kernel.Register<IXq32ScriptFileConverter, Xq32ScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IXseqScriptFileConverter, XseqScriptFileConverter>(ActivationScope.Unique);

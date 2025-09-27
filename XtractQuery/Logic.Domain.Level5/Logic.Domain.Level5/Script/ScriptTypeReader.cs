@@ -20,6 +20,9 @@ internal class ScriptTypeReader : IScriptTypeReader
         if (buffer[0] == 'X' && buffer[1] == 'S' && buffer[2] == 'E' && buffer[3] == 'Q')
             return ScriptType.Xseq;
 
+        if (buffer[0] == 'X' && buffer[1] == 'S' && buffer[2] == 'C' && buffer[3] == 'R')
+            return ScriptType.Xscr;
+
         if (buffer[0] == 'G' && buffer[1] == 'S' && buffer[2] == 'S' && buffer[3] == '1')
             return ScriptType.Gss1;
 
