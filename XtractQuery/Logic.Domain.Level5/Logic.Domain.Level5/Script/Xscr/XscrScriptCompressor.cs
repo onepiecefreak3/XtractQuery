@@ -9,7 +9,7 @@ namespace Logic.Domain.Level5.Script.Xscr;
 
 internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor compressor) : IXscrScriptCompressor
 {
-    public void Compress(XscrScriptContainer container, Stream output)
+    public void Compress(XscrCompressionContainer container, Stream output)
     {
         Stream instructionStream = container.InstructionTable.Stream;
         Stream argumentStream = container.ArgumentTable.Stream;
@@ -22,7 +22,7 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
         Write(container, output, instructionStream, argumentStream, stringStream);
     }
 
-    public void Compress(XscrScriptContainer container, Stream output, CompressionType compressionType)
+    public void Compress(XscrCompressionContainer container, Stream output, CompressionType compressionType)
     {
         Stream instructionStream = compressor.Compress(container.InstructionTable.Stream, compressionType);
         Stream argumentStream = compressor.Compress(container.ArgumentTable.Stream, compressionType);
@@ -31,7 +31,7 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
         Write(container, output, instructionStream, argumentStream, stringStream);
     }
 
-    private void Write(XscrScriptContainer container, Stream output, Stream instructionStream, Stream argumentStream, Stream stringStream)
+    private void Write(XscrCompressionContainer container, Stream output, Stream instructionStream, Stream argumentStream, Stream stringStream)
     {
         long instructionOffset = output.Position = 0x14;
         instructionStream.CopyTo(output);

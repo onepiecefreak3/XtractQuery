@@ -4,8 +4,8 @@ namespace Logic.Domain.Level5.Contract.Script.Xscr.DataClasses
 {
     public class XscrScriptContainer
     {
-        public CompressedScriptTable InstructionTable { get; set; }
-        public CompressedScriptTable ArgumentTable { get; set; }
-        public CompressedScriptStringTable StringTable { get; set; }
+        public required XscrInstruction[] Instructions { get; set; }
+        public required XscrArgument[] Arguments { get; set; }
+        public required CompressedScriptStringTable Strings { get; set; }
     }
 }

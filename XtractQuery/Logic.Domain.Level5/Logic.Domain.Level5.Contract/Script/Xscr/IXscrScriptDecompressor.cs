@@ -4,5 +4,5 @@ namespace Logic.Domain.Level5.Contract.Script.Xscr;
 
 public interface IXscrScriptDecompressor
 {
-    XscrScriptContainer Decompress(Stream input);
+    XscrCompressionContainer Decompress(Stream input);
 }

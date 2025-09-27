@@ -13,7 +13,7 @@ class DecompressXscrWorkflow(
     public void Decompress(Stream input, Stream output)
     {
         // Decompress script data
-        XscrScriptContainer container = decompressor.Decompress(input);
+        XscrCompressionContainer container = decompressor.Decompress(input);
 
         // Write script data
         compressor.Compress(container, output, CompressionType.None);

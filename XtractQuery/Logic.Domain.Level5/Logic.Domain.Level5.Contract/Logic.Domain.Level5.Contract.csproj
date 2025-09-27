@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Script\Xscr\IXscrScriptParser.cs~RF2982b7d1.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
     <ProjectReference Include="..\..\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.Contract\Logic.Domain.Kuriimu2.KomponentAdapter.Contract.csproj" />
   </ItemGroup>

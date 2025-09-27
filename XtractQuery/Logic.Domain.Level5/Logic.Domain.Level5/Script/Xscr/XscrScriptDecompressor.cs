@@ -10,7 +10,7 @@ namespace Logic.Domain.Level5.Script.Xscr;
 
 internal class XscrScriptDecompressor(IBinaryFactory binaryFactory, IDecompressor decompressor) : IXscrScriptDecompressor
 {
-    public XscrScriptContainer Decompress(Stream input)
+    public XscrCompressionContainer Decompress(Stream input)
     {
         using IBinaryReaderX reader = binaryFactory.CreateReader(input, true);
 
@@ -20,7 +20,7 @@ internal class XscrScriptDecompressor(IBinaryFactory binaryFactory, IDecompresso
         TableData argumentTable = GetArgumentTableData(header);
         int stringOffset = GetStringTableOffset(header);
 
-        return new XscrScriptContainer
+        return new XscrCompressionContainer
         {
             InstructionTable = ReadTable(input, instructionTable),
             ArgumentTable = ReadTable(input, argumentTable),

@@ -10,6 +10,7 @@ class ExtractWorkflow(
     IScriptTypeReader typeReader,
     IExtractXq32Workflow extractXq32Workflow,
     IExtractXseqWorkflow extractXseqWorkflow,
+    IExtractXscrWorkflow extractXscrWorkflow,
     IExtractGss1Workflow extractGss1Workflow,
     IExtractGsd1Workflow extractGsd1Workflow)
     : IExtractWorkflow
@@ -71,6 +72,10 @@ class ExtractWorkflow(
                 case ScriptType.Xseq:
                     extractXseqWorkflow.Prepare();
                     extractXseqWorkflow.Extract(input, output);
+                    break;
+
+                case ScriptType.Xscr:
+                    extractXscrWorkflow.Extract(input, output);
                     break;
 
                 case ScriptType.Gss1:

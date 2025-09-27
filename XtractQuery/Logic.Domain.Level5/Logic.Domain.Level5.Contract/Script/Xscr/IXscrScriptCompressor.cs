@@ -5,6 +5,6 @@ namespace Logic.Domain.Level5.Contract.Script.Xscr;
 
 public interface IXscrScriptCompressor
 {
-    void Compress(XscrScriptContainer container, Stream output);
-    void Compress(XscrScriptContainer container, Stream output, CompressionType compressionType);
+    void Compress(XscrCompressionContainer container, Stream output);
+    void Compress(XscrCompressionContainer container, Stream output, CompressionType compressionType);
 }
