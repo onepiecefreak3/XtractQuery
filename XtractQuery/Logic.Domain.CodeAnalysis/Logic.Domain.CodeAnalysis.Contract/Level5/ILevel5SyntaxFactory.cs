@@ -13,6 +13,7 @@ public interface ILevel5SyntaxFactory
     SyntaxToken Token(SyntaxTokenKind kind);
 
     SyntaxToken NumericLiteral(long value);
+    SyntaxToken UnsignedNumericLiteral(uint value);
     SyntaxToken HashNumericLiteral(ulong value);
     SyntaxToken HashStringLiteral(string text);
     SyntaxToken FloatingNumericLiteral(float value);

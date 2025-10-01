@@ -419,6 +419,15 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
 
                     _sb.Append(ReadChar());
                     break;
+
+                case 'u':
+                    if (hasDot)
+                        throw CreateException("Floating numeric literal marked as unsigned numeric literal ('u').");
+
+                    kind = SyntaxTokenKind.UnsignedNumericLiteral;
+
+                    _sb.Append(ReadChar());
+                    break;
             }
 
             break;

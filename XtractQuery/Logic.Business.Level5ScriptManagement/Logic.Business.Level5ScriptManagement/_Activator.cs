@@ -44,6 +44,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IExtractXscrWorkflow, ExtractXscrWorkflow>(ActivationScope.Unique);
         kernel.Register<IExtractGss1Workflow, ExtractGss1Workflow>(ActivationScope.Unique);
         kernel.Register<IExtractGsd1Workflow, ExtractGsd1Workflow>(ActivationScope.Unique);
+        kernel.Register<IExtractGdsWorkflow, ExtractGdsWorkflow>(ActivationScope.Unique);
 
         kernel.Register<ICreateWorkflow, CreateWorkflow>(ActivationScope.Unique);
         kernel.Register<ICreateXq32Workflow, CreateXq32Workflow>(ActivationScope.Unique);
@@ -51,6 +52,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<ICreateXscrWorkflow, CreateXscrWorkflow>(ActivationScope.Unique);
         kernel.Register<ICreateGss1Workflow, CreateGss1Workflow>(ActivationScope.Unique);
         kernel.Register<ICreateGsd1Workflow, CreateGsd1Workflow>(ActivationScope.Unique);
+        kernel.Register<ICreateGdsWorkflow, CreateGdsWorkflow>(ActivationScope.Unique);
 
         kernel.Register<IDecompressWorkflow, DecompressWorkflow>(ActivationScope.Unique);
         kernel.Register<IDecompressXq32Workflow, DecompressXq32Workflow>(ActivationScope.Unique);
@@ -62,16 +64,19 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IXscrScriptFileConverter, XscrScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IGss1ScriptFileConverter, Gss1ScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IGsd1ScriptFileConverter, Gsd1ScriptFileConverter>(ActivationScope.Unique);
+        kernel.Register<IGdsScriptFileConverter, GdsScriptFileConverter>(ActivationScope.Unique);
 
         kernel.Register<IXq32CodeUnitConverter, Xq32CodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IXseqCodeUnitConverter, XseqCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IXscrCodeUnitConverter, XscrCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IGss1CodeUnitConverter, Gss1CodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IGsd1CodeUnitConverter, Gsd1CodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IGdsCodeUnitConverter, GdsCodeUnitConverter>(ActivationScope.Unique);
 
         kernel.Register<IGss1CodeUnitReducer, Gss1CodeUnitReducer>(ActivationScope.Unique);
 
         kernel.Register<IMethodNameMapper, MethodNameMapper>(ActivationScope.Unique);
+        kernel.Register<IScriptTypeConverter, ScriptTypeConverter>(ActivationScope.Unique);
 
         kernel.Register<IScriptManagementConfigurationValidator, ScriptManagementConfigurationValidator>(ActivationScope.Unique);
 

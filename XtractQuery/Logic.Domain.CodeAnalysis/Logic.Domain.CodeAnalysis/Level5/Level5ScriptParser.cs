@@ -315,8 +315,8 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             return new IfGotoStatementSyntax(ifToken, ParseValueExpression(buffer), ParseGotoStatement(buffer));
 
         throw CreateException(buffer, "Unknown if statement.", SyntaxTokenKind.NotKeyword, SyntaxTokenKind.Variable,
-            SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
-            SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral);
+            SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral,
+            SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral);
     }
 
     private GotoStatementSyntax ParseGotoStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -449,7 +449,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         else
             throw CreateException(buffer, "Invalid expression.", SyntaxTokenKind.Variable,
                 SyntaxTokenKind.StringLiteral,
-                SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
+                SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
                 SyntaxTokenKind.HashStringLiteral,
                 SyntaxTokenKind.HashNumericLiteral);
 
@@ -762,7 +762,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
             if (!IsValueExpression(buffer))
                 throw CreateException(buffer, "Invalid end of parameter list.", SyntaxTokenKind.Variable,
-                    SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral,
+                    SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral,
                     SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral,
                     SyntaxTokenKind.FloatingNumericLiteral);
 
@@ -783,6 +783,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     {
         return HasTokenKind(buffer, SyntaxTokenKind.StringLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.NumericLiteral) ||
+               HasTokenKind(buffer, SyntaxTokenKind.UnsignedNumericLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.HashStringLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.HashNumericLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.FloatingNumericLiteral);
@@ -799,6 +800,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.NumericLiteral))
             return new ValueExpressionSyntax(ParseNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
+        if (HasTokenKind(buffer, SyntaxTokenKind.UnsignedNumericLiteral))
+            return new ValueExpressionSyntax(ParseUnsignedNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
+
         if (HasTokenKind(buffer, SyntaxTokenKind.HashNumericLiteral))
             return new ValueExpressionSyntax(ParseHashNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
@@ -809,8 +813,8 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             return new ValueExpressionSyntax(ParseFloatingNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
         throw CreateException(buffer, "Unknown value expression.", SyntaxTokenKind.Variable, SyntaxTokenKind.StringLiteral,
-            SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.HashNumericLiteral,
-            SyntaxTokenKind.HashStringLiteral);
+            SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral);
     }
 
     private ValueMetadataParametersSyntax? ParseValueMetadataParameters(IBuffer<Level5SyntaxToken> buffer)
@@ -835,6 +839,13 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private LiteralExpressionSyntax ParseNumericLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken literal = ParseNumericLiteralToken(buffer);
+
+        return new LiteralExpressionSyntax(literal);
+    }
+
+    private LiteralExpressionSyntax ParseUnsignedNumericLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken literal = ParseUnsignedNumericLiteralToken(buffer);
 
         return new LiteralExpressionSyntax(literal);
     }
@@ -1140,6 +1151,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseNumericLiteralToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.NumericLiteral);
+    }
+
+    private SyntaxToken ParseUnsignedNumericLiteralToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.UnsignedNumericLiteral);
     }
 
     private SyntaxToken ParseHashNumericLiteralToken(IBuffer<Level5SyntaxToken> buffer)

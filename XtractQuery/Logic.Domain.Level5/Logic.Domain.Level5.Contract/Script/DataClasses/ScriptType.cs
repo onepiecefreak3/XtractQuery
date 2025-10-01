@@ -6,5 +6,6 @@ public enum ScriptType
     Xseq,
     Xscr,
     Gss1,
-    Gsd1
+    Gsd1,
+    Gds
 }

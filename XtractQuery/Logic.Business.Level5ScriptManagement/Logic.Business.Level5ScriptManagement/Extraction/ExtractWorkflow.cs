@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.Level5.Contract.Script;
@@ -8,11 +9,13 @@ namespace Logic.Business.Level5ScriptManagement.Extraction;
 class ExtractWorkflow(
     ScriptManagementConfiguration config,
     IScriptTypeReader typeReader,
+    IScriptTypeConverter typeConverter,
     IExtractXq32Workflow extractXq32Workflow,
     IExtractXseqWorkflow extractXseqWorkflow,
     IExtractXscrWorkflow extractXscrWorkflow,
     IExtractGss1Workflow extractGss1Workflow,
-    IExtractGsd1Workflow extractGsd1Workflow)
+    IExtractGsd1Workflow extractGsd1Workflow,
+    IExtractGdsWorkflow extractGdsWorkflow)
     : IExtractWorkflow
 {
     public void Extract()
@@ -38,13 +41,18 @@ class ExtractWorkflow(
 
         using Stream inputStream = File.OpenRead(filePath);
 
+        string outputPath = filePath + ".txt";
+
         if (!TryPeekType(inputStream, out ScriptType? type))
         {
-            Console.WriteLine("Unsupported script type.");
-            return;
+            if (!typeConverter.TryConvert(config.QueryType, out type))
+            {
+                Console.WriteLine("Script format could not be automatically determined. Set it explicitly with the -t parameter.");
+                return;
+            }
         }
 
-        using Stream outputStream = File.Create(filePath + ".txt");
+        using Stream outputStream = File.Create(outputPath);
 
         bool wasSuccessful = TryExtractFile(inputStream, outputStream, type.Value, out Exception? error);
         if (wasSuccessful)
@@ -54,6 +62,9 @@ class ExtractWorkflow(
         }
 
         Console.WriteLine($"Error: {GetInnermostException(error!).Message}");
+
+        outputStream.Close();
+        File.Delete(outputPath);
     }
 
     private bool TryExtractFile(Stream input, Stream output, ScriptType type, [NotNullWhen(false)] out Exception? error)
@@ -85,6 +96,10 @@ class ExtractWorkflow(
 
                 case ScriptType.Gsd1:
                     extractGsd1Workflow.Extract(input, output);
+                    break;
+
+                case ScriptType.Gds:
+                    extractGdsWorkflow.Extract(input, output);
                     break;
             }
         }

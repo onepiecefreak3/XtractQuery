@@ -50,6 +50,7 @@ public enum SyntaxTokenKind
 
     StringLiteral,
     NumericLiteral,
+    UnsignedNumericLiteral,
     HashNumericLiteral,
     HashStringLiteral,
     FloatingNumericLiteral,

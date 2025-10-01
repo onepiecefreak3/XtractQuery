@@ -35,9 +35,15 @@ internal class ScriptTypeReader : IScriptTypeReader
     public ScriptType Peek(Stream stream)
     {
         var bkPos = stream.Position;
-        var type = Read(stream);
 
-        stream.Position = bkPos;
-        return type;
+        try
+        {
+            return Read(stream);
+        }
+        catch (Exception)
+        {
+            stream.Position = bkPos;
+            throw;
+        }
     }
 }

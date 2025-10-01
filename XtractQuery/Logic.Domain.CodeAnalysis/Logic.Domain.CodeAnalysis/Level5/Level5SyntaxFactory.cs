@@ -82,6 +82,11 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
         return new($"{value}", (int)SyntaxTokenKind.NumericLiteral);
     }
 
+    public SyntaxToken UnsignedNumericLiteral(uint value)
+    {
+        return new($"{value}u", (int)SyntaxTokenKind.NumericLiteral);
+    }
+
     public SyntaxToken HashNumericLiteral(ulong value)
     {
         return new($"0x{value:X8}h", (int)SyntaxTokenKind.HashNumericLiteral);

@@ -814,7 +814,9 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         SyntaxToken newRelBigger = valueMetadataParameters.RelBigger.WithNoTrivia();
 
         valueMetadataParameters.SetRelSmaller(newRelSmaller, false);
-        NormalizeLiteralExpression(valueMetadataParameters.Parameter, ctx);
         valueMetadataParameters.SetRelBigger(newRelBigger, false);
+
+        ctx.IsFirstElement = true;
+        NormalizeLiteralExpression(valueMetadataParameters.Parameter, ctx);
     }
 }

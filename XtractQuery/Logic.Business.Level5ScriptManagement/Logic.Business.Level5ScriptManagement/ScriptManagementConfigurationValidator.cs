@@ -53,7 +53,7 @@ internal class ScriptManagementConfigurationValidator : IScriptManagementConfigu
         if (string.IsNullOrWhiteSpace(config.QueryType))
             throw new InvalidOperationException("No query type was given. Specify a query type by using the -t argument.");
 
-        if (config.QueryType != "xq32" && config.QueryType != "xseq" && config.QueryType != "xscr" && config.QueryType != "gss1" && config.QueryType != "gsd1")
+        if (config.QueryType != "xq32" && config.QueryType != "xseq" && config.QueryType != "xscr" && config.QueryType != "gss1" && config.QueryType != "gsd1" && config.QueryType != "gds")
             throw new InvalidOperationException($"The query type '{config.QueryType}' is not valid. Use -h to see a list of valid query types.");
     }
 }

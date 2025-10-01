@@ -1,21 +1,24 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using Logic.Domain.Level5.Contract.Script.DataClasses;
 using System.Diagnostics.CodeAnalysis;
+using Logic.Business.Level5ScriptManagement.InternalContract;
 
 namespace Logic.Business.Level5ScriptManagement.Creation;
 
 class CreateWorkflow(
     ScriptManagementConfiguration config,
+    IScriptTypeConverter typeConverter,
     ICreateXq32Workflow createXq32Workflow,
     ICreateXseqWorkflow createXseqWorkflow,
     ICreateXscrWorkflow createXscrWorkflow,
     ICreateGss1Workflow createGss1Workflow,
-    ICreateGsd1Workflow createGsd1Workflow)
+    ICreateGsd1Workflow createGsd1Workflow,
+    ICreateGdsWorkflow createGdsWorkflow)
     : ICreateWorkflow
 {
     public void Create()
     {
-        if (!TryDetermineScriptType(config.QueryType, out ScriptType? type))
+        if (!typeConverter.TryConvert(config.QueryType, out ScriptType? type))
         {
             Console.WriteLine("Unknown script type.");
             return;
@@ -84,45 +87,17 @@ class CreateWorkflow(
                     using (Stream outputStream = File.Create(filePath + ".lb"))
                         createGsd1Workflow.Create(inputStream, outputStream);
                     break;
+
+                case ScriptType.Gds:
+                    using (Stream outputStream = File.Create(filePath + ".gds"))
+                        createGdsWorkflow.Create(inputStream, outputStream);
+                    break;
             }
         }
         catch (Exception e)
         {
             error = e;
             return false;
-        }
-
-        return true;
-    }
-
-    private static bool TryDetermineScriptType(string type, [NotNullWhen(true)] out ScriptType? scriptType)
-    {
-        scriptType = null;
-
-        switch (type)
-        {
-            case "xq32":
-                scriptType = ScriptType.Xq32;
-                break;
-
-            case "xseq":
-                scriptType = ScriptType.Xseq;
-                break;
-
-            case "xscr":
-                scriptType = ScriptType.Xscr;
-                break;
-
-            case "gss1":
-                scriptType = ScriptType.Gss1;
-                break;
-
-            case "gsd1":
-                scriptType = ScriptType.Gsd1;
-                break;
-
-            default:
-                return false;
         }
 
         return true;
