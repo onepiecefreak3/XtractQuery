@@ -59,7 +59,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | ```$unk0``` | A value, that persists through multiple scripts. |
 | ```$local0``` | A value, that persists only in the function it was set in. |
-| ```$object0``` | A value, that persists only in the function it was set in. |
+| ```$object0``` | A value, that persists only in the function it was set in. Frequently used for UI objects in some games. |
 | ```$param0``` | A value, that exclusively holds input parameters to the function. |
 | ```$global0``` | A value, that persists through multiple functions only in the script it was set in. |
 
@@ -141,7 +141,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 500 | Was originally used to log a message in developement. Is a no-op in published games.<br>```$local1 = log("This is a message.");``` |
 | 501 | Formats a string with placeholder values.<br>```$local1 = format("Formatted message %s", $local2);``` |
-| 503 | Get a substring from another string.<br>```$local1 = substring("This message", 5);``` |
+| 503 | Get a substring from another string. Crashes on a negative number. <br>```$local1 = substring("This message", 5);``` |
 
 #### Arrays
 | Type | Description |
@@ -155,7 +155,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 40 | Gets the base type of a variable.<br>```$local1 = typeof($local2);``` |
-| 511 | Casts a literal value or variable to int.<br>```$local1 = (int)$local2;``` |
+| 511 | Casts a literal value or variable to int. Truncates floats and returns 0 for strings. <br>```$local1 = (int)$local2;``` |
 | 512 | Casts a literal value or variable to bool.<br>```$local1 = (bool)$local2;``` |
 | 513 | Casts a literal value or variable to float.<br>```$local1 = (float)$local2;``` |
 
