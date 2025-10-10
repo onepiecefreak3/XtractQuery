@@ -155,7 +155,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 40 | Gets the base type of a variable.<br>```$local1 = typeof($local2);``` |
-| 511 | Casts a literal value or variable to int. Truncates Floats and returns 0 for Strings. <br>```$local1 = (int)$local2;``` |
+| 511 | Casts a literal value or variable to int. Truncates Floats and returns `0` for Strings. <br>```$local1 = (int)$local2;``` |
 | 512 | Casts a literal value or variable to bool. Non-Zero Ints and Floats become `true`, Arrays become `true` if `null` and Strings are always coerced to `false`. <br>```$local1 = (bool)$local2;``` |
 | 513 | Casts a literal value or variable to float. Ints and Floats coerce as you'd expect while other types become `0.0f`. <br>```$local1 = (float)$local2;``` |
 
