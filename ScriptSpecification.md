@@ -162,7 +162,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 #### Math
 | Type | Description |
 | - | - |
-| 600 | Gets the absolute representation of a literal value or variable and sets to another variable.<br>```$local1 = math_abs($local2);``` |
+| 600 | Gets the absolute representation of a literal value or variable and sets to another variable. Returns 0 if the value passed is not an integer or float. <br>```$local1 = math_abs($local2);``` |
 | 601 | Gets the square root of a literal value or variable and sets to another variable.<br>```$local1 = math_sqrt($local2);``` |
 | 602 | Rounds a literal value or variable to the next integer towards negative infinity and sets to another variable.<br>```$local1 = math_floor($local2);``` |
 | 603 | Rounds a literal value or variable to the nearest integer and sets to another variable. .5 and upwards rounds towards positive infinity.<br>```$local1 = math_round($local2);``` |
