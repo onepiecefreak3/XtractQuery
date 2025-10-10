@@ -181,7 +181,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 510 | Gets the amount of parameters into the function.<br>```$local1 = parameter_count();``` |
-| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets to another variable.<br>```$local1 = random(5);```<br>```$local1 = random($local2);``` |
+| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets to another variable. It attempts to follow the inputted type; for instance if an integer is passed, the result will be an integer, the same applies for floats and booleans but string inputs will always return `0`. <br>```$local1 = random(5);```<br>```$local1 = random($local2);``` |
 | 521 | Gets the CRC32 from a literal value or variable and sets to another variable.<br>```$local1 = crc32($local2);``` |
 | 522 | Gets the CRC16 from a literal value or variable and sets to another variable.<br>```$local1 = crc16($local2);``` |
 | 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
