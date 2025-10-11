@@ -173,9 +173,11 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | 610 | Gets the sin of a literal value or variable and sets to another variable.<br>```$local1 = math_sin($local2);``` |
 | 611 | Gets the cos of a literal value or variable and sets to another variable.<br>```$local1 = math_cos($local2);``` |
 | 612 | Gets the tan of a literal value or variable and sets to another variable.<br>```$local1 = math_tan($local2);``` |
-| 620 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_asin($local2);``` |
-| 621 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_acos($local2);``` |
+| 620 | Gets the inverse sin of a literal value or variable and sets to another variable.<br>```$local1 = math_asin($local2);``` |
+| 621 | Gets the inverse cos of a literal value or variable and sets to another variable.<br>```$local1 = math_acos($local2);``` |
 | 622 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_atan($local2);``` |
+| 623 | Gets the arctangent of two values (y and x) considering the correct quadrant and sets to another variable.<br>```$local1 = math_atan2($localY, $localX);``` |
+| 630 | Raises a base value to the power of an exponent and sets to another variable.<br>```$local1 = math_pow($local2, $local3);``` |
 
 #### Advanced operations
 | Type | Description |
