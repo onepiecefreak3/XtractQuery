@@ -177,7 +177,8 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | 621 | Gets the inverse cos of a literal value or variable and sets to another variable.<br>```$local1 = math_acos($local2);``` |
 | 622 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_atan($local2);``` |
 | 623 | Gets the arctangent of two values (y and x) considering the correct quadrant and sets to another variable.<br>```$local1 = math_atan2($localY, $localX);``` |
-| 630 | Raises a base value to the power of an exponent and sets to another variable. Allows fractional bases and exponents.<br>```$local1 = math_pow($local2, $local3);``` |
+| 630 | Raises a base value to the power of an exponent and sets to another variable. Allows fractional bases and exponents.<br>```$local1 = math_powf($local2, $local3);``` |
+| 631 | Gets `e` (Euler’s number) raised to the power of a value and sets to another variable.<br>```$local1 = math_exp($local2);``` |
 
 #### Advanced operations
 | Type | Description |
