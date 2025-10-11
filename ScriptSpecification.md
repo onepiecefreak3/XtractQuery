@@ -124,10 +124,10 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 130 | Compares if two literal values or variables are equal and to another variable.<br>```$local1 = 1 == 2;```<br>```$local1 = $local2 == 2;```<br>```$local1 = $local3 == $local4;``` |
 | 131 | Compares if two literal values or variables are not equal and sets the result to another variable.<br>```$local1 = 1 != 2;```<br>```$local1 = $local2 != 2;```<br>```$local1 = $local3 != $local4;``` |
-| 132 | Compares if one literal value or variable is greater or equal to another literal value or variable and sets to another variable.<br>```$local1 = 1 >= 2;```<br>```$local1 = $local2 >= 2;```<br>```$local1 = $local3 >= $local4;``` |
-| 133 | Compares if one literal value or variable is smaller or equal to another literal value or variable and sets to another variable.<br>```$local1 = 1 <= 2;```<br>```$local1 = $local2 <= 2;```<br>```$local1 = $local3 <= $local4;``` |
-| 134 | Compares if one literal value or variable is greater than another literal value or variable and sets to another variable.<br>```$local1 = 1 > 2;```<br>```$local1 = $local2 > 2;```<br>```$local1 = $local3 > $local4;``` |
-| 135 | Compares if one literal value or variable is smaller than another literal value or variable and sets to another variable.<br>```$local1 = 1 < 2;```<br>```$local1 = $local2 < 2;```<br>```$local1 = $local3 < $local4;``` |
+| 132 | Compares if one literal value or variable is greater or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 >= 2;```<br>```$local1 = $local2 >= 2;```<br>```$local1 = $local3 >= $local4;``` |
+| 133 | Compares if one literal value or variable is smaller or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 <= 2;```<br>```$local1 = $local2 <= 2;```<br>```$local1 = $local3 <= $local4;``` |
+| 134 | Compares if one literal value or variable is greater than another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 > 2;```<br>```$local1 = $local2 > 2;```<br>```$local1 = $local3 > $local4;``` |
+| 135 | Compares if one literal value or variable is smaller than another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 < 2;```<br>```$local1 = $local2 < 2;```<br>```$local1 = $local3 < $local4;``` |
 
 #### Booleans
 | Type | Description |
@@ -147,7 +147,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | Type | Description |
 | - | - |
 | 530 | Creates a new multi-dimensional array.<br>```$local1 = new[2];```<br>```$local1 = new[2][1];``` |
-| 531 | Gets a reference to the indexed element in an array.<br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
+| 531 | Gets a reference to the indexed element in an array. Returns 0 if a non-numeric type is indexed (not an int or float). <br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
 
 The array index notation can be used in all shorthand assignments of type 240 - 271. They can not be directly used in operations of type 110 - 171. You need to use operation 531 to get an array element and set it to another variable to use them in those operations.
 
