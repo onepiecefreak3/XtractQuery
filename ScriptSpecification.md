@@ -82,7 +82,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 30 | If the value equates to ``true``, jump to the label in the current function.<br>```if 1 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
 | 31 | Unconditionally jump to the label in the current function. Theoretically, if multiple labels are provided, it'll choose a random one - although this behaviour is unused and XtractQuery will require you to format it as `sub32(labelA, labelB...)` to use multiple. <br>```goto "Label1"h;```<br>```sub32("Label1"h, "Label2"h ...) // jumps to a random label``` |
-| 32 | If the value equates to ``true``, jump to the label in the current function. |
+| 32 | If the value equates to ``true``, jump to the label in the current function.<br>```if not 0 goto "Label1"h;```<br>```if not $variable0 goto "Label1"h;``` |
 | 33 | If the value equates to ``false``, jump to the label in the current function.<br>```if 0 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
 
 #### Basic assignments and operations
