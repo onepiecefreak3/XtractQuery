@@ -82,6 +82,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 30 | If the value equates to ``true``, jump to the label in the current function.<br>```if 1 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
 | 31 | Unconditionally jump to the label in the current function. If multiple labels are provided, it'll choose a random one. <br>```goto "Label1"h;``` |
+| 32 | If the value equates to ``true``, jump to the label in the current function. |
 | 33 | If the value equates to ``false``, jump to the label in the current function.<br>```if 0 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
 
 #### Basic assignments and operations
