@@ -13,7 +13,7 @@ Various options have to be set to properly use the command line tool.
 | - | - |
 | -h | Shows a help text explaining all the options listed here and examples on how to use use them. |
 | -o | The operation to execute. Has to be followed by either:<br>`d` to decompress a script<br>`e` to extract a script to human readable code<br>`c` to create a scripot from human readable code |
-| -t | The type of .xq or .cq file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`gss1`<br>`gsd1`<br>`gds` |
+| -t | The type of .xq, .cq, or .gds file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`gss1`<br>`gsd1`<br>`gds` |
 | -f | The file or directory to execute the operation on. |
 
 ### Method name mapping
