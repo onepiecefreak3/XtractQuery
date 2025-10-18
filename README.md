@@ -2,7 +2,7 @@
 
 ## Description
 
-A command line tool to de- and recompile .xq files from various 3DS games by Level5 and .cq files from various NDS games by Level5.<br>
+A command line tool to de- and recompile .xq and .xs files from various 3DS games by Level5 and .cq, .lb, and .gds files from various NDS games by Level5.<br>
 It supports all known format specifications.
 
 ## Usage
@@ -13,7 +13,7 @@ Various options have to be set to properly use the command line tool.
 | - | - |
 | -h | Shows a help text explaining all the options listed here and examples on how to use use them. |
 | -o | The operation to execute. Has to be followed by either:<br>`d` to decompress a script<br>`e` to extract a script to human readable code<br>`c` to create a scripot from human readable code |
-| -t | The type of .xq or .cq file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`gss1` |
+| -t | The type of .xq, .cq, .lb, or .gds file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`xscr`<br>`gss1`<br>`gsd1`<br>`gds` |
 | -f | The file or directory to execute the operation on. |
 
 ### Method name mapping
@@ -22,6 +22,8 @@ In the file `methodMapping.json` instruction types, that are not known by the pr
 Since those unknown instructions are normally game specific logic, they have to be figured out by the user and added to the mapping for themselves.
 
 If an unknown instruction type has no corresponding mapping, its name will be set to `subXXX`, where `XXX` is the instruction type.
+
+This mapping is currently not used for GDS scripts.
 
 ### Reference scripts
 
