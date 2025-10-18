@@ -134,9 +134,9 @@ Everything after the number will be ignored for compilation and follows no speci
 #### Booleans
 | Type | Description |
 | - | - |
-| 120 | Converts a literal value or variable to boolean and negate it.<br>```$local1 = not $local2;``` |
-| 121 | Converts two literal values or variables to boolean and boolean and them.<br>```$local1 = true && true;```<br>```$local1 = $local2 && true;```<br>```$local1 = $local2 && $local3;``` |
-| 122 | Converts two literal values or variables to boolean and boolean or them.<br>```$local1 = true \|\| true;```<br>```$local1 = $local2 \|\| true;```<br>```$local1 = $local2 \|\| $local3;``` |
+| 120 | Coerces a literal value or variable to boolean and negates it.<br>```$local1 = not $local2;``` |
+| 121 | Coerces two literal values or variables to boolean and runs a logical AND operation on them.<br>```$local1 = true && true;```<br>```$local1 = $local2 && true;```<br>```$local1 = $local2 && $local3;``` |
+| 122 | Coerces two literal values or variables to boolean and runs a logical OR operation on them.<br>```$local1 = true \|\| true;```<br>```$local1 = $local2 \|\| true;```<br>```$local1 = $local2 \|\| $local3;``` |
 
 #### Strings
 | Type | Description |
