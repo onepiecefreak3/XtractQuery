@@ -189,7 +189,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 510 | Gets the amount of parameters into the function.<br>```$local1 = parameter_count();``` |
-| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets it to another variable. Here are the results from the following inputs:<br><ul><li>Int - Returns a random integer in the range `0` to `input - 1`.</li><li>Float - Returns a random float in the range `0.0` to `input`.</li><li>String - Returns a random integer in the range `0` to `strlen(input) - 1`.</li><li>Others - Return `0`.</li></ul> |
+| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets it to another variable. Here are the results from the following inputs:<br><ul><li>Int: Returns a random integer in the range `0` to `input - 1`.</li><li>Float: Returns a random float in the range `0.0` to `input`.</li><li>String: Returns a random integer in the range `0` to `strlen(input) - 1`.</li><li>Others: Returns `0`.</li></ul> |
 | 521 | Gets the CRC32 checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc32($local2);``` |
 | 522 | Gets the CRC16 checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc16($local2);``` |
 | 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
