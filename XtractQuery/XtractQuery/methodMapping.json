@@ -2,7 +2,7 @@
   20: "call", // return 0 (Calls another method by name or crc with all arguments, ignoring the first one)
 
   40: "typeof", // return 0 (Gets the type of the static or variable value)
-  111: "validate_numeric_type", // return 0 (Validates a literal value or variable to another variable. Non-numeric types get coeerced to 0)
+  111: "to_number", // return 0 (Validates a literal value or variable to another variable. Ints and floats remain unchanged, other types coerce to `0`.)
   500: "log", // return 0 (no-op)
   501: "format", // return 0 (Formats a string like printf)
   502: "utf8_to_wide", // return 0 (Converts a UTF-8 encoded string into a UTF-16 (wide) string).
