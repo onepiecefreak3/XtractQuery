@@ -3,7 +3,7 @@
 
   40: "typeof", // return 0 (Gets the type of the static or variable value)
   
-  111: "to_number", // return 0 (Validates a literal value or variable to another variable. Ints and floats remain unchanged, other types coerce to `0`.)
+  111: "to_number", // return 0 (Validates a literal value or variable to another variable. Ints and floats remain unchanged, other types coerce to 0.)
   
   500: "log", // return 0 (no-op)
   501: "format", // return 0 (Formats a string like printf)
