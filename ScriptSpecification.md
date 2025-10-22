@@ -81,9 +81,10 @@ Everything after the number will be ignored for compilation and follows no speci
 | Type | Description |
 | - | - |
 | 30 | If the value equates to ``true``, jump to the label in the current function.<br>```if 1 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
-| 31 | Unconditionally jump to the label in the current function. Theoretically, if multiple labels are provided, it'll choose a random one - although this behaviour is unused and XtractQuery will require you to format it as `sub32(labelA, labelB...)` to use multiple. <br>```goto "Label1"h;```<br>```sub32("Label1"h, "Label2"h ...) // jumps to a random label``` |
+| 31 | Unconditionally jump to the label in the current function. Multiple labels can be provided when written as `sub31("Label1"h, "Label2"h, ...)`. The instruction then unconditionally jumps to one random label. <br>```goto "Label1"h;```<br>```sub32("Label1"h, "Label2"h, ...) // jumps to a random label``` |
 | 32 | If the value equates to ``true``, jump to the label in the current function.<br>```if 0 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
-| 33 | If the value equates to ``false``, jump to the label in the current function.<br>```if not 0 goto "Label1"h;```<br>```if not $variable0 goto "Label1"h;``` |
+| 33 | If the negated value equates to ``true``, jump to the label in the current function.<br>```if not 0 goto "Label1"h;```<br>```if not $variable0 goto "Label1"h;``` |
+> Note: Differences between instruction 30 and instruction 32 are unclear.
 
 #### Basic assignments and operations
 | Type | Description |
@@ -124,7 +125,7 @@ Everything after the number will be ignored for compilation and follows no speci
 #### Comparisons
 | Type | Description |
 | - | - |
-| 130 | Compares if two literal values or variables are equal and to another variable.<br>```$local1 = 1 == 2;```<br>```$local1 = $local2 == 2;```<br>```$local1 = $local3 == $local4;``` |
+| 130 | Compares if two literal values or variables are equal and sets to another variable.<br>```$local1 = 1 == 2;```<br>```$local1 = $local2 == 2;```<br>```$local1 = $local3 == $local4;``` |
 | 131 | Compares if two literal values or variables are not equal and sets the result to another variable.<br>```$local1 = 1 != 2;```<br>```$local1 = $local2 != 2;```<br>```$local1 = $local3 != $local4;``` |
 | 132 | Compares if one literal value or variable is greater or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 >= 2;```<br>```$local1 = $local2 >= 2;```<br>```$local1 = $local3 >= $local4;``` |
 | 133 | Compares if one literal value or variable is smaller or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 <= 2;```<br>```$local1 = $local2 <= 2;```<br>```$local1 = $local3 <= $local4;``` |
@@ -143,14 +144,14 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 500 | Was originally used to log a message in developement. Is a no-op in published games.<br>```$local1 = log("This is a message.");``` |
 | 501 | Formats a string with placeholder values.<br>```$local1 = format("Formatted message %s", $local2);``` |
-| 502 | Converts a UTF-8 encoded string into a UTF-16 (wide) string.<br>```$local1 = utf8_to_wide("hi");``` |
+| 502 | Converts a UTF-8 encoded string into a UTF-16 (wide) encoded string.<br>```$local1 = utf8_to_wide("hi");``` |
 | 503 | Get a substring from another string. Crashes on negative numbers. <br>```$local1 = substring("This message", 5);``` |
 
 #### Arrays
 | Type | Description |
 | - | - |
 | 530 | Creates a new multi-dimensional array.<br>```$local1 = new[2];```<br>```$local1 = new[2][1];``` |
-| 531 | Gets a reference to the indexed element in an array. Returns 0 if a non-numeric type is indexed (not an int or float). <br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
+| 531 | Gets a reference to the indexed element in an array. Returns `0` if a non-numeric type is indexed. <br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
 
 The array index notation can be used in all shorthand assignments of type 240 - 271. They can not be directly used in operations of type 110 - 171. You need to use operation 531 to get an array element and set it to another variable to use them in those operations.
 
@@ -158,14 +159,14 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 40 | Gets the base type of a variable.<br>```$local1 = typeof($local2);``` |
-| 511 | Casts a literal value or variable to int. Truncates floats and returns `0` for strings. <br>```$local1 = (int)$local2;``` |
-| 512 | Casts a literal value or variable to bool. Non-Zero ints, floats and arrays coerce to `true` and strings are always coerced to `false`. <br>```$local1 = (bool)$local2;``` |
-| 513 | Casts a literal value or variable to float. Ints and floats coerce as you'd expect while other types become `0.0f`. <br>```$local1 = (float)$local2;``` |
+| 511 | Casts a literal value or variable to int. Truncates floats; other types coerce to `0`. <br>```$local1 = (int)$local2;``` |
+| 512 | Casts a literal value or variable to bool. Non-Zero ints, floats, and arrays coerce to `true`. Strings coerce to `false`. <br>```$local1 = (bool)$local2;``` |
+| 513 | Casts a literal value or variable to float. Non-numeric values coerce to `0.0f`. <br>```$local1 = (float)$local2;``` |
 
 #### Math
 | Type | Description |
 | - | - |
-| 600 | Gets the absolute representation of a literal value or variable and sets to another variable. Returns 0 if the value passed is not an integer or float. <br>```$local1 = math_abs($local2);``` |
+| 600 | Gets the absolute representation of a literal value or variable and sets to another variable. Non-numeric values coerce to `0`. <br>```$local1 = math_abs($local2);``` |
 | 601 | Gets the square root of a literal value or variable and sets to another variable.<br>```$local1 = math_sqrt($local2);``` |
 | 602 | Rounds a literal value or variable to the next integer towards negative infinity and sets to another variable.<br>```$local1 = math_floor($local2);``` |
 | 603 | Rounds a literal value or variable to the nearest integer and sets to another variable. .5 and upwards rounds towards positive infinity.<br>```$local1 = math_round($local2);``` |
