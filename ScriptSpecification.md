@@ -90,7 +90,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 100 | Sets a literal value or variable to another variable.<br>```$local1 = 0;```<br>```$local1 = $local2;``` |
 | 110 | Sets the bit complement of a literal value or variable to another variable.<br>```$local1 = ~0;```<br>```$local1 = ~$local2;``` |
-| 111 | Validates a literal value or variable to another variable. Ints and floats remain unchanged while other types (i.e. string and array) get coeerced to `0`. <br>```$local1 = validate_numeric_type("heya"); // 0```<br>```$local1 = validate_numeric_type($local2);``` |
+| 111 | Coerces a literal value or variable to a number and sets to another variable.<br>Ints and floats remain unchanged. All other types coerce to 0. <br>```$local1 = to_number("heya"); // 0```<br>```$local1 = to_number($local2);``` |
 | 112 | Sets the negation of a literal value or variable to another variable.<br>```$local1 = -0;```<br>```$local1 = -$local2;``` |
 | 140 | Adds 1 to a variable and sets to another variable.<br>```$local1 = $local2 + 1;``` |
 | 141 | Subtracts 1 from a variable and sets to another variable.<br>```$local1 = $local2 - 1;``` |
