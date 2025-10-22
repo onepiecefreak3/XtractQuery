@@ -2,9 +2,10 @@
   20: "call", // return 0 (Calls another method by name or crc with all arguments, ignoring the first one)
 
   40: "typeof", // return 0 (Gets the type of the static or variable value)
-
+  111: "validate_numeric_type", // return 0 (Validates a literal value or variable to another variable. Non-numeric types get coeerced to 0)
   500: "log", // return 0 (no-op)
   501: "format", // return 0 (Formats a string like printf)
+  502: "utf8_to_wide", // return 0 (Converts a UTF-8 encoded string into a UTF-16 (wide) string).
   503: "substring", // return 0 (Cuts a string at the beginning by n bytes)
 
   510: "parameter_count", // return 0 (returns the amount of input parameters of the current function)
@@ -21,7 +22,7 @@
   605: "math_min", // return 0 (Gets the lowest of any 2 or more values)
   606: "math_max", // return 0 (Gets the highest of any 2 or more values)
   607: "math_clamp", // return 0 (Clamps a value between a minimum and maximum, given in that order)
-  //608: "", // return 0 (Something with 2*PI and 1/(2*PI))
+  608: "math_normalize_angle", // return 0 (Normalizes an angle (in radians) to the range [-π, π])
 
   610: "math_sin", // return 0 (Gets the sin of the value)
   611: "math_cos", // return 0 (Gets the cos of the value)
@@ -29,5 +30,9 @@
 
   620: "math_asin", // return 0 (Gets the inverse sin of the value)
   621: "math_acos", // return 0 (Gets the inverse cos of the value)
-  622: "math_atan" // return 0 (Gets the inverse tan of the value)
+  622: "math_atan", // return 0 (Gets the inverse tan of the value)
+  623: "math_atan2", // return 0 (Gets the arctangent of two values (y and x) considering the correct quadrant and sets to another variable)
+
+  630: "math_powf", // return 0 (Raises a base value to the power of an exponent and sets to another variable. Allows fractional bases and exponents)
+  631: "math_exp" // return 0 (Gets e (Euler’s number) raised to the power of a value and sets to another variable)
 }
