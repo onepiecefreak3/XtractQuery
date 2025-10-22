@@ -143,6 +143,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 500 | Was originally used to log a message in developement. Is a no-op in published games.<br>```$local1 = log("This is a message.");``` |
 | 501 | Formats a string with placeholder values.<br>```$local1 = format("Formatted message %s", $local2);``` |
+| 502 | Converts a UTF-8 encoded string into a UTF-16 (wide) string.<br>```$local1 = utf8_to_wide("hi");``` |
 | 503 | Get a substring from another string. Crashes on negative numbers. <br>```$local1 = substring("This message", 5);``` |
 
 #### Arrays
