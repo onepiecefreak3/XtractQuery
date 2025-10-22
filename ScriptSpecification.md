@@ -59,7 +59,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | ```$unk0``` | A value, that persists through multiple scripts. |
 | ```$local0``` | A value, that persists only in the function it was set in. |
-| ```$object0``` | A value, that persists only in the function it was set in. |
+| ```$object0``` | A value, that persists only in the function it was set in. Frequently used for UI objects in some games. |
 | ```$param0``` | A value, that exclusively holds input parameters to the function. |
 | ```$global0``` | A value, that persists through multiple functions only in the script it was set in. |
 
@@ -81,14 +81,17 @@ Everything after the number will be ignored for compilation and follows no speci
 | Type | Description |
 | - | - |
 | 30 | If the value equates to ``true``, jump to the label in the current function.<br>```if 1 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
-| 31 | Unconditionally jump to the label in the current function.<br>```goto "Label1"h;``` |
-| 33 | If the value equates to ``false``, jump to the label in the current function.<br>```if 0 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
+| 31 | Unconditionally jump to the label in the current function. Multiple labels can be provided when written as `sub31("Label1"h, "Label2"h, ...)`. The instruction then unconditionally jumps to one random label. <br>```goto "Label1"h;```<br>```sub32("Label1"h, "Label2"h, ...) // jumps to a random label``` |
+| 32 | If the value equates to ``true``, jump to the label in the current function.<br>```if 0 goto "Label1"h;```<br>```if $variable0 goto "Label1"h;``` |
+| 33 | If the negated value equates to ``true``, jump to the label in the current function.<br>```if not 0 goto "Label1"h;```<br>```if not $variable0 goto "Label1"h;``` |
+> Note: Differences between instruction 30 and instruction 32 are unclear.
 
 #### Basic assignments and operations
 | Type | Description |
 | - | - |
 | 100 | Sets a literal value or variable to another variable.<br>```$local1 = 0;```<br>```$local1 = $local2;``` |
 | 110 | Sets the bit complement of a literal value or variable to another variable.<br>```$local1 = ~0;```<br>```$local1 = ~$local2;``` |
+| 111 | Coerces a literal value or variable to a number and sets to another variable.<br>Ints and floats remain unchanged. All other types coerce to `0`. <br>```$local1 = to_number("heya"); // 0```<br>```$local1 = to_number($local2);``` |
 | 112 | Sets the negation of a literal value or variable to another variable.<br>```$local1 = -0;```<br>```$local1 = -$local2;``` |
 | 140 | Adds 1 to a variable and sets to another variable.<br>```$local1 = $local2 + 1;``` |
 | 141 | Subtracts 1 from a variable and sets to another variable.<br>```$local1 = $local2 - 1;``` |
@@ -122,32 +125,33 @@ Everything after the number will be ignored for compilation and follows no speci
 #### Comparisons
 | Type | Description |
 | - | - |
-| 130 | Compares if two literal values or variables are equal and to another variable.<br>```$local1 = 1 == 2;```<br>```$local1 = $local2 == 2;```<br>```$local1 = $local3 == $local4;``` |
+| 130 | Compares if two literal values or variables are equal and sets to another variable.<br>```$local1 = 1 == 2;```<br>```$local1 = $local2 == 2;```<br>```$local1 = $local3 == $local4;``` |
 | 131 | Compares if two literal values or variables are not equal and sets the result to another variable.<br>```$local1 = 1 != 2;```<br>```$local1 = $local2 != 2;```<br>```$local1 = $local3 != $local4;``` |
-| 132 | Compares if one literal value or variable is greater or equal to another literal value or variable and sets to another variable.<br>```$local1 = 1 >= 2;```<br>```$local1 = $local2 >= 2;```<br>```$local1 = $local3 >= $local4;``` |
-| 133 | Compares if one literal value or variable is smaller or equal to another literal value or variable and sets to another variable.<br>```$local1 = 1 <= 2;```<br>```$local1 = $local2 <= 2;```<br>```$local1 = $local3 <= $local4;``` |
-| 134 | Compares if one literal value or variable is greater than another literal value or variable and sets to another variable.<br>```$local1 = 1 > 2;```<br>```$local1 = $local2 > 2;```<br>```$local1 = $local3 > $local4;``` |
-| 135 | Compares if one literal value or variable is smaller than another literal value or variable and sets to another variable.<br>```$local1 = 1 < 2;```<br>```$local1 = $local2 < 2;```<br>```$local1 = $local3 < $local4;``` |
+| 132 | Compares if one literal value or variable is greater or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 >= 2;```<br>```$local1 = $local2 >= 2;```<br>```$local1 = $local3 >= $local4;``` |
+| 133 | Compares if one literal value or variable is smaller or equal to another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 <= 2;```<br>```$local1 = $local2 <= 2;```<br>```$local1 = $local3 <= $local4;``` |
+| 134 | Compares if one literal value or variable is greater than another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 > 2;```<br>```$local1 = $local2 > 2;```<br>```$local1 = $local3 > $local4;``` |
+| 135 | Compares if one literal value or variable is smaller than another literal value or variable and sets to another variable. Lexographically compares strings. <br>```$local1 = 1 < 2;```<br>```$local1 = $local2 < 2;```<br>```$local1 = $local3 < $local4;``` |
 
 #### Booleans
 | Type | Description |
 | - | - |
-| 120 | Converts a literal value or variable to boolean and negate it.<br>```$local1 = not $local2;``` |
-| 121 | Converts two literal values or variables to boolean and boolean and them.<br>```$local1 = true && true;```<br>```$local1 = $local2 && true;```<br>```$local1 = $local2 && $local3;``` |
-| 122 | Converts two literal values or variables to boolean and boolean or them.<br>```$local1 = true \|\| true;```<br>```$local1 = $local2 \|\| true;```<br>```$local1 = $local2 \|\| $local3;``` |
+| 120 | Coerces a literal value or variable to boolean and negates it.<br>```$local1 = not $local2;``` |
+| 121 | Coerces two literal values or variables to boolean and runs a logical AND operation on them.<br>```$local1 = true && true;```<br>```$local1 = $local2 && true;```<br>```$local1 = $local2 && $local3;``` |
+| 122 | Coerces two literal values or variables to boolean and runs a logical OR operation on them.<br>```$local1 = true \|\| true;```<br>```$local1 = $local2 \|\| true;```<br>```$local1 = $local2 \|\| $local3;``` |
 
 #### Strings
 | Type | Description |
 | - | - |
 | 500 | Was originally used to log a message in developement. Is a no-op in published games.<br>```$local1 = log("This is a message.");``` |
 | 501 | Formats a string with placeholder values.<br>```$local1 = format("Formatted message %s", $local2);``` |
-| 503 | Get a substring from another string.<br>```$local1 = substring("This message", 5);``` |
+| 502 | Converts a UTF-8 encoded string into a UTF-16 (wide) encoded string.<br>```$local1 = utf8_to_wide("hi");``` |
+| 503 | Get a substring from another string. Crashes on negative numbers. <br>```$local1 = substring("This message", 5);``` |
 
 #### Arrays
 | Type | Description |
 | - | - |
 | 530 | Creates a new multi-dimensional array.<br>```$local1 = new[2];```<br>```$local1 = new[2][1];``` |
-| 531 | Gets a reference to the indexed element in an array.<br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
+| 531 | Gets a reference to the indexed element in an array. Returns `0` if a non-numeric type is indexed. <br>```$local1 = $local2[0];```<br>```$local1 = $local2[2];``` |
 
 The array index notation can be used in all shorthand assignments of type 240 - 271. They can not be directly used in operations of type 110 - 171. You need to use operation 531 to get an array element and set it to another variable to use them in those operations.
 
@@ -155,14 +159,14 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | Type | Description |
 | - | - |
 | 40 | Gets the base type of a variable.<br>```$local1 = typeof($local2);``` |
-| 511 | Casts a literal value or variable to int.<br>```$local1 = (int)$local2;``` |
-| 512 | Casts a literal value or variable to bool.<br>```$local1 = (bool)$local2;``` |
-| 513 | Casts a literal value or variable to float.<br>```$local1 = (float)$local2;``` |
+| 511 | Casts a literal value or variable to int. Truncates floats. Other types coerce to `0`. <br>```$local1 = (int)$local2;``` |
+| 512 | Casts a literal value or variable to bool. `0`, `0.0f` and strings coerce to `false`. All other values coerce to `true`. <br>```$local1 = (bool)$local2;``` |
+| 513 | Casts a literal value or variable to float. Non-numeric values coerce to `0.0f`. <br>```$local1 = (float)$local2;``` |
 
 #### Math
 | Type | Description |
 | - | - |
-| 600 | Gets the absolute representation of a literal value or variable and sets to another variable.<br>```$local1 = math_abs($local2);``` |
+| 600 | Gets the absolute representation of a literal value or variable and sets to another variable. Non-numeric values coerce to `0`. <br>```$local1 = math_abs($local2);``` |
 | 601 | Gets the square root of a literal value or variable and sets to another variable.<br>```$local1 = math_sqrt($local2);``` |
 | 602 | Rounds a literal value or variable to the next integer towards negative infinity and sets to another variable.<br>```$local1 = math_floor($local2);``` |
 | 603 | Rounds a literal value or variable to the nearest integer and sets to another variable. .5 and upwards rounds towards positive infinity.<br>```$local1 = math_round($local2);``` |
@@ -170,18 +174,22 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | 605 | Gets the smaller of two literal values or variables and sets to another variable.<br>```$local1 = math_min($local2, $local3);``` |
 | 606 | Gets the greater of two literal values or variables and sets to another variable.<br>```$local1 = math_max($local2, $local3);``` |
 | 607 | Clamps the first literal value or variable between a minimum and maximum literal value or variable and sets to another variable.<br>```$local1 = math_clamp($local2, $local3, $local4);``` |
+| 608 | Normalizes an angle (in radians) to the range `[-π, π]` and sets to another variable.<br>```$local1 = math_normalize_angle($local2);``` |
 | 610 | Gets the sin of a literal value or variable and sets to another variable.<br>```$local1 = math_sin($local2);``` |
 | 611 | Gets the cos of a literal value or variable and sets to another variable.<br>```$local1 = math_cos($local2);``` |
 | 612 | Gets the tan of a literal value or variable and sets to another variable.<br>```$local1 = math_tan($local2);``` |
-| 620 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_asin($local2);``` |
-| 621 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_acos($local2);``` |
+| 620 | Gets the inverse sin of a literal value or variable and sets to another variable.<br>```$local1 = math_asin($local2);``` |
+| 621 | Gets the inverse cos of a literal value or variable and sets to another variable.<br>```$local1 = math_acos($local2);``` |
 | 622 | Gets the inverse tan of a literal value or variable and sets to another variable.<br>```$local1 = math_atan($local2);``` |
+| 623 | Gets the arctangent of two values (y and x) considering the correct quadrant and sets to another variable.<br>```$local1 = math_atan2($localY, $localX);``` |
+| 630 | Raises a base value to the power of an exponent and sets to another variable. Allows fractional bases and exponents.<br>```$local1 = math_powf($local2, $local3);``` |
+| 631 | Gets `e` (Euler’s number) raised to the power of a value and sets to another variable.<br>```$local1 = math_exp($local2);``` |
 
 #### Advanced operations
 | Type | Description |
 | - | - |
 | 510 | Gets the amount of parameters into the function.<br>```$local1 = parameter_count();``` |
-| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets to another variable.<br>```$local1 = random(5);```<br>```$local1 = random($local2);``` |
-| 521 | Gets the CRC32 from a literal value or variable and sets to another variable.<br>```$local1 = crc32($local2);``` |
-| 522 | Gets the CRC16 from a literal value or variable and sets to another variable.<br>```$local1 = crc16($local2);``` |
+| 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets it to another variable. Here are the results from the following inputs:<br><ul><li>Int: Returns a random integer in the range `0` to `input - 1`.</li><li>Float: Returns a random float in the range `0.0` to `input`.</li><li>String: Returns a random integer in the range `0` to `strlen(input) - 1`.</li><li>Others: Returns `0`.</li></ul> |
+| 521 | Gets the CRC32 checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc32($local2);``` |
+| 522 | Gets the CRC16 checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc16($local2);``` |
 | 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
