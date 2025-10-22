@@ -160,7 +160,7 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | - | - |
 | 40 | Gets the base type of a variable.<br>```$local1 = typeof($local2);``` |
 | 511 | Casts a literal value or variable to int. Truncates floats. Other types coerce to `0`. <br>```$local1 = (int)$local2;``` |
-| 512 | Casts a literal value or variable to bool. `0`, `0.0f` and strings coerce to `false`. Arrays coerce to `true`. <br>```$local1 = (bool)$local2;``` |
+| 512 | Casts a literal value or variable to bool. `0`, `0.0f` and strings coerce to `false`. All other values coerce to `true`. <br>```$local1 = (bool)$local2;``` |
 | 513 | Casts a literal value or variable to float. Non-numeric values coerce to `0.0f`. <br>```$local1 = (float)$local2;``` |
 
 #### Math
@@ -190,6 +190,6 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | - | - |
 | 510 | Gets the amount of parameters into the function.<br>```$local1 = parameter_count();``` |
 | 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets it to another variable. Here are the results from the following inputs:<br><ul><li>integer - Returns a random integer in the range `0` to the `input - 1`.</li><li>float - Returns a random float in the range `0.0` to the input.</li><li>string - Returns a random integer in the range `0` to the length of the string minus 1.</li><li>All other types will return `0`.</li></ul> |
-| 521 | Gets the CRC32 from a literal value or variable and sets to another variable. Passing an array will return `0`. <br>```$local1 = crc32($local2);``` |
-| 522 | Gets the CRC16 from a literal value or variable and sets to another variable. Passing an array will return `0`. <br>```$local1 = crc16($local2);``` |
+| 521 | Gets the CRC32 from a non-array literal value or variable and sets to another variable. Passing an array will return `0`. <br>```$local1 = crc32($local2);``` |
+| 522 | Gets the CRC16 from a non-array literal value or variable and sets to another variable. Passing an array will return `0`. <br>```$local1 = crc16($local2);``` |
 | 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
