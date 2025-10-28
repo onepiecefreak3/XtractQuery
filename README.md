@@ -2,7 +2,8 @@
 
 ## Description
 
-A command line tool to de- and recompile .xq and .xs files from various 3DS games by Level5 and .cq, .lb, and .gds files from various NDS games by Level5.<br>
+A command line tool to de- and recompile .xq and .xs files from various 3DS games by Level5 and .cq, .lb, and .gds files from various NDS games by Level5.
+
 It supports all known format specifications.
 
 ## Usage
