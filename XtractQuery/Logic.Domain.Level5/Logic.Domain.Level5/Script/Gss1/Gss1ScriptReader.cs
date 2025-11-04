@@ -10,7 +10,7 @@ class Gss1ScriptReader : IGss1ScriptReader
 {
     public Gss1ScriptContainer Read(Stream input)
     {
-        using BinaryReaderX reader = new BinaryReaderX(input, true);
+        using var reader = new BinaryReaderX(input, true);
 
         Gss1Header header = ReadHeader(reader);
 

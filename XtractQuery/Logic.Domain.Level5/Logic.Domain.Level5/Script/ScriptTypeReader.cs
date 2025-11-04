@@ -38,7 +38,10 @@ internal class ScriptTypeReader : IScriptTypeReader
 
         try
         {
-            return Read(stream);
+            var type = Read(stream);
+            stream.Position = bkPos;
+
+            return type;
         }
         catch (Exception)
         {

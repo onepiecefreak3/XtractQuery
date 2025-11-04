@@ -1,8 +1,11 @@
+using System.Text;
 using CrossCutting.Core.Contract.EventBrokerage;
 using CrossCutting.Core.Contract.Messages;
 using CrossCutting.Core.Contract.DependencyInjection;
 using XtractQuery;
 using Logic.Business.Level5ScriptManagement.Contract;
+
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 KernelLoader loader = new();
 ICoCoKernel kernel = loader.Initialize();
