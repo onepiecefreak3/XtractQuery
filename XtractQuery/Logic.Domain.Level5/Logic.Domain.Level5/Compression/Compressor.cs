@@ -1,19 +1,13 @@
 ﻿using System.Buffers.Binary;
-using Logic.Domain.Kuriimu2.KompressionAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
+using Kompression;
+using Kompression.Contract;
+using Logic.Domain.Level5.Contract.Enums.Compression;
+using Logic.Domain.Level5.InternalContract.Compression;
 
 namespace Logic.Domain.Level5.Compression;
 
 internal class Compressor : ICompressor
 {
-    private readonly ICompressionFactory _compressionFactory;
-
-    public Compressor(ICompressionFactory compressionFactory)
-    {
-        _compressionFactory = compressionFactory;
-    }
-
     public Stream Compress(Stream input, CompressionType compressionType)
     {
         ICompression compression;
@@ -28,29 +22,29 @@ internal class Compressor : ICompressor
                 break;
 
             case CompressionType.Lz10:
-                compression = _compressionFactory.Create(Kuriimu2.KompressionAdapter.Contract.DataClasses.CompressionType.Level5_Lz10);
+                compression = Compressions.Level5.Lz10.Build();
                 compression.Compress(input, ms);
                 break;
 
             case CompressionType.Huffman4Bit:
-                compression = _compressionFactory.Create(Kuriimu2.KompressionAdapter.Contract.DataClasses.CompressionType.Level5_Huffman4Bit);
+                compression = Compressions.Level5.Huffman4Bit.Build();
                 compression.Compress(input, ms);
                 break;
 
             case CompressionType.Huffman8Bit:
-                compression = _compressionFactory.Create(Kuriimu2.KompressionAdapter.Contract.DataClasses.CompressionType.Level5_Huffman8Bit);
+                compression = Compressions.Level5.Huffman8Bit.Build();
                 compression.Compress(input, ms);
                 break;
 
             case CompressionType.Rle:
-                compression = _compressionFactory.Create(Kuriimu2.KompressionAdapter.Contract.DataClasses.CompressionType.Level5_Rle);
+                compression = Compressions.Level5.Rle.Build();
                 compression.Compress(input, ms);
                 break;
 
             case CompressionType.ZLib:
                 WriteCompressionMethod(ms, input, compressionType);
 
-                compression = _compressionFactory.Create(Kuriimu2.KompressionAdapter.Contract.DataClasses.CompressionType.ZLib);
+                compression = Compressions.ZLib.Build();
                 compression.Compress(input, ms);
                 break;
         }

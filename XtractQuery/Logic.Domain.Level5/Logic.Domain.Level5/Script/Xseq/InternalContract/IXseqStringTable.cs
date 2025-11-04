@@ -1,8 +1,0 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.Level5.Contract.Script;
-using Logic.Domain.Level5.Script.Xseq.InternalContract.Exceptions;
-
-namespace Logic.Domain.Level5.Script.Xseq.InternalContract;
-
-[MapException(typeof(XseqStringTableException))]
-public interface IXseqStringTable : IStringTable;

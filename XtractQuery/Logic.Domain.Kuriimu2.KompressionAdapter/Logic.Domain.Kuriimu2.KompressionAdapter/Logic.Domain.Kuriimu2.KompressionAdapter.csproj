@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Kompression" Version="2.0.10" />
+    <PackageReference Include="Kompression" Version="2.1.11" />
   </ItemGroup>
 
   <ItemGroup>

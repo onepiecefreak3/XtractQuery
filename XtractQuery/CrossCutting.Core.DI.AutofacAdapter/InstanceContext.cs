@@ -45,7 +45,7 @@ public class InstanceContext : IInstanceContext
 
     private InstanceContext()
     {
-        _scopes = new List<ILifetimeScope>();
+        _scopes = [];
 
         _resolvedParameterCache.Add(
             typeof(IScope),

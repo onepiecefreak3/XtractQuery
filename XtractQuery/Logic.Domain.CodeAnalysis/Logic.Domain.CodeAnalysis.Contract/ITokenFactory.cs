@@ -1,9 +1,5 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.CodeAnalysis.Contract.Exceptions;
+﻿namespace Logic.Domain.CodeAnalysis.Contract;
 
-namespace Logic.Domain.CodeAnalysis.Contract;
-
-[MapException(typeof(TokenFactoryException))]
 public interface ITokenFactory<TToken>
     where TToken : struct
 {

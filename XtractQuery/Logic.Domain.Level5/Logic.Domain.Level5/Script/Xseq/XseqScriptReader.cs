@@ -1,29 +1,26 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
 using Logic.Domain.Level5.Contract.Script.Xseq;
-using Logic.Domain.Level5.Contract.Script.Xseq.DataClasses;
-using Logic.Domain.Level5.Script.Xseq.InternalContract;
+using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
 internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
 {
-    private readonly IBinaryFactory _binaryFactory;
     private readonly Dictionary<ushort, HashSet<string>> _functionCache;
     private readonly Dictionary<ushort, HashSet<string>> _jumpCache;
 
-    public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider,
-        IBinaryFactory binaryFactory)
-        : base(decompressor, entrySizeProvider, binaryFactory)
+    public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider)
+        : base(decompressor, entrySizeProvider)
     {
-        _binaryFactory = binaryFactory;
         _functionCache = new Dictionary<ushort, HashSet<string>>();
         _jumpCache = new Dictionary<ushort, HashSet<string>>();
     }
 
     public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(functionStream, true);
+        using var br = new BinaryReaderX(functionStream, true);
 
         var result = new XseqFunction[entryCount];
 
@@ -63,7 +60,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
 
     public override IReadOnlyList<XseqJump> ReadJumps(Stream jumpStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(jumpStream, true);
+        using var br = new BinaryReaderX(jumpStream, true);
 
         var result = new XseqJump[entryCount];
 
@@ -100,7 +97,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
 
     public override IReadOnlyList<XseqInstruction> ReadInstructions(Stream instructionStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(instructionStream, true);
+        using var br = new BinaryReaderX(instructionStream, true);
 
         var result = new XseqInstruction[entryCount];
 
@@ -134,7 +131,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
 
     public override IReadOnlyList<XseqArgument> ReadArguments(Stream argumentStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(argumentStream, true);
+        using var br = new BinaryReaderX(argumentStream, true);
 
         var result = new XseqArgument[entryCount];
 
@@ -171,16 +168,16 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
         return result;
     }
 
-    protected override ScriptFunction CreateFunction(XseqFunction function, IBinaryReaderX? stringReader)
+    protected override ScriptFunction CreateFunction(XseqFunction function, BinaryReaderX? stringReader)
     {
         var name = string.Empty;
         if (stringReader != null)
         {
             stringReader.BaseStream.Position = function.nameOffset;
-            name = stringReader.ReadCStringSJIS();
+            name = stringReader.ReadNullTerminatedString();
 
             if (!_functionCache.TryGetValue(function.crc16, out HashSet<string>? functionNames))
-                _functionCache[function.crc16] = functionNames = new HashSet<string>();
+                _functionCache[function.crc16] = functionNames = [];
 
             functionNames.Add(name);
         }
@@ -202,16 +199,16 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
         };
     }
 
-    protected override ScriptJump CreateJump(XseqJump jump, IBinaryReaderX? stringReader)
+    protected override ScriptJump CreateJump(XseqJump jump, BinaryReaderX? stringReader)
     {
         var name = string.Empty;
         if (stringReader != null)
         {
             stringReader.BaseStream.Position = jump.nameOffset;
-            name = stringReader.ReadCStringSJIS();
+            name = stringReader.ReadNullTerminatedString();
 
             if (!_jumpCache.TryGetValue(jump.crc16, out HashSet<string>? jumpNames))
-                _jumpCache[jump.crc16] = jumpNames = new HashSet<string>();
+                _jumpCache[jump.crc16] = jumpNames = [];
 
             jumpNames.Add(name);
         }
@@ -237,7 +234,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
         };
     }
 
-    protected override ScriptArgument CreateArgument(XseqArgument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader)
+    protected override ScriptArgument CreateArgument(XseqArgument argument, int instructionType, int argumentIndex, BinaryReaderX? stringReader)
     {
         int rawType = -1;
         ScriptArgumentType type;
@@ -306,7 +303,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
                     rawType = argument.type;
 
                 type = ScriptArgumentType.String;
-                value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+                value = stringReader?.ReadNullTerminatedString() ?? string.Empty;
 
                 break;
 

@@ -34,13 +34,15 @@ public sealed class Logger : ILogger
     public void Trace(string msg, object arg0)
     {
         if (IsTraceEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Trace, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Trace, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]));
     }
 
     public void Trace(string msg, object arg0, object arg1)
     {
         if (IsTraceEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Trace, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Trace, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]));
     }
 
     public void Trace(string msg, params object[] args)
@@ -58,13 +60,15 @@ public sealed class Logger : ILogger
     public void Debug(string msg, object arg0)
     {
         if (IsDebugEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Debug, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Debug, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]));
     }
 
     public void Debug(string msg, object arg0, object arg1)
     {
         if (IsDebugEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Debug, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Debug, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]));
     }
 
     public void Debug(string msg, params object[] args)
@@ -82,13 +86,15 @@ public sealed class Logger : ILogger
     public void Info(string msg, object arg0)
     {
         if (IsInfoEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Info, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Info, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]));
     }
 
     public void Info(string msg, object arg0, object arg1)
     {
         if (IsInfoEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Info, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Info, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]));
     }
 
     public void Info(string msg, params object[] args)
@@ -106,13 +112,15 @@ public sealed class Logger : ILogger
     public void Warn(string msg, object arg0)
     {
         if (IsWarnEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Warn, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Warn, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]));
     }
 
     public void Warn(string msg, object arg0, object arg1)
     {
         if (IsWarnEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Warn, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Warn, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]));
     }
 
     public void Warn(string msg, params object[] args)
@@ -130,13 +138,15 @@ public sealed class Logger : ILogger
     public void Error(string msg, object arg0)
     {
         if (IsErrorEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]));
     }
 
     public void Error(string msg, object arg0, object arg1)
     {
         if (IsErrorEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }));
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]));
     }
 
     public void Error(string msg, params object[] args)
@@ -154,13 +164,15 @@ public sealed class Logger : ILogger
     public void Error(string msg, Exception ex, object arg0)
     {
         if (IsErrorEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0 }) { Exception = ex });
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0]) { Exception = ex });
     }
 
     public void Error(string msg, Exception ex, object arg0, object arg1)
     {
         if (IsErrorEnabled)
-            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg, new[] { arg0, arg1 }) { Exception = ex });
+            _logger.Log(typeof(Logger), new LogEventInfo(LogLevel.Error, _logger.Name, CultureInfo.InvariantCulture, msg,
+                [arg0, arg1]) { Exception = ex });
     }
 
     public void Error(string msg, Exception ex, params object[] args)

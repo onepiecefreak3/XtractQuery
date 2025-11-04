@@ -1,10 +1,10 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 

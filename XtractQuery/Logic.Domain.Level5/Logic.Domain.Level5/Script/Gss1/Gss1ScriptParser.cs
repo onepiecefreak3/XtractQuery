@@ -1,12 +1,15 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using System.Text;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader reader) : IGss1ScriptParser
+internal class Gss1ScriptParser(IGss1ScriptReader reader) : IGss1ScriptParser
 {
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
     private readonly Dictionary<ushort, HashSet<string>> _functionCache = [];
     private readonly Dictionary<ushort, HashSet<string>> _jumpCache = [];
 
@@ -31,13 +34,13 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
 
     public IList<ScriptFunction> ParseFunctions(Gss1Function[] functions, ScriptStringTable? strings = null)
     {
-        using IBinaryReaderX? stringReader = strings is null ? null : binaryFactory.CreateReader(strings.Stream, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
         return ParseFunctions(functions, stringReader, strings?.BaseOffset ?? 0);
     }
 
     public IList<ScriptJump> ParseJumps(Gss1Jump[] jumps, ScriptStringTable? strings = null)
     {
-        using IBinaryReaderX? stringReader = strings is null ? null : binaryFactory.CreateReader(strings.Stream, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
         return ParseJumps(jumps, stringReader, strings?.BaseOffset ?? 0);
     }
 
@@ -61,11 +64,11 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
 
     public IList<ScriptArgument> ParseArguments(Gss1Argument[] arguments, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? strings = null)
     {
-        using IBinaryReaderX? stringReader = strings is null ? null : binaryFactory.CreateReader(strings.Stream, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
         return ParseArguments(arguments, instructions, stringReader, strings?.BaseOffset ?? 0);
     }
 
-    private IList<ScriptFunction> ParseFunctions(Gss1Function[] functions, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private IList<ScriptFunction> ParseFunctions(Gss1Function[] functions, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         var result = new ScriptFunction[functions.Length];
 
@@ -87,7 +90,7 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
         return result;
     }
 
-    private IList<ScriptJump> ParseJumps(Gss1Jump[] jumps, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private IList<ScriptJump> ParseJumps(Gss1Jump[] jumps, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         var result = new ScriptJump[jumps.Length];
 
@@ -104,7 +107,7 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
     }
 
     private IList<ScriptArgument> ParseArguments(Gss1Argument[] arguments, IReadOnlyList<ScriptInstruction> instructions,
-        IBinaryReaderX? stringReader, int stringBaseOffset)
+        BinaryReaderX? stringReader, int stringBaseOffset)
     {
         var result = new ScriptArgument[arguments.Length];
 
@@ -126,7 +129,7 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
     }
 
     private ScriptArgument ParseArgument(Gss1Argument argument, int instructionType, int argumentIndex,
-        IBinaryReaderX? stringReader, int stringBaseOffset)
+        BinaryReaderX? stringReader, int stringBaseOffset)
     {
         int rawType = -1;
         ScriptArgumentType type;
@@ -187,7 +190,7 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
                     rawType = argument.type;
 
                 type = ScriptArgumentType.String;
-                value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+                value = stringReader?.ReadNullTerminatedString() ?? string.Empty;
                 break;
 
             default:
@@ -202,13 +205,13 @@ internal class Gss1ScriptParser(IBinaryFactory binaryFactory, IGss1ScriptReader 
         };
     }
 
-    private static string? ReadString(IBinaryReaderX? stringReader, int offset, ushort hash, Dictionary<ushort, HashSet<string>> cache)
+    private static string? ReadString(BinaryReaderX? stringReader, int offset, ushort hash, Dictionary<ushort, HashSet<string>> cache)
     {
         if (stringReader is null)
             return null;
 
         stringReader.BaseStream.Position = offset;
-        string name = stringReader.ReadCStringSJIS();
+        string name = stringReader.ReadNullTerminatedString();
 
         if (!cache.TryGetValue(hash, out HashSet<string>? functionNames))
             cache[hash] = functionNames = [];

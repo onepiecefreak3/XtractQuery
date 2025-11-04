@@ -1,11 +1,11 @@
-﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
+using System.Text;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer composer) : IGss1ScriptWriter
+class Gss1ScriptWriter(IGss1ScriptComposer composer) : IGss1ScriptWriter
 {
     public void Write(Gss1ScriptFile script, Stream output)
     {
@@ -16,7 +16,7 @@ class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer compose
 
     public void Write(Gss1ScriptContainer container, Stream output)
     {
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(output, true);
+        using var writer = new BinaryWriterX(output, true);
 
         output.Position = 0x20;
         WriteFunctions(container.Functions, writer);
@@ -57,7 +57,7 @@ class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer compose
         WriteHeader(header, writer);
     }
 
-    private void WriteHeader(Gss1Header header, IBinaryWriterX writer)
+    private void WriteHeader(Gss1Header header, BinaryWriterX writer)
     {
         writer.WriteString(header.magic, Encoding.ASCII, false, false);
         writer.Write(header.functionEntryCount);
@@ -72,13 +72,13 @@ class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer compose
         writer.Write(header.stringOffset);
     }
 
-    private void WriteFunctions(Gss1Function[] functions, IBinaryWriterX writer)
+    private void WriteFunctions(Gss1Function[] functions, BinaryWriterX writer)
     {
         foreach (Gss1Function function in functions)
             WriteFunction(function, writer);
     }
 
-    private void WriteFunction(Gss1Function function, IBinaryWriterX writer)
+    private void WriteFunction(Gss1Function function, BinaryWriterX writer)
     {
         writer.Write(function.nameOffset);
         writer.Write(function.crc16);
@@ -91,26 +91,26 @@ class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer compose
         writer.Write(function.parameterCount);
     }
 
-    private void WriteJumps(Gss1Jump[] jumps, IBinaryWriterX writer)
+    private void WriteJumps(Gss1Jump[] jumps, BinaryWriterX writer)
     {
         foreach (Gss1Jump jump in jumps)
             WriteJump(jump, writer);
     }
 
-    private void WriteJump(Gss1Jump jump, IBinaryWriterX writer)
+    private void WriteJump(Gss1Jump jump, BinaryWriterX writer)
     {
         writer.Write(jump.nameOffset);
         writer.Write(jump.crc16);
         writer.Write(jump.instructionIndex);
     }
 
-    private void WriteInstructions(Gss1Instruction[] instructions, IBinaryWriterX writer)
+    private void WriteInstructions(Gss1Instruction[] instructions, BinaryWriterX writer)
     {
         foreach (Gss1Instruction instruction in instructions)
             WriteInstruction(instruction, writer);
     }
 
-    private void WriteInstruction(Gss1Instruction instruction, IBinaryWriterX writer)
+    private void WriteInstruction(Gss1Instruction instruction, BinaryWriterX writer)
     {
         writer.Write(instruction.argOffset);
         writer.Write(instruction.argCount);
@@ -119,13 +119,13 @@ class Gss1ScriptWriter(IBinaryFactory binaryFactory, IGss1ScriptComposer compose
         writer.Write(instruction.zero0);
     }
 
-    private void WriteArguments(Gss1Argument[] arguments, IBinaryWriterX writer)
+    private void WriteArguments(Gss1Argument[] arguments, BinaryWriterX writer)
     {
         foreach (Gss1Argument argument in arguments)
             WriteArgument(argument, writer);
     }
 
-    private void WriteArgument(Gss1Argument argument, IBinaryWriterX writer)
+    private void WriteArgument(Gss1Argument argument, BinaryWriterX writer)
     {
         writer.Write(argument.type);
         writer.Write(argument.value);

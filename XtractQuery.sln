@@ -55,18 +55,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Level5", "Xtra
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Level5.Contract", "XtractQuery\Logic.Domain.Level5\Logic.Domain.Level5.Contract\Logic.Domain.Level5.Contract.csproj", "{87B8E243-E3AE-4171-B707-61ADD14379F5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KompressionAdapter", "XtractQuery\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter.csproj", "{8482D49A-DB17-4D8A-AD26-4960296D3C8D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KompressionAdapter.Contract", "XtractQuery\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter.Contract\Logic.Domain.Kuriimu2.KompressionAdapter.Contract.csproj", "{542BBE7E-CD49-4A76-9819-76397643A094}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KomponentAdapter", "XtractQuery\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.csproj", "{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KomponentAdapter.Contract", "XtractQuery\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.Contract\Logic.Domain.Kuriimu2.KomponentAdapter.Contract.csproj", "{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KryptographyAdapter", "XtractQuery\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter.csproj", "{24FE46E0-D6CA-44B8-9041-6A91036AAE1B}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logic.Domain.Kuriimu2.KryptographyAdapter.Contract", "XtractQuery\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter.Contract\Logic.Domain.Kuriimu2.KryptographyAdapter.Contract.csproj", "{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logic.Domain.CodeAnalysis", "XtractQuery\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis.csproj", "{06A0E77B-9919-43E3-948C-9F7C74C87152}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logic.Domain.CodeAnalysis.Contract", "XtractQuery\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis.Contract\Logic.Domain.CodeAnalysis.Contract.csproj", "{BCD3F18B-C364-4F58-8EC6-2C510AC892EC}"
@@ -141,30 +129,6 @@ Global
 		{87B8E243-E3AE-4171-B707-61ADD14379F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87B8E243-E3AE-4171-B707-61ADD14379F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87B8E243-E3AE-4171-B707-61ADD14379F5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8482D49A-DB17-4D8A-AD26-4960296D3C8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8482D49A-DB17-4D8A-AD26-4960296D3C8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8482D49A-DB17-4D8A-AD26-4960296D3C8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8482D49A-DB17-4D8A-AD26-4960296D3C8D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{542BBE7E-CD49-4A76-9819-76397643A094}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{542BBE7E-CD49-4A76-9819-76397643A094}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{542BBE7E-CD49-4A76-9819-76397643A094}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{542BBE7E-CD49-4A76-9819-76397643A094}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73}.Release|Any CPU.Build.0 = Release|Any CPU
-		{24FE46E0-D6CA-44B8-9041-6A91036AAE1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{24FE46E0-D6CA-44B8-9041-6A91036AAE1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{24FE46E0-D6CA-44B8-9041-6A91036AAE1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{24FE46E0-D6CA-44B8-9041-6A91036AAE1B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{06A0E77B-9919-43E3-948C-9F7C74C87152}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{06A0E77B-9919-43E3-948C-9F7C74C87152}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{06A0E77B-9919-43E3-948C-9F7C74C87152}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -199,12 +163,6 @@ Global
 		{748DDEDB-A497-4303-848F-6D979E8F2DAD} = {3E63F761-ACBA-42AA-9455-9CD196D9661A}
 		{DE62744C-8A43-42E2-BF4E-20B57D216E79} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
 		{87B8E243-E3AE-4171-B707-61ADD14379F5} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{8482D49A-DB17-4D8A-AD26-4960296D3C8D} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{542BBE7E-CD49-4A76-9819-76397643A094} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{B8606B0C-FE1F-4BC5-90AC-0C7D9D8150A2} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{35F4BBFF-B20C-4F39-8B24-9B6B41B95D73} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{24FE46E0-D6CA-44B8-9041-6A91036AAE1B} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
-		{2DB62FCD-C9AC-4DBD-9A2B-A19F0AEDD6C2} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
 		{06A0E77B-9919-43E3-948C-9F7C74C87152} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
 		{BCD3F18B-C364-4F58-8EC6-2C510AC892EC} = {C5E6CE1F-9B13-4440-8B81-613AB322C3AE}
 	EndGlobalSection

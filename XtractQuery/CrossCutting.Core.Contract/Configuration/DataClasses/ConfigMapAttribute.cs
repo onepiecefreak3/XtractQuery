@@ -9,7 +9,7 @@ public class ConfigMapAttribute : Attribute
     public string[] Keys { get; }
 
     public ConfigMapAttribute(string category, string key)
-        : this(category, new[] { key })
+        : this(category, [key])
     {
     }
 

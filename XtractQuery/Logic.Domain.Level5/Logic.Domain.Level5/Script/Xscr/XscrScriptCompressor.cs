@@ -1,13 +1,13 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
+using Logic.Domain.Level5.Contract.Enums.Compression;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
+using Logic.Domain.Level5.InternalContract.Compression;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor compressor) : IXscrScriptCompressor
+internal class XscrScriptCompressor(ICompressor compressor) : IXscrScriptCompressor
 {
     public void Compress(XscrCompressionContainer container, Stream output)
     {
@@ -36,13 +36,13 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
         long instructionOffset = output.Position = 0x14;
         instructionStream.CopyTo(output);
 
-        long argumentOffset = output.Position = output.Position + 3 & ~3;
+        long argumentOffset = output.Position = (output.Position + 3) & ~3;
         argumentStream.CopyTo(output);
 
-        long stringOffset = output.Position = output.Position + 3 & ~3;
+        long stringOffset = output.Position = (output.Position + 3) & ~3;
         stringStream.CopyTo(output);
 
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(output, true);
+        using var writer = new BinaryWriterX(output, true);
 
         writer.WriteAlignment(4);
 
@@ -61,7 +61,7 @@ internal class XscrScriptCompressor(IBinaryFactory binaryFactory, ICompressor co
         WriteHeader(header, writer);
     }
 
-    private void WriteHeader(XscrHeader header, IBinaryWriterX writer)
+    private void WriteHeader(XscrHeader header, BinaryWriterX writer)
     {
         writer.WriteString(header.magic, Encoding.ASCII, false, false);
         writer.Write(header.instructionEntryCount);

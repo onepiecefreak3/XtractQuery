@@ -1,4 +1,4 @@
-﻿using Komponent.IO.Streams;
+﻿using Komponent.Streams;
 using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 
 namespace Logic.Domain.Kuriimu2.KomponentAdapter;

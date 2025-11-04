@@ -19,9 +19,6 @@
     <ProjectReference Include="..\CrossCutting.Core.Serialization.JsonAdapter\CrossCutting.Core.Serialization.JsonAdapter.csproj" />
     <ProjectReference Include="..\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement.csproj" />
     <ProjectReference Include="..\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis\Logic.Domain.CodeAnalysis.csproj" />
-    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter\Logic.Domain.Kuriimu2.KomponentAdapter.csproj" />
-    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter\Logic.Domain.Kuriimu2.KompressionAdapter.csproj" />
-    <ProjectReference Include="..\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter\Logic.Domain.Kuriimu2.KryptographyAdapter.csproj" />
     <ProjectReference Include="..\Logic.Domain.Level5\Logic.Domain.Level5\Logic.Domain.Level5.csproj" />
   </ItemGroup>
 

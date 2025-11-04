@@ -1,17 +1,15 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 using Logic.Domain.Level5.Contract.Script.Xq32;
-using Logic.Domain.Level5.Contract.Script.Xq32.DataClasses;
-using Logic.Domain.Level5.Script.InternalContract.DataClasses;
-using Logic.Domain.Level5.Script.Xq32.InternalContract;
+using Logic.Domain.Level5.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Compression;
+using Logic.Domain.Level5.InternalContract.Script.Xq32;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
 internal class Xq32ScriptDecompressor : ScriptDecompressor<Xq32Header>, IXq32ScriptDecompressor
 {
-    public Xq32ScriptDecompressor(IBinaryFactory binaryFactory, IBinaryTypeReader typeReader, IStreamFactory streamFactory,
-        IDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider)
-        : base(binaryFactory, typeReader, streamFactory, decompressor, entrySizeProvider)
+    public Xq32ScriptDecompressor(IDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider)
+        : base(decompressor, entrySizeProvider)
     {
     }
 

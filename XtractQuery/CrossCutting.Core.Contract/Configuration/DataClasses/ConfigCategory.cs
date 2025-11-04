@@ -11,7 +11,7 @@ public class ConfigCategory
 
     public ConfigCategory()
     {
-        _entries = new List<ConfigEntry>();
+        _entries = [];
     }
 
     public ConfigEntry AddEntry(string key, object value)

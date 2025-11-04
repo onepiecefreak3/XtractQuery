@@ -1,12 +1,15 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using System.Text;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
-using Logic.Domain.Level5.Contract.Script.Gsd1.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-internal class Gsd1ScriptParser(IBinaryFactory binaryFactory, IGsd1ScriptReader reader) : IGsd1ScriptParser
+internal class Gsd1ScriptParser(IGsd1ScriptReader reader) : IGsd1ScriptParser
 {
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
     public Gsd1ScriptFile Parse(Stream input)
     {
         Gsd1ScriptContainer container = reader.Read(input);
@@ -41,11 +44,11 @@ internal class Gsd1ScriptParser(IBinaryFactory binaryFactory, IGsd1ScriptReader 
 
     public IList<Gsd1ScriptArgument> ParseArguments(Gsd1Argument[] arguments, ScriptStringTable? strings = null)
     {
-        using IBinaryReaderX? stringReader = strings is null ? null : binaryFactory.CreateReader(strings.Stream, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
         return ParseArguments(arguments, stringReader, strings?.BaseOffset ?? 0);
     }
 
-    private IList<Gsd1ScriptArgument> ParseArguments(Gsd1Argument[] arguments, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private IList<Gsd1ScriptArgument> ParseArguments(Gsd1Argument[] arguments, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         var result = new Gsd1ScriptArgument[arguments.Length];
 
@@ -55,7 +58,7 @@ internal class Gsd1ScriptParser(IBinaryFactory binaryFactory, IGsd1ScriptReader 
         return result;
     }
 
-    private Gsd1ScriptArgument ParseArgument(Gsd1Argument argument, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private Gsd1ScriptArgument ParseArgument(Gsd1Argument argument, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         int rawType = -1;
         ScriptArgumentType type;
@@ -92,7 +95,7 @@ internal class Gsd1ScriptParser(IBinaryFactory binaryFactory, IGsd1ScriptReader 
                     rawType = argument.type;
 
                 type = ScriptArgumentType.String;
-                value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+                value = stringReader?.ReadNullTerminatedString() ?? string.Empty;
                 break;
 
             default:

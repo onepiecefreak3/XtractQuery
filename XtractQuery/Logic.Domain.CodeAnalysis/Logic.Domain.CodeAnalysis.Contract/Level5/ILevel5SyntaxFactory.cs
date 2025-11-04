@@ -1,11 +1,8 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Contract.Level5;
 
-[MapException(typeof(Level5SyntaxFactoryException))]
 public interface ILevel5SyntaxFactory
 {
     SyntaxToken Create(string text, int rawKind, SyntaxTokenTrivia? leadingTrivia = null, SyntaxTokenTrivia? trailingTrivia = null);
@@ -13,7 +10,6 @@ public interface ILevel5SyntaxFactory
     SyntaxToken Token(SyntaxTokenKind kind);
 
     SyntaxToken NumericLiteral(long value);
-    SyntaxToken UnsignedNumericLiteral(uint value);
     SyntaxToken HashNumericLiteral(ulong value);
     SyntaxToken HashStringLiteral(string text);
     SyntaxToken FloatingNumericLiteral(float value);

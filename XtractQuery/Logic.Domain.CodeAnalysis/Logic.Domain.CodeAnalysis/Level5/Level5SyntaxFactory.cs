@@ -1,7 +1,7 @@
 ﻿using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using System.Globalization;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 
@@ -80,11 +80,6 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
     public SyntaxToken NumericLiteral(long value)
     {
         return new($"{value}", (int)SyntaxTokenKind.NumericLiteral);
-    }
-
-    public SyntaxToken UnsignedNumericLiteral(uint value)
-    {
-        return new($"{value}u", (int)SyntaxTokenKind.NumericLiteral);
     }
 
     public SyntaxToken HashNumericLiteral(ulong value)

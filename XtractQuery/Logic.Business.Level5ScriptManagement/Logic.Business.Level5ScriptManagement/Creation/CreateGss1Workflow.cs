@@ -1,9 +1,9 @@
-﻿using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5;
+﻿using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Creation;
 

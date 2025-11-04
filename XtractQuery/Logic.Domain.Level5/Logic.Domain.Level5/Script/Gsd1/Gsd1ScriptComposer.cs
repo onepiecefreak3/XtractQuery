@@ -1,19 +1,19 @@
-﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
-using Logic.Domain.Level5.Contract.Script.Gsd1.DataClasses;
+using System.Text;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
+class Gsd1ScriptComposer : IGsd1ScriptComposer
 {
-    private readonly Encoding _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
 
     public Gsd1ScriptContainer Compose(Gsd1ScriptFile script)
     {
         Stream stringStream = new MemoryStream();
-        using IBinaryWriterX stringWriter = binaryFactory.CreateWriter(stringStream, true);
+        using var stringWriter = new BinaryWriterX(stringStream, true);
 
         var writtenNames = new Dictionary<string, long>();
         int stringOffset = CalculateStringOffset(script);
@@ -58,7 +58,7 @@ class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
         return [.. result];
     }
 
-    private Gsd1Argument[] ComposeArguments(Gsd1ScriptFile script, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gsd1Argument[] ComposeArguments(Gsd1ScriptFile script, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         var result = new List<Gsd1Argument>(script.Arguments.Count);
 
@@ -72,7 +72,7 @@ class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
         return [.. result];
     }
 
-    private Gsd1Argument CreateArgument(Gsd1ScriptArgument argument, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gsd1Argument CreateArgument(Gsd1ScriptArgument argument, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         byte type;
         uint value;
@@ -118,7 +118,7 @@ class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
         };
     }
 
-    private long WriteString(string value, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private long WriteString(string value, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         if (writtenNames.TryGetValue(value, out long nameOffset))
             return nameOffset;
@@ -126,7 +126,7 @@ class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _sjisEncoding, false);
+        stringWriter.WriteString(value, SjisEncoding);
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -140,7 +140,7 @@ class Gsd1ScriptComposer(IBinaryFactory binaryFactory) : IGsd1ScriptComposer
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += _sjisEncoding.GetByteCount(value[..1]);
+            stringOffset += SjisEncoding.GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

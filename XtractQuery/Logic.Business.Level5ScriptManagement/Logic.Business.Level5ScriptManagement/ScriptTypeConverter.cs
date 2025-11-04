@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Logic.Business.Level5ScriptManagement.InternalContract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
 
 namespace Logic.Business.Level5ScriptManagement;
 

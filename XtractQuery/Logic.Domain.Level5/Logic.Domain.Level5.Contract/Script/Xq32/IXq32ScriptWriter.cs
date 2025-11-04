@@ -1,5 +1,5 @@
-﻿using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Xq32.DataClasses;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 
 namespace Logic.Domain.Level5.Contract.Script.Xq32;
 

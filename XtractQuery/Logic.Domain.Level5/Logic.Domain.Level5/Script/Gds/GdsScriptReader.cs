@@ -1,15 +1,17 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
 using Logic.Domain.Level5.Contract.Script.Gds;
-using Logic.Domain.Level5.Contract.Script.Gds.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
-class GdsScriptReader(IBinaryFactory binaryFactory) : IGdsScriptReader
+class GdsScriptReader : IGdsScriptReader
 {
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
     public GdsArgument[] Read(Stream input)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(input, Encoding.GetEncoding("Shift-JIS"), true);
+        using var reader = new BinaryReaderX(input, SjisEncoding, true);
 
         int scriptSize = reader.ReadInt32();
         if (input.Length - 4 != scriptSize)
@@ -17,18 +19,13 @@ class GdsScriptReader(IBinaryFactory binaryFactory) : IGdsScriptReader
 
         var result = new List<GdsArgument>();
 
-        while (input.Position < input.Length)
-        {
+        while (input.Position - 4 < scriptSize)
             result.Add(ReadArgument(reader));
-
-            if (result[^1].type is 0xC)
-                break;
-        }
 
         return [.. result];
     }
 
-    private GdsArgument ReadArgument(IBinaryReaderX reader)
+    private GdsArgument ReadArgument(BinaryReaderX reader)
     {
         int offset = (int)reader.BaseStream.Position - 4;
         short type = reader.ReadInt16();
@@ -47,7 +44,7 @@ class GdsScriptReader(IBinaryFactory binaryFactory) : IGdsScriptReader
                 break;
 
             case 2:
-                value = reader.ReadUInt32();
+                value = reader.ReadSingle();
                 break;
 
             case 3:

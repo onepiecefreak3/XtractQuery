@@ -1,29 +1,25 @@
-﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Kuriimu2.KryptographyAdapter.Contract;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.Script.Xseq;
-using Logic.Domain.Level5.Contract.Script.Xseq.DataClasses;
-using Logic.Domain.Level5.Cryptography.InternalContract;
+using System.Text;
+using Kryptography.Checksum;
+using Logic.Domain.Level5.Contract.Enums.Compression;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
 internal class XseqScriptWriter : IXseqScriptWriter
 {
-    private readonly IXseqScriptCompressor _compressor;
-    private readonly IBinaryFactory _binaryFactory;
-    private readonly IChecksum<ushort> _checksum;
-    private readonly Encoding _sjisEncoding;
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
 
-    public XseqScriptWriter(IXseqScriptCompressor compressor, IBinaryFactory binaryFactory, IChecksumFactory checksumFactory)
+    private readonly IXseqScriptCompressor _compressor;
+    private readonly Checksum<ushort> _checksum;
+
+    public XseqScriptWriter(IXseqScriptCompressor compressor, IChecksumFactory checksumFactory)
     {
         _compressor = compressor;
-        _binaryFactory = binaryFactory;
         _checksum = checksumFactory.CreateCrc16();
-
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
     }
 
     public void Write(ScriptFile script, Stream output, bool hasCompression)
@@ -52,7 +48,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
     public void WriteFunctions(IReadOnlyList<XseqFunction> functions, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (XseqFunction function in functions)
             WriteFunction(function, bw, length);
@@ -60,7 +56,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
     public void WriteJumps(IReadOnlyList<XseqJump> jumps, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (XseqJump jump in jumps)
             WriteJump(jump, bw, length);
@@ -68,7 +64,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
     public void WriteInstructions(IReadOnlyList<XseqInstruction> instructions, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (XseqInstruction instruction in instructions)
             WriteInstruction(instruction, bw, length);
@@ -76,7 +72,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
     public void WriteArguments(IReadOnlyList<XseqArgument> arguments, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (XseqArgument argument in arguments)
             WriteArgument(argument, bw, length);
@@ -85,7 +81,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
     private ScriptContainer CreateContainer(ScriptFile script)
     {
         Stream stringStream = new MemoryStream();
-        using IBinaryWriterX stringWriter = _binaryFactory.CreateWriter(stringStream, true);
+        using var stringWriter = new BinaryWriterX(stringStream, true);
 
         var writtenNames = new Dictionary<string, long>();
 
@@ -149,10 +145,10 @@ internal class XseqScriptWriter : IXseqScriptWriter
         return (short)(objectVariables.Max() - 1999);
     }
 
-    private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteFunctions(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream functionStream = new MemoryStream();
-        using IBinaryWriterX functionWriter = _binaryFactory.CreateWriter(functionStream, true);
+        using var functionWriter = new BinaryWriterX(functionStream, true);
 
         foreach ((ScriptFunction function, ushort nameHash) in script.Functions.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
         {
@@ -182,10 +178,10 @@ internal class XseqScriptWriter : IXseqScriptWriter
         return functionStream;
     }
 
-    private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteJumps(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream jumpStream = new MemoryStream();
-        using IBinaryWriterX jumpWriter = _binaryFactory.CreateWriter(jumpStream, true);
+        using BinaryWriterX jumpWriter = new BinaryWriterX(jumpStream, true);
 
         // HINT: Here we go through functions sequentially, not sorted by hash
         foreach (ScriptFunction function in script.Functions)
@@ -214,7 +210,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
     private Stream WriteInstructions(ScriptFile script)
     {
         Stream instructionStream = new MemoryStream();
-        using IBinaryWriterX instructionWriter = _binaryFactory.CreateWriter(instructionStream, true);
+        using var instructionWriter = new BinaryWriterX(instructionStream, true);
 
         foreach (ScriptInstruction instruction in script.Instructions)
         {
@@ -234,10 +230,10 @@ internal class XseqScriptWriter : IXseqScriptWriter
         return instructionStream;
     }
 
-    private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteArguments(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream argumentStream = new MemoryStream();
-        using IBinaryWriterX argumentWriter = _binaryFactory.CreateWriter(argumentStream, true);
+        using var argumentWriter = new BinaryWriterX(argumentStream, true);
 
         foreach (ScriptArgument argument in script.Arguments)
         {
@@ -250,7 +246,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         return argumentStream;
     }
 
-    private XseqArgument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter,
+    private XseqArgument CreateArgument(ScriptArgument argument, BinaryWriterX stringWriter,
         IDictionary<string, long> writtenNames)
     {
         int type;
@@ -300,20 +296,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         };
     }
 
-    private long WriteString(string value, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
-    {
-        if (writtenNames.TryGetValue(value, out long nameOffset))
-            return nameOffset;
-
-        CacheStrings(value, stringWriter, writtenNames);
-
-        nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _sjisEncoding, false);
-
-        return nameOffset;
-    }
-
-    private void WriteFunction(XseqFunction function, IBinaryWriterX bw, PointerLength length)
+    private void WriteFunction(XseqFunction function, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -339,7 +322,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         bw.Write(function.parameterCount);
     }
 
-    private void WriteJump(XseqJump jump, IBinaryWriterX bw, PointerLength length)
+    private void WriteJump(XseqJump jump, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -361,7 +344,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         }
     }
 
-    private void WriteInstruction(XseqInstruction instruction, IBinaryWriterX bw, PointerLength length)
+    private void WriteInstruction(XseqInstruction instruction, BinaryWriterX bw, PointerLength length)
     {
         bw.Write(instruction.argOffset);
         bw.Write(instruction.argCount);
@@ -383,7 +366,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         }
     }
 
-    private void WriteArgument(XseqArgument argument, IBinaryWriterX bw, PointerLength length)
+    private void WriteArgument(XseqArgument argument, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -404,8 +387,20 @@ internal class XseqScriptWriter : IXseqScriptWriter
         }
     }
 
+    private long WriteString(string value, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    {
+        if (writtenNames.TryGetValue(value, out long nameOffset))
+            return nameOffset;
 
-    private void CacheStrings(string value, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+        CacheStrings(value, stringWriter, writtenNames);
+
+        nameOffset = stringWriter.BaseStream.Position;
+        stringWriter.WriteString(value, SjisEncoding);
+
+        return nameOffset;
+    }
+
+    private void CacheStrings(string value, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         long nameOffset = stringWriter.BaseStream.Position;
 
@@ -414,7 +409,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
             if (!writtenNames.ContainsKey(value))
                 writtenNames[value] = nameOffset;
 
-            nameOffset += _sjisEncoding.GetByteCount(value[..1]);
+            nameOffset += SjisEncoding.GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

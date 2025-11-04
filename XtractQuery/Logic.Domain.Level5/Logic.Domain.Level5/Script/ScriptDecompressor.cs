@@ -1,26 +1,20 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
+﻿using Komponent.IO;
+using Komponent.Streams;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Script.InternalContract.DataClasses;
-using CompressionType = Logic.Domain.Level5.Contract.Compression.DataClasses.CompressionType;
+using Logic.Domain.Level5.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Compression;
+using CompressionType = Logic.Domain.Level5.Contract.Enums.Compression.CompressionType;
 
 namespace Logic.Domain.Level5.Script;
 
 internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
 {
-    private readonly IBinaryFactory _binaryFactory;
-    private readonly IBinaryTypeReader _typeReader;
-    private readonly IStreamFactory _streamFactory;
     private readonly IDecompressor _decompressor;
     private readonly IScriptEntrySizeProvider _entrySizeProvider;
 
-    public ScriptDecompressor(IBinaryFactory binaryFactory, IBinaryTypeReader typeReader, IStreamFactory streamFactory, IDecompressor decompressor,
-        IScriptEntrySizeProvider entrySizeProvider)
+    public ScriptDecompressor(IDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider)
     {
-        _binaryFactory = binaryFactory;
-        _typeReader = typeReader;
-        _streamFactory = streamFactory;
         _decompressor = decompressor;
         _entrySizeProvider = entrySizeProvider;
     }
@@ -168,7 +162,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         {
             EntryCount = tableData.count,
             CompressionType = null,
-            Stream = _streamFactory.CreateSubStream(input, tableData.offset, nextOffset - tableData.offset)
+            Stream = new SubStream(input, tableData.offset, nextOffset - tableData.offset)
         };
     }
 
@@ -192,7 +186,7 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return new CompressedScriptStringTable
         {
             CompressionType = null,
-            Stream = _streamFactory.CreateSubStream(input, offset, input.Length - offset),
+            Stream = new SubStream(input, offset, input.Length - offset),
             BaseOffset = 0
         };
     }
@@ -220,9 +214,9 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         long bkPos = input.Position;
         input.Position = 0;
 
-        using IBinaryReaderX br = _binaryFactory.CreateReader(input, true);
+        using var br = new BinaryReaderX(input, true);
 
-        var header = _typeReader.Read<THeader>(br)!;
+        var header = BinaryTypeReader.Read<THeader>(br)!;
         input.Position = bkPos;
 
         return header;

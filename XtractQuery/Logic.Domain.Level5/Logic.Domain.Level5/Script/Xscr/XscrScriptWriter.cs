@@ -1,11 +1,11 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-class XscrScriptWriter(IBinaryFactory binaryFactory, IXscrScriptComposer composer, IXscrScriptCompressor compressor) : IXscrScriptWriter
+class XscrScriptWriter(IXscrScriptComposer composer, IXscrScriptCompressor compressor) : IXscrScriptWriter
 {
     public void Write(XscrScriptFile script, Stream output)
     {
@@ -37,7 +37,7 @@ class XscrScriptWriter(IBinaryFactory binaryFactory, IXscrScriptComposer compose
     private Stream WriteInstructions(XscrInstruction[] instructions)
     {
         Stream instructionStream = new MemoryStream();
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(instructionStream, true);
+        using var writer = new BinaryWriterX(instructionStream, true);
 
         foreach (XscrInstruction instruction in instructions)
             WriteInstruction(instruction, writer);
@@ -46,7 +46,7 @@ class XscrScriptWriter(IBinaryFactory binaryFactory, IXscrScriptComposer compose
         return instructionStream;
     }
 
-    private void WriteInstruction(XscrInstruction instruction, IBinaryWriterX writer)
+    private void WriteInstruction(XscrInstruction instruction, BinaryWriterX writer)
     {
         writer.Write(instruction.instructionType);
         writer.Write(instruction.argCount);
@@ -57,7 +57,7 @@ class XscrScriptWriter(IBinaryFactory binaryFactory, IXscrScriptComposer compose
     private Stream WriteArguments(XscrArgument[] arguments)
     {
         Stream argumentStream = new MemoryStream();
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(argumentStream, true);
+        using var writer = new BinaryWriterX(argumentStream, true);
 
         foreach (XscrArgument argument in arguments)
             WriteArgument(argument, writer);
@@ -66,7 +66,7 @@ class XscrScriptWriter(IBinaryFactory binaryFactory, IXscrScriptComposer compose
         return argumentStream;
     }
 
-    private void WriteArgument(XscrArgument argument, IBinaryWriterX writer)
+    private void WriteArgument(XscrArgument argument, BinaryWriterX writer)
     {
         writer.Write(argument.type);
         writer.Write(argument.value);

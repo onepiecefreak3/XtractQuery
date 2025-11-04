@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Reflection;
+using Komponent.Contract.Exceptions;
 using Komponent.IO;
 using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
 using Logic.Domain.Kuriimu2.KomponentAdapter.Contract.DataClasses;

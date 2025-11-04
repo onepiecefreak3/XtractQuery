@@ -1,22 +1,23 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Kuriimu2.KryptographyAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+using Komponent.IO;
+using Kryptography.Checksum;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
-using Logic.Domain.Level5.Cryptography.InternalContract;
+using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksumFactory) : IGss1ScriptComposer
+class Gss1ScriptComposer(IChecksumFactory checksumFactory) : IGss1ScriptComposer
 {
-    private readonly IChecksum<ushort> _checksum = checksumFactory.CreateCrc16();
-    private readonly Encoding _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
+    private readonly Checksum<ushort> _checksum = checksumFactory.CreateCrc16();
 
     public Gss1ScriptContainer Compose(Gss1ScriptFile script)
     {
         Stream stringStream = new MemoryStream();
-        using IBinaryWriterX stringWriter = binaryFactory.CreateWriter(stringStream, true);
+        using var stringWriter = new BinaryWriterX(stringStream, true);
 
         var writtenNames = new Dictionary<string, long>();
         int stringOffset = CalculateStringOffset(script);
@@ -93,7 +94,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         return (short)(objectVariables.Max() - 1999);
     }
 
-    private Gss1Function[] ComposeFunctions(Gss1ScriptFile script, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gss1Function[] ComposeFunctions(Gss1ScriptFile script, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         var result = new List<Gss1Function>(script.Functions.Count);
 
@@ -122,7 +123,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         return [.. result];
     }
 
-    private Gss1Jump[] ComposeJumps(Gss1ScriptFile script, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gss1Jump[] ComposeJumps(Gss1ScriptFile script, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         var result = new List<Gss1Jump>(script.Jumps.Count);
 
@@ -166,7 +167,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         return [.. result];
     }
 
-    private Gss1Argument[] ComposeArguments(Gss1ScriptFile script, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gss1Argument[] ComposeArguments(Gss1ScriptFile script, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         var result = new List<Gss1Argument>(script.Arguments.Count);
 
@@ -180,7 +181,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         return [.. result];
     }
 
-    private Gss1Argument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private Gss1Argument CreateArgument(ScriptArgument argument, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         byte type;
         uint value;
@@ -229,7 +230,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         };
     }
 
-    private long WriteString(string value, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private long WriteString(string value, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         if (writtenNames.TryGetValue(value, out long nameOffset))
             return nameOffset;
@@ -237,7 +238,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _sjisEncoding, false);
+        stringWriter.WriteString(value, SjisEncoding);
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -251,7 +252,7 @@ class Gss1ScriptComposer(IBinaryFactory binaryFactory, IChecksumFactory checksum
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += _sjisEncoding.GetByteCount(value[..1]);
+            stringOffset += SjisEncoding.GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

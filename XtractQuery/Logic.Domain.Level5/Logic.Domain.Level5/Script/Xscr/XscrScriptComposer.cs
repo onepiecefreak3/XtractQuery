@@ -1,19 +1,19 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
+class XscrScriptComposer : IXscrScriptComposer
 {
-    private readonly Encoding _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
 
     public XscrScriptContainer Compose(XscrScriptFile script)
     {
         Stream stringStream = new MemoryStream();
-        using IBinaryWriterX stringWriter = binaryFactory.CreateWriter(stringStream, true);
+        using var stringWriter = new BinaryWriterX(stringStream, true);
 
         var writtenNames = new Dictionary<string, long>();
         var stringOffset = 0;
@@ -51,7 +51,7 @@ class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
         return [.. result];
     }
 
-    private XscrArgument[] ComposeArguments(XscrScriptFile script, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private XscrArgument[] ComposeArguments(XscrScriptFile script, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         var result = new List<XscrArgument>(script.Arguments.Count);
 
@@ -65,7 +65,7 @@ class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
         return [.. result];
     }
 
-    private XscrArgument CreateArgument(XscrScriptArgument argument, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private XscrArgument CreateArgument(XscrScriptArgument argument, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         byte type;
         uint value;
@@ -111,7 +111,7 @@ class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
         };
     }
 
-    private long WriteString(string value, IBinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
+    private long WriteString(string value, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
         if (writtenNames.TryGetValue(value, out long nameOffset))
             return nameOffset;
@@ -119,7 +119,7 @@ class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _sjisEncoding, false);
+        stringWriter.WriteString(value, SjisEncoding);
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -133,7 +133,7 @@ class XscrScriptComposer(IBinaryFactory binaryFactory) : IXscrScriptComposer
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += _sjisEncoding.GetByteCount(value[..1]);
+            stringOffset += SjisEncoding.GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

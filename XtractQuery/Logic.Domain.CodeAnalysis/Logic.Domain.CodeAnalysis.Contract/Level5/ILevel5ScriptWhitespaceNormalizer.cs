@@ -1,10 +1,7 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Contract.Level5;
 
-[MapException(typeof(Level5ScriptWhitespaceNormalizer))]
 public interface ILevel5ScriptWhitespaceNormalizer
 {
     void NormalizeCodeUnit(CodeUnitSyntax codeUnit);

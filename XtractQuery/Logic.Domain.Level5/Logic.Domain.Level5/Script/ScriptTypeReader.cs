@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
 
 namespace Logic.Domain.Level5.Script;
 

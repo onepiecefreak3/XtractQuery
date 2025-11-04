@@ -1,9 +1,10 @@
 ﻿using Logic.Domain.CodeAnalysis.Contract;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
+using Logic.Domain.CodeAnalysis.Contract.Exceptions;
+using Logic.Domain.CodeAnalysis.Contract.Exceptions.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
-using Logic.Domain.CodeAnalysis.Level5.InternalContract.DataClasses;
+using Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 
@@ -32,7 +33,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return ParseMethodDeclaration(buffer);
     }
 
-    public MethodDeclarationMetadataParametersSyntax ParseMethodDeclarationMetadataParameters(string text)
+    public MethodDeclarationMetadataParametersSyntax? ParseMethodDeclarationMetadataParameters(string text)
     {
         IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
 

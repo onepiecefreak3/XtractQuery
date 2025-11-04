@@ -1,11 +1,11 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
-using Logic.Domain.Level5.Contract.Script.Gsd1.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-class Gsd1ScriptWriter(IBinaryFactory binaryFactory, IGsd1ScriptComposer composer) : IGsd1ScriptWriter
+class Gsd1ScriptWriter(IGsd1ScriptComposer composer) : IGsd1ScriptWriter
 {
     public void Write(Gsd1ScriptFile script, Stream output)
     {
@@ -16,7 +16,7 @@ class Gsd1ScriptWriter(IBinaryFactory binaryFactory, IGsd1ScriptComposer compose
 
     public void Write(Gsd1ScriptContainer container, Stream output)
     {
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(output, true);
+        using var writer = new BinaryWriterX(output, true);
 
         output.Position = 0x10;
         WriteInstructions(container.Instructions, writer);
@@ -44,7 +44,7 @@ class Gsd1ScriptWriter(IBinaryFactory binaryFactory, IGsd1ScriptComposer compose
         WriteHeader(header, writer);
     }
 
-    private void WriteHeader(Gsd1Header header, IBinaryWriterX writer)
+    private void WriteHeader(Gsd1Header header, BinaryWriterX writer)
     {
         writer.WriteString(header.magic, Encoding.ASCII, false, false);
         writer.Write(header.instructionEntryCount);
@@ -54,26 +54,26 @@ class Gsd1ScriptWriter(IBinaryFactory binaryFactory, IGsd1ScriptComposer compose
         writer.Write(header.stringOffset);
     }
 
-    private void WriteInstructions(Gsd1Instruction[] instructions, IBinaryWriterX writer)
+    private void WriteInstructions(Gsd1Instruction[] instructions, BinaryWriterX writer)
     {
         foreach (Gsd1Instruction instruction in instructions)
             WriteInstruction(instruction, writer);
     }
 
-    private void WriteInstruction(Gsd1Instruction instruction, IBinaryWriterX writer)
+    private void WriteInstruction(Gsd1Instruction instruction, BinaryWriterX writer)
     {
         writer.Write(instruction.instructionType);
         writer.Write(instruction.argOffset);
         writer.Write(instruction.argCount);
     }
 
-    private void WriteArguments(Gsd1Argument[] arguments, IBinaryWriterX writer)
+    private void WriteArguments(Gsd1Argument[] arguments, BinaryWriterX writer)
     {
         foreach (Gsd1Argument argument in arguments)
             WriteArgument(argument, writer);
     }
 
-    private void WriteArgument(Gsd1Argument argument, IBinaryWriterX writer)
+    private void WriteArgument(Gsd1Argument argument, BinaryWriterX writer)
     {
         writer.Write(argument.type);
         writer.Write(argument.value);

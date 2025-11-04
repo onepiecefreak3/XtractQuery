@@ -1,8 +1,8 @@
 ﻿using Logic.Domain.Level5.Contract.Script;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
 using CrossCutting.Core.Contract.DependencyInjection;
-using Logic.Domain.Level5.Script.Xq32.InternalContract;
-using Logic.Domain.Level5.Script.Xseq.InternalContract;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Script.Xq32;
+using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script;
 
@@ -17,16 +17,11 @@ internal class ScriptEntrySizeProviderFactory : IScriptEntrySizeProviderFactory
 
     public IScriptEntrySizeProvider Create(ScriptType type)
     {
-        switch (type)
+        return type switch
         {
-            case ScriptType.Xq32:
-                return _kernel.Get<IXq32ScriptEntrySizeProvider>();
-
-            case ScriptType.Xseq:
-                return _kernel.Get<IXseqScriptEntrySizeProvider>();
-
-            default:
-                throw new InvalidOperationException($"Unknown script type {type}.");
-        }
+            ScriptType.Xq32 => _kernel.Get<IXq32ScriptEntrySizeProvider>(),
+            ScriptType.Xseq => _kernel.Get<IXseqScriptEntrySizeProvider>(),
+            _ => throw new InvalidOperationException($"Unknown script type {type}.")
+        };
     }
 }

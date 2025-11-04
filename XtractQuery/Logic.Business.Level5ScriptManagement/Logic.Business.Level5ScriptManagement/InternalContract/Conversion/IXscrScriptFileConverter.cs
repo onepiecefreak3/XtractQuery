@@ -1,5 +1,5 @@
-﻿using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 
 namespace Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 

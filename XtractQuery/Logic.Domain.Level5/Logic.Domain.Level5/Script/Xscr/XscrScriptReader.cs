@@ -1,11 +1,11 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-class XscrScriptReader(IBinaryFactory binaryFactory, IXscrScriptDecompressor decompressor) : IXscrScriptReader
+class XscrScriptReader(IXscrScriptDecompressor decompressor) : IXscrScriptReader
 {
     public XscrScriptContainer Read(Stream input)
     {
@@ -29,7 +29,7 @@ class XscrScriptReader(IBinaryFactory binaryFactory, IXscrScriptDecompressor dec
 
     private XscrInstruction[] ReadInstructions(CompressedScriptTable table)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(table.Stream, true);
+        using var reader = new BinaryReaderX(table.Stream, true);
 
         var result = new XscrInstruction[table.EntryCount];
 
@@ -39,7 +39,7 @@ class XscrScriptReader(IBinaryFactory binaryFactory, IXscrScriptDecompressor dec
         return result;
     }
 
-    private static XscrInstruction ReadInstruction(IBinaryReaderX reader)
+    private static XscrInstruction ReadInstruction(BinaryReaderX reader)
     {
         return new XscrInstruction
         {
@@ -52,7 +52,7 @@ class XscrScriptReader(IBinaryFactory binaryFactory, IXscrScriptDecompressor dec
 
     private XscrArgument[] ReadArguments(CompressedScriptTable table)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(table.Stream, true);
+        using var reader = new BinaryReaderX(table.Stream, true);
 
         var result = new XscrArgument[table.EntryCount];
 
@@ -62,7 +62,7 @@ class XscrScriptReader(IBinaryFactory binaryFactory, IXscrScriptDecompressor dec
         return result;
     }
 
-    private static XscrArgument ReadArgument(IBinaryReaderX reader)
+    private static XscrArgument ReadArgument(BinaryReaderX reader)
     {
         return new XscrArgument
         {

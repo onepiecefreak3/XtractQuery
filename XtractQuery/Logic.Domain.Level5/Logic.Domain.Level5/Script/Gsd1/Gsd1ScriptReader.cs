@@ -1,15 +1,16 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Komponent.Streams;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
-using Logic.Domain.Level5.Contract.Script.Gsd1.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactory) : IGsd1ScriptReader
+class Gsd1ScriptReader : IGsd1ScriptReader
 {
     public Gsd1ScriptContainer Read(Stream input)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(input, true);
+        using var reader = new BinaryReaderX(input, true);
 
         Gsd1Header header = ReadHeader(reader);
 
@@ -20,7 +21,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         Gsd1Argument[] arguments = ReadArguments(reader, header.argumentEntryCount);
 
         int stringOffset = header.stringOffset << 2;
-        Stream stringStream = streamFactory.CreateSubStream(input, stringOffset, input.Length - stringOffset);
+        Stream stringStream = new SubStream(input, stringOffset, input.Length - stringOffset);
 
         return new Gsd1ScriptContainer
         {
@@ -34,7 +35,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gsd1Header ReadHeader(IBinaryReaderX reader)
+    private static Gsd1Header ReadHeader(BinaryReaderX reader)
     {
         return new Gsd1Header
         {
@@ -47,7 +48,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gsd1Instruction[] ReadInstructions(IBinaryReaderX reader, int count)
+    private static Gsd1Instruction[] ReadInstructions(BinaryReaderX reader, int count)
     {
         var result = new Gsd1Instruction[count];
 
@@ -57,7 +58,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gsd1Instruction ReadInstruction(IBinaryReaderX reader)
+    private static Gsd1Instruction ReadInstruction(BinaryReaderX reader)
     {
         return new Gsd1Instruction
         {
@@ -67,7 +68,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gsd1Argument[] ReadArguments(IBinaryReaderX reader, int count)
+    private static Gsd1Argument[] ReadArguments(BinaryReaderX reader, int count)
     {
         var result = new Gsd1Argument[count];
 
@@ -77,7 +78,7 @@ class Gsd1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gsd1Argument ReadArgument(IBinaryReaderX reader)
+    private static Gsd1Argument ReadArgument(BinaryReaderX reader)
     {
         return new Gsd1Argument
         {

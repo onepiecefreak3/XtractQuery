@@ -1,29 +1,25 @@
-﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Kuriimu2.KryptographyAdapter.Contract;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.Script.Xq32;
-using Logic.Domain.Level5.Contract.Script.Xq32.DataClasses;
-using Logic.Domain.Level5.Cryptography.InternalContract;
+using System.Text;
+using Kryptography.Checksum;
+using Logic.Domain.Level5.Contract.Enums.Compression;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
 internal class Xq32ScriptWriter : IXq32ScriptWriter
 {
-    private readonly IXq32ScriptCompressor _compressor;
-    private readonly IBinaryFactory _binaryFactory;
-    private readonly IChecksum<uint> _checksum;
-    private readonly Encoding _sjisEncoding;
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
 
-    public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IBinaryFactory binaryFactory, IChecksumFactory checksumFactory)
+    private readonly IXq32ScriptCompressor _compressor;
+    private readonly Checksum<uint> _checksum;
+
+    public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IChecksumFactory checksumFactory)
     {
         _compressor = compressor;
-        _binaryFactory = binaryFactory;
         _checksum = checksumFactory.CreateCrc32();
-
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
     }
 
     public void Write(ScriptFile script, Stream output, bool hasCompression)
@@ -52,7 +48,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
 
     public void WriteFunctions(IReadOnlyList<Xq32Function> functions, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (Xq32Function function in functions)
             WriteFunction(function, bw, length);
@@ -60,7 +56,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
 
     public void WriteJumps(IReadOnlyList<Xq32Jump> jumps, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (Xq32Jump jump in jumps)
             WriteJump(jump, bw, length);
@@ -68,7 +64,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
 
     public void WriteInstructions(IReadOnlyList<Xq32Instruction> instructions, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (Xq32Instruction instruction in instructions)
             WriteInstruction(instruction, bw, length);
@@ -76,7 +72,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
 
     public void WriteArguments(IReadOnlyList<Xq32Argument> arguments, Stream output, PointerLength length)
     {
-        using IBinaryWriterX bw = _binaryFactory.CreateWriter(output, false);
+        using var bw = new BinaryWriterX(output, false);
 
         foreach (Xq32Argument argument in arguments)
             WriteArgument(argument, bw, length);
@@ -85,7 +81,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
     private ScriptContainer CreateContainer(ScriptFile script)
     {
         Stream stringStream = new MemoryStream();
-        using IBinaryWriterX stringWriter = _binaryFactory.CreateWriter(stringStream, true);
+        using var stringWriter = new BinaryWriterX(stringStream, true);
 
         var writtenNames = new Dictionary<string, long>();
 
@@ -149,10 +145,10 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         return (short)(objectVariables.Max() - 1999);
     }
 
-    private Stream WriteFunctions(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteFunctions(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream functionStream = new MemoryStream();
-        using IBinaryWriterX functionWriter = _binaryFactory.CreateWriter(functionStream, true);
+        using var functionWriter = new BinaryWriterX(functionStream, true);
 
         foreach ((ScriptFunction function, uint nameHash) in script.Functions.Select(f => (f, _checksum.ComputeValue(f.Name))).OrderBy(x => x.Item2))
         {
@@ -182,10 +178,10 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         return functionStream;
     }
 
-    private Stream WriteJumps(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteJumps(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream jumpStream = new MemoryStream();
-        using IBinaryWriterX jumpWriter = _binaryFactory.CreateWriter(jumpStream, true);
+        using var jumpWriter = new BinaryWriterX(jumpStream, true);
 
         // HINT: Here we go through functions sequentially, not sorted by hash
         foreach (ScriptFunction function in script.Functions)
@@ -214,7 +210,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
     private Stream WriteInstructions(ScriptFile script)
     {
         Stream instructionStream = new MemoryStream();
-        using IBinaryWriterX instructionWriter = _binaryFactory.CreateWriter(instructionStream, true);
+        using var instructionWriter = new BinaryWriterX(instructionStream, true);
 
         foreach (ScriptInstruction instruction in script.Instructions)
         {
@@ -234,10 +230,10 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         return instructionStream;
     }
 
-    private Stream WriteArguments(ScriptFile script, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Stream WriteArguments(ScriptFile script, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         Stream argumentStream = new MemoryStream();
-        using IBinaryWriterX argumentWriter = _binaryFactory.CreateWriter(argumentStream, true);
+        using var argumentWriter = new BinaryWriterX(argumentStream, true);
 
         foreach (ScriptArgument argument in script.Arguments)
         {
@@ -250,7 +246,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         return argumentStream;
     }
 
-    private Xq32Argument CreateArgument(ScriptArgument argument, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private Xq32Argument CreateArgument(ScriptArgument argument, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         int type;
         uint value;
@@ -299,7 +295,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         };
     }
 
-    private long WriteString(string value, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private long WriteString(string value, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         if (writtenNames.TryGetValue(value, out long nameOffset))
             return nameOffset;
@@ -307,12 +303,12 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         CacheStrings(value, stringWriter, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _sjisEncoding, false);
+        stringWriter.WriteString(value, SjisEncoding);
 
         return nameOffset;
     }
 
-    private void WriteFunction(Xq32Function function, IBinaryWriterX bw, PointerLength length)
+    private void WriteFunction(Xq32Function function, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -346,7 +342,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         }
     }
 
-    private void WriteJump(Xq32Jump jump, IBinaryWriterX bw, PointerLength length)
+    private void WriteJump(Xq32Jump jump, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -366,7 +362,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         bw.Write(jump.instructionIndex);
     }
 
-    private void WriteInstruction(Xq32Instruction instruction, IBinaryWriterX bw, PointerLength length)
+    private void WriteInstruction(Xq32Instruction instruction, BinaryWriterX bw, PointerLength length)
     {
         bw.Write(instruction.argOffset);
         bw.Write(instruction.argCount);
@@ -388,7 +384,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         }
     }
 
-    private void WriteArgument(Xq32Argument argument, IBinaryWriterX bw, PointerLength length)
+    private void WriteArgument(Xq32Argument argument, BinaryWriterX bw, PointerLength length)
     {
         switch (length)
         {
@@ -409,20 +405,18 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         }
     }
 
-    private void CacheStrings(string value, IBinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
+    private void CacheStrings(string value, BinaryWriterX stringWriter, IDictionary<string, long> writtenNames)
     {
         long nameOffset = stringWriter.BaseStream.Position;
 
         do
         {
-            if (!writtenNames.ContainsKey(value))
-                writtenNames[value] = nameOffset;
+            writtenNames.TryAdd(value, nameOffset);
 
-            nameOffset += _sjisEncoding.GetByteCount(value[..1]);
+            nameOffset += SjisEncoding.GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 
-        if (!writtenNames.ContainsKey(value))
-            writtenNames[value] = nameOffset;
+        writtenNames.TryAdd(value, nameOffset);
     }
 }

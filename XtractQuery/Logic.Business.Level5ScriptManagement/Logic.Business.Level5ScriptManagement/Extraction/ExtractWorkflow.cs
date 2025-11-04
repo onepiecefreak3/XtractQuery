@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
 using Logic.Domain.Level5.Contract.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
 
 namespace Logic.Business.Level5ScriptManagement.Extraction;
 
@@ -29,10 +29,21 @@ class ExtractWorkflow(
 
     private void ExtractDirectory(string dirPath)
     {
-        string[] files = Directory.GetFiles(dirPath, "*", SearchOption.AllDirectories);
+        string[] files = CollectFiles(dirPath);
 
         foreach (string file in files)
             ExtractFile(file);
+    }
+
+    private static string[] CollectFiles(string dirPath)
+    {
+        IEnumerable<string> files = Directory.EnumerateFiles(dirPath, "*.xq", SearchOption.AllDirectories);
+        files = files.Concat(Directory.EnumerateFiles(dirPath, "*.xs", SearchOption.AllDirectories));
+        files = files.Concat(Directory.EnumerateFiles(dirPath, "*.cq", SearchOption.AllDirectories));
+        files = files.Concat(Directory.EnumerateFiles(dirPath, "*.lb", SearchOption.AllDirectories));
+        files = files.Concat(Directory.EnumerateFiles(dirPath, "*.gds", SearchOption.AllDirectories));
+
+        return [.. files];
     }
 
     private void ExtractFile(string filePath)
@@ -45,10 +56,19 @@ class ExtractWorkflow(
 
         if (!TryPeekType(inputStream, out ScriptType? type))
         {
-            if (!typeConverter.TryConvert(config.QueryType, out type))
+            switch (Path.GetExtension(filePath))
             {
-                Console.WriteLine("Script format could not be automatically determined. Set it explicitly with the -t parameter.");
-                return;
+                case ".gds":
+                    type = ScriptType.Gds;
+                    break;
+
+                default:
+                    if (!typeConverter.TryConvert(config.QueryType, out type))
+                    {
+                        Console.WriteLine("Script format could not be automatically determined. Set it explicitly with the -t parameter.");
+                        return;
+                    }
+                    break;
             }
         }
 

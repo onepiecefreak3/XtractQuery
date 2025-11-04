@@ -67,6 +67,8 @@ public struct SyntaxToken
         Location = new(line, column);
 
         _textPosition = fullPosition;
+        fullPosition += Text.Length;
+
         AdvanceLineColumn(Text, ref line, ref column);
 
         if (TrailingTrivia.HasValue)

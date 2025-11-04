@@ -1,15 +1,16 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Komponent.Streams;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactory) : IGss1ScriptReader
+class Gss1ScriptReader : IGss1ScriptReader
 {
     public Gss1ScriptContainer Read(Stream input)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(input, true);
+        using BinaryReaderX reader = new BinaryReaderX(input, true);
 
         Gss1Header header = ReadHeader(reader);
 
@@ -26,7 +27,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         Gss1Argument[] arguments = ReadArguments(reader, header.argumentEntryCount);
 
         int stringOffset = header.stringOffset << 2;
-        Stream stringStream = streamFactory.CreateSubStream(input, stringOffset, input.Length - stringOffset);
+        Stream stringStream = new SubStream(input, stringOffset, input.Length - stringOffset);
 
         return new Gss1ScriptContainer
         {
@@ -43,7 +44,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gss1Header ReadHeader(IBinaryReaderX reader)
+    private static Gss1Header ReadHeader(BinaryReaderX reader)
     {
         return new Gss1Header
         {
@@ -61,7 +62,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gss1Function[] ReadFunctions(IBinaryReaderX reader, int count)
+    private static Gss1Function[] ReadFunctions(BinaryReaderX reader, int count)
     {
         var result = new Gss1Function[count];
 
@@ -71,7 +72,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gss1Function ReadFunction(IBinaryReaderX reader)
+    private static Gss1Function ReadFunction(BinaryReaderX reader)
     {
         return new Gss1Function
         {
@@ -87,7 +88,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gss1Jump[] ReadJumps(IBinaryReaderX reader, int count)
+    private static Gss1Jump[] ReadJumps(BinaryReaderX reader, int count)
     {
         var result = new Gss1Jump[count];
 
@@ -97,7 +98,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gss1Jump ReadJump(IBinaryReaderX reader)
+    private static Gss1Jump ReadJump(BinaryReaderX reader)
     {
         return new Gss1Jump
         {
@@ -107,7 +108,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gss1Instruction[] ReadInstructions(IBinaryReaderX reader, int count)
+    private static Gss1Instruction[] ReadInstructions(BinaryReaderX reader, int count)
     {
         var result = new Gss1Instruction[count];
 
@@ -117,7 +118,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gss1Instruction ReadInstruction(IBinaryReaderX reader)
+    private static Gss1Instruction ReadInstruction(BinaryReaderX reader)
     {
         return new Gss1Instruction
         {
@@ -129,7 +130,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         };
     }
 
-    private static Gss1Argument[] ReadArguments(IBinaryReaderX reader, int count)
+    private static Gss1Argument[] ReadArguments(BinaryReaderX reader, int count)
     {
         var result = new Gss1Argument[count];
 
@@ -139,7 +140,7 @@ class Gss1ScriptReader(IBinaryFactory binaryFactory, IStreamFactory streamFactor
         return result;
     }
 
-    private static Gss1Argument ReadArgument(IBinaryReaderX reader)
+    private static Gss1Argument ReadArgument(BinaryReaderX reader)
     {
         return new Gss1Argument
         {

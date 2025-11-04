@@ -1,15 +1,12 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Contract.Level5.Exceptions;
+﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Contract.Level5;
 
-[MapException(typeof(Level5ScriptParserException))]
 public interface ILevel5ScriptParser
 {
     CodeUnitSyntax ParseCodeUnit(string text);
     MethodDeclarationSyntax ParseMethodDeclaration(string text);
-    MethodDeclarationMetadataParametersSyntax ParseMethodDeclarationMetadataParameters(string text);
+    MethodDeclarationMetadataParametersSyntax? ParseMethodDeclarationMetadataParameters(string text);
     MethodDeclarationMetadataParameterListSyntax ParseMethodDeclarationMetadataParameterList(string text);
     MethodDeclarationParametersSyntax ParseMethodDeclarationParameters(string text);
     MethodDeclarationBodySyntax ParseMethodDeclarationBody(string text);

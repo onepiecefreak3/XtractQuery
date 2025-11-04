@@ -1,6 +1,6 @@
-﻿using Logic.Domain.Level5.Contract.Script.Gds;
-using Logic.Domain.Level5.Contract.Script.Gds.DataClasses;
-using Logic.Domain.Level5.Script.Gds.DataClasses;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.Level5.Contract.Script.Gds;
+using Logic.Domain.Level5.DataClasses.Script.Gds;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
@@ -9,6 +9,7 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
     public GdsScriptFile Parse(Stream input)
     {
         GdsArgument[] arguments = reader.Read(input);
+
         return Parse(arguments);
     }
 
@@ -33,6 +34,9 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
         {
             if (argument.type is >= 1 and <= 6)
             {
+                if (instruction is null)
+                    throw new InvalidOperationException("Script cannot start with an argument of type 1 to 6.");
+
                 parameters.Add(CreateArgument(argument, jumpTargets));
                 continue;
             }
@@ -57,22 +61,17 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
                     parameters.Add(CreateArgument(jumpTarget.Label, true));
                     break;
             }
-
-            if (instruction.type is 12)
-                break;
         }
 
-        if (instruction?.type is not 12)
-            throw new InvalidOperationException("Script is not exited correctly.");
-
-        result.Add(CreateInstruction(instruction, [.. parameters], jumpTargets));
+        if (instruction is not null)
+            result.Add(CreateInstruction(instruction, [.. parameters], jumpTargets));
 
         return result;
     }
 
     private GdsJumpTarget[] ParseJumpTargets(GdsArgument[] arguments)
     {
-        var result = new List<GdsJumpTarget>();
+        var jumpsTargets = new List<GdsArgument>();
 
         Dictionary<int, GdsArgument> lookup = arguments.ToDictionary(x => x.offset, y => y);
         foreach (GdsArgument argument in arguments)
@@ -83,9 +82,17 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
             if (!lookup.TryGetValue((int)argument.value!, out GdsArgument? jumpTarget))
                 throw new InvalidOperationException($"Could not determine target of jump at position {argument.offset}.");
 
+            jumpsTargets.Add(jumpTarget);
+        }
+
+        var result = new List<GdsJumpTarget>();
+
+        var jumpIndex = 0;
+        foreach (GdsArgument jumpTarget in jumpsTargets.OrderBy(j => j.offset))
+        {
             result.Add(new GdsJumpTarget
             {
-                Label = $"@{result.Count:000}@",
+                Label = $"@{jumpIndex++:000}@",
                 Offset = jumpTarget.offset
             });
         }
@@ -122,7 +129,7 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
             Type = argument.type switch
             {
                 1 => GdsScriptArgumentType.Int,
-                2 => GdsScriptArgumentType.UnsignedInt,
+                2 => GdsScriptArgumentType.Float,
                 3 => GdsScriptArgumentType.String,
                 6 => GdsScriptArgumentType.Jump,
                 _ => throw new InvalidOperationException($"Unknown argument type {argument.type}.")
@@ -139,6 +146,7 @@ internal class GdsScriptParser(IGdsScriptReader reader) : IGdsScriptParser
             {
                 int => GdsScriptArgumentType.Int,
                 short => GdsScriptArgumentType.Int,
+                float => GdsScriptArgumentType.Float,
                 string => isJump ? GdsScriptArgumentType.Jump : GdsScriptArgumentType.String,
                 _ => throw new InvalidOperationException($"Unknown argument type {value?.GetType()}.")
             },

@@ -1,20 +1,22 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
 
 namespace Logic.Domain.Level5.Script;
 
 internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, TArgument> : ICompressedScriptReader
 {
+    private readonly Encoding _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
     private readonly IScriptDecompressor _decompressor;
     private readonly IScriptEntrySizeProvider _entrySizeProvider;
-    private readonly IBinaryFactory _binaryFactory;
 
-    public CompressedScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider, IBinaryFactory binaryFactory)
+    public CompressedScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider)
     {
         _decompressor = decompressor;
         _entrySizeProvider = entrySizeProvider;
-        _binaryFactory = binaryFactory;
     }
 
     public ScriptFile Read(Stream input)
@@ -29,10 +31,10 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
         if (!TryDetectPointerLength(container, out PointerLength? length))
             throw new InvalidOperationException("Could not detect pointer length.");
 
-        IList<ScriptFunction> functions = ReadFunctions(container.FunctionTable, container.StringTable, length!.Value);
-        IList<ScriptJump> jumps = ReadJumps(container.JumpTable, container.StringTable, length!.Value);
-        IList<ScriptInstruction> instructions = ReadInstructions(container.InstructionTable, length!.Value);
-        IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, instructions.AsReadOnly(), container.StringTable, length!.Value);
+        IList<ScriptFunction> functions = ReadFunctions(container.FunctionTable, container.StringTable, length.Value);
+        IList<ScriptJump> jumps = ReadJumps(container.JumpTable, container.StringTable, length.Value);
+        IList<ScriptInstruction> instructions = ReadInstructions(container.InstructionTable, length.Value);
+        IList<ScriptArgument> arguments = ReadArguments(container.ArgumentTable, instructions.AsReadOnly(), container.StringTable, length.Value);
 
         return new ScriptFile
         {
@@ -84,7 +86,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptFunction> CreateFunctions(IReadOnlyList<TFunction> functions, CompressedScriptStringTable? stringTable)
     {
-        using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
 
         var result = new ScriptFunction[functions.Count];
 
@@ -97,7 +99,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptJump> CreateJumps(IReadOnlyList<TJump> jumps, CompressedScriptStringTable? stringTable = null)
     {
-        using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
 
         var result = new ScriptJump[jumps.Count];
 
@@ -121,7 +123,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, IReadOnlyList<ScriptInstruction> instructions, CompressedScriptStringTable? stringTable = null)
     {
-        using IBinaryReaderX? stringReader = stringTable == null ? null : _binaryFactory.CreateReader(stringTable.Stream, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
 
         var result = new ScriptArgument[arguments.Count];
 
@@ -142,10 +144,10 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
         return result;
     }
 
-    protected abstract ScriptFunction CreateFunction(TFunction function, IBinaryReaderX? stringReader);
-    protected abstract ScriptJump CreateJump(TJump jump, IBinaryReaderX? stringReader);
+    protected abstract ScriptFunction CreateFunction(TFunction function, BinaryReaderX? stringReader);
+    protected abstract ScriptJump CreateJump(TJump jump, BinaryReaderX? stringReader);
     protected abstract ScriptInstruction CreateInstruction(TInstruction instruction);
-    protected abstract ScriptArgument CreateArgument(TArgument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader);
+    protected abstract ScriptArgument CreateArgument(TArgument argument, int instructionType, int argumentIndex, BinaryReaderX? stringReader);
 
     protected abstract IEnumerable<TFunction> OrderFunctions(IReadOnlyList<TFunction> functions);
 
@@ -184,7 +186,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
         return CreateArguments(arguments, instructions, stringTable);
     }
 
-    private bool TryDetectPointerLength(ScriptContainer container, out PointerLength? length)
+    private bool TryDetectPointerLength(ScriptContainer container, [NotNullWhen(true)] out PointerLength? length)
     {
         length = null;
 

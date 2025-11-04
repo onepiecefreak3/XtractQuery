@@ -1,4 +1,4 @@
-﻿using Logic.Domain.Level5.Contract.Script.Gss1.DataClasses;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 
 namespace Logic.Domain.Level5.Contract.Script.Gss1;
 

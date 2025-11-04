@@ -11,7 +11,6 @@ public interface IBinaryReaderX : IDisposable
     Stream BaseStream { get; }
 
     BitOrder BitOrder { get; set; }
-    BitOrder EffectiveBitOrder { get; }
     ByteOrder ByteOrder { get; set; }
 
     int BlockSize { get; set; }
@@ -32,12 +31,9 @@ public interface IBinaryReaderX : IDisposable
     double ReadDouble();
     decimal ReadDecimal();
 
-    string ReadCStringSJIS();
-
     string ReadString();
     string ReadString(int length);
     string ReadString(int length, Encoding encoding);
 
     long ReadBits(int count);
-    void ResetBitBuffer();
 }

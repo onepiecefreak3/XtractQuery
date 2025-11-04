@@ -1,29 +1,26 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 using Logic.Domain.Level5.Contract.Script.Xq32;
-using Logic.Domain.Level5.Contract.Script.Xq32.DataClasses;
-using Logic.Domain.Level5.Script.Xq32.InternalContract;
+using Logic.Domain.Level5.InternalContract.Script.Xq32;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
 internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>, IXq32ScriptReader
 {
-    private readonly IBinaryFactory _binaryFactory;
     private readonly Dictionary<uint, HashSet<string>> _functionCache;
     private readonly Dictionary<uint, HashSet<string>> _jumpCache;
 
-    public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider, 
-        IBinaryFactory binaryFactory)
-        : base(decompressor, entrySizeProvider, binaryFactory)
+    public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider)
+        : base(decompressor, entrySizeProvider)
     {
-        _binaryFactory = binaryFactory;
         _functionCache = new Dictionary<uint, HashSet<string>>();
         _jumpCache = new Dictionary<uint, HashSet<string>>();
     }
 
     public override IReadOnlyList<Xq32Function> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(functionStream, true);
+        using var br = new BinaryReaderX(functionStream, true);
 
         var result = new Xq32Function[entryCount];
 
@@ -72,7 +69,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
 
     public override IReadOnlyList<Xq32Jump> ReadJumps(Stream jumpStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(jumpStream, true);
+        using var br = new BinaryReaderX(jumpStream, true);
 
         var result = new Xq32Jump[entryCount];
 
@@ -106,7 +103,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
 
     public override IReadOnlyList<Xq32Instruction> ReadInstructions(Stream instructionStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(instructionStream, true);
+        using var br = new BinaryReaderX(instructionStream, true);
 
         var result = new Xq32Instruction[entryCount];
 
@@ -140,7 +137,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
 
     public override IReadOnlyList<Xq32Argument> ReadArguments(Stream argumentStream, int entryCount, PointerLength length)
     {
-        using IBinaryReaderX br = _binaryFactory.CreateReader(argumentStream, true);
+        using var br = new BinaryReaderX(argumentStream, true);
 
         var result = new Xq32Argument[entryCount];
 
@@ -177,16 +174,16 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
         return result;
     }
 
-    protected override ScriptFunction CreateFunction(Xq32Function function, IBinaryReaderX? stringReader)
+    protected override ScriptFunction CreateFunction(Xq32Function function, BinaryReaderX? stringReader)
     {
         var name = string.Empty;
         if (stringReader != null)
         {
             stringReader.BaseStream.Position = function.nameOffset;
-            name = stringReader.ReadCStringSJIS();
+            name = stringReader.ReadNullTerminatedString();
 
             if (!_functionCache.TryGetValue(function.crc32, out HashSet<string>? functionNames))
-                _functionCache[function.crc32] = functionNames = new HashSet<string>();
+                _functionCache[function.crc32] = functionNames = [];
 
             functionNames.Add(name);
         }
@@ -208,16 +205,16 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
         };
     }
 
-    protected override ScriptJump CreateJump(Xq32Jump jump, IBinaryReaderX? stringReader)
+    protected override ScriptJump CreateJump(Xq32Jump jump, BinaryReaderX? stringReader)
     {
         var name = string.Empty;
         if (stringReader != null)
         {
             stringReader.BaseStream.Position = jump.nameOffset;
-            name = stringReader.ReadCStringSJIS();
+            name = stringReader.ReadNullTerminatedString();
 
             if (!_jumpCache.TryGetValue(jump.crc32, out HashSet<string>? jumpNames))
-                _jumpCache[jump.crc32] = jumpNames = new HashSet<string>();
+                _jumpCache[jump.crc32] = jumpNames = [];
 
             jumpNames.Add(name);
         }
@@ -243,7 +240,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
         };
     }
 
-    protected override ScriptArgument CreateArgument(Xq32Argument argument, int instructionType, int argumentIndex, IBinaryReaderX? stringReader)
+    protected override ScriptArgument CreateArgument(Xq32Argument argument, int instructionType, int argumentIndex, BinaryReaderX? stringReader)
     {
         int rawType = -1;
         ScriptArgumentType type;
@@ -276,15 +273,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
                         break;
 
                     case 30:
-                        if (_jumpCache.TryGetValue(argument.value, out names))
-                            value = names.First();
-                        break;
-
                     case 31:
-                        if (_jumpCache.TryGetValue(argument.value, out names))
-                            value = names.First();
-                        break;
-
                     case 33:
                         if (_jumpCache.TryGetValue(argument.value, out names))
                             value = names.First();
@@ -312,7 +301,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
                     rawType = argument.type;
 
                 type = ScriptArgumentType.String;
-                value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+                value = stringReader?.ReadNullTerminatedString() ?? string.Empty;
                 break;
 
             default:

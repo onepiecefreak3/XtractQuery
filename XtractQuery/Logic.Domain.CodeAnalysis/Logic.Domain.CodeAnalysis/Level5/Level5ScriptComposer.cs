@@ -1,6 +1,6 @@
 ﻿using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using System.Text;
 
 namespace Logic.Domain.CodeAnalysis.Level5;

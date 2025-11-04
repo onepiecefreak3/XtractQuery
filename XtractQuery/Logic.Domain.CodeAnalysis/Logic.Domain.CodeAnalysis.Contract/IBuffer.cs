@@ -1,9 +1,5 @@
-﻿using CrossCutting.Core.Contract.Aspects;
-using Logic.Domain.CodeAnalysis.Contract.Exceptions;
+﻿namespace Logic.Domain.CodeAnalysis.Contract;
 
-namespace Logic.Domain.CodeAnalysis.Contract;
-
-[MapException(typeof(BufferException))]
 public interface IBuffer<out T>
 {
     bool IsEndOfInput { get; }

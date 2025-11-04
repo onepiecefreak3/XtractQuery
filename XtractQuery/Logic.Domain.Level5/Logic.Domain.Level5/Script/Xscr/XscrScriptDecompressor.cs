@@ -1,18 +1,18 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
+using Logic.Domain.Level5.Contract.Enums.Compression;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
-using Logic.Domain.Level5.Script.InternalContract.DataClasses;
+using Logic.Domain.Level5.DataClasses.Script;
+using Logic.Domain.Level5.InternalContract.Compression;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-internal class XscrScriptDecompressor(IBinaryFactory binaryFactory, IDecompressor decompressor) : IXscrScriptDecompressor
+internal class XscrScriptDecompressor(IDecompressor decompressor) : IXscrScriptDecompressor
 {
     public XscrCompressionContainer Decompress(Stream input)
     {
-        using IBinaryReaderX reader = binaryFactory.CreateReader(input, true);
+        using var reader = new BinaryReaderX(input, true);
 
         XscrHeader header = ReadHeader(reader);
 
@@ -28,7 +28,7 @@ internal class XscrScriptDecompressor(IBinaryFactory binaryFactory, IDecompresso
         };
     }
 
-    private XscrHeader ReadHeader(IBinaryReaderX reader)
+    private XscrHeader ReadHeader(BinaryReaderX reader)
     {
         return new XscrHeader
         {

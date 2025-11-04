@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Logic.Domain.CodeAnalysis.Contract;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Exceptions;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
-using Logic.Domain.CodeAnalysis.Level5.InternalContract.DataClasses;
+using Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 

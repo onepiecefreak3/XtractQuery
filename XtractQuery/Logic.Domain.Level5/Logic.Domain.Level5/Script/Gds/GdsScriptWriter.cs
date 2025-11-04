@@ -1,11 +1,11 @@
 ﻿using System.Text;
-using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
 using Logic.Domain.Level5.Contract.Script.Gds;
-using Logic.Domain.Level5.Contract.Script.Gds.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
-class GdsScriptWriter(IBinaryFactory binaryFactory, IGdsScriptComposer composer) : IGdsScriptWriter
+class GdsScriptWriter(IGdsScriptComposer composer) : IGdsScriptWriter
 {
     private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
 
@@ -18,7 +18,7 @@ class GdsScriptWriter(IBinaryFactory binaryFactory, IGdsScriptComposer composer)
 
     public void Write(GdsArgument[] arguments, Stream output)
     {
-        using IBinaryWriterX writer = binaryFactory.CreateWriter(output, true);
+        using var writer = new BinaryWriterX(output, true);
 
         output.Position = 4;
         foreach (GdsArgument argument in arguments)
@@ -38,14 +38,15 @@ class GdsScriptWriter(IBinaryFactory binaryFactory, IGdsScriptComposer composer)
                     break;
 
                 case 2:
-                    writer.Write((uint)argument.value!);
+                    writer.Write((float)argument.value!);
                     break;
 
                 case 3:
                     var stringValue = (string)argument.value!;
 
-                    writer.Write((short)(stringValue.Length + 1));
-                    writer.WriteString(stringValue, SjisEncoding, false);
+                    byte[] stringBytes = SjisEncoding.GetBytes(stringValue + '\0');
+                    writer.Write((short)stringBytes.Length);
+                    writer.Write(stringBytes);
                     break;
 
                 case 8:

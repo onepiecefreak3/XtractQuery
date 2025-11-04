@@ -18,9 +18,6 @@ using CrossCutting.Core.Scheduling.QuartzAdapter;
 using CrossCutting.Core.Serialization.JsonAdapter;
 using Logic.Business.Level5ScriptManagement;
 using Logic.Domain.CodeAnalysis;
-using Logic.Domain.Kuriimu2.KomponentAdapter;
-using Logic.Domain.Kuriimu2.KompressionAdapter;
-using Logic.Domain.Kuriimu2.KryptographyAdapter;
 using Logic.Domain.Level5;
 
 namespace Mappings.XtractQuery;
@@ -64,9 +61,5 @@ public class KernelInitializer : IKernelInitializer
         kernel.RegisterComponent<Level5Activator>();
 
         kernel.RegisterComponent<CodeAnalysisActivator>();
-
-        kernel.RegisterComponent<Kuriimu2KompressionActivator>();
-        kernel.RegisterComponent<Kuriimu2KomponentActivator>();
-        kernel.RegisterComponent<Kuriimu2KryptographyActivator>();
     }
 }

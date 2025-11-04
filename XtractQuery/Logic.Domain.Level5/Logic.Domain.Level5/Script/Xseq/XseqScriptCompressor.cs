@@ -1,22 +1,18 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Compression.InternalContract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
-using Logic.Domain.Level5.Contract.Compression.DataClasses;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
+using Logic.Domain.Level5.Contract.Enums.Compression;
 using Logic.Domain.Level5.Contract.Script.Xseq;
-using Logic.Domain.Level5.Contract.Script.Xseq.DataClasses;
+using Logic.Domain.Level5.InternalContract.Compression;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
 internal class XseqScriptCompressor : IXseqScriptCompressor
 {
-    private readonly IBinaryFactory _binaryFactory;
-    private readonly IBinaryTypeWriter _typeWriter;
     private readonly ICompressor _compressor;
 
-    public XseqScriptCompressor(IBinaryFactory binaryFactory, IBinaryTypeWriter typeWriter, ICompressor compressor)
+    public XseqScriptCompressor(ICompressor compressor)
     {
-        _binaryFactory = binaryFactory;
-        _typeWriter = typeWriter;
         _compressor = compressor;
     }
 
@@ -71,19 +67,19 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
         long functionOffset = output.Position = 0x20;
         functionStream.CopyTo(output);
 
-        long jumpOffset = output.Position = output.Position + 3 & ~3;
+        long jumpOffset = output.Position = (output.Position + 3) & ~3;
         jumpStream.CopyTo(output);
 
-        long instructionOffset = output.Position = output.Position + 3 & ~3;
+        long instructionOffset = output.Position = (output.Position + 3) & ~3;
         instructionStream.CopyTo(output);
 
-        long argumentOffset = output.Position = output.Position + 3 & ~3;
+        long argumentOffset = output.Position = (output.Position + 3) & ~3;
         argumentStream.CopyTo(output);
 
-        long stringOffset = output.Position = output.Position + 3 & ~3;
+        long stringOffset = output.Position = (output.Position + 3) & ~3;
         stringStream.CopyTo(output);
 
-        using IBinaryWriterX writer = _binaryFactory.CreateWriter(output);
+        using var writer = new BinaryWriterX(output);
         writer.WriteAlignment(4);
 
         var header = new XseqHeader
@@ -108,6 +104,6 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
         };
 
         output.Position = 0;
-        _typeWriter.Write(header, writer);
+        BinaryTypeWriter.Write(header, writer);
     }
 }

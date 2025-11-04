@@ -1,8 +1,7 @@
 {
   "profiles": {
     "XtractQuery": {
-      "commandName": "Project",
-      "commandLineArgs": "-o c -f D:\\Users\\Kirito\\Desktop\\reverse_engineering\\professor_layton_1\\pl1e_nds\\ -t gds"
+      "commandName": "Project"
     },
     "Profil \"1\"": {
       "commandName": "Project",

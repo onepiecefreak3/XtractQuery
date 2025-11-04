@@ -1,9 +1,9 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
-using Logic.Domain.Level5.Contract.Script.Gds.DataClasses;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
@@ -208,8 +208,8 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
             case GdsScriptArgumentType.Int:
                 return CreateNumericLiteralExpression((int)value!);
 
-            case GdsScriptArgumentType.UnsignedInt:
-                return CreateUnsignedNumericLiteralExpression((uint)value!);
+            case GdsScriptArgumentType.Float:
+                return CreateFloatingNumericLiteralExpression((float)value!);
 
             case GdsScriptArgumentType.String:
                 return CreateStringLiteralExpression((string)value!);
@@ -227,9 +227,9 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
         return new LiteralExpressionSyntax(_syntaxFactory.NumericLiteral(value));
     }
 
-    private LiteralExpressionSyntax CreateUnsignedNumericLiteralExpression(uint value)
+    private LiteralExpressionSyntax CreateFloatingNumericLiteralExpression(float value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.UnsignedNumericLiteral(value));
+        return new LiteralExpressionSyntax(_syntaxFactory.FloatingNumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateStringLiteralExpression(string value)

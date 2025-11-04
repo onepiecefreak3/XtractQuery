@@ -1,12 +1,15 @@
-﻿using Logic.Domain.Kuriimu2.KomponentAdapter.Contract;
-using Logic.Domain.Level5.Contract.Script.DataClasses;
+﻿using System.Text;
+using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 using Logic.Domain.Level5.Contract.Script.Xscr;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-internal class XscrScriptParser(IBinaryFactory binaryFactory, IXscrScriptReader reader) : IXscrScriptParser
+internal class XscrScriptParser(IXscrScriptReader reader) : IXscrScriptParser
 {
+    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
+
     public XscrScriptFile Parse(Stream input)
     {
         XscrScriptContainer container = reader.Read(input);
@@ -49,11 +52,11 @@ internal class XscrScriptParser(IBinaryFactory binaryFactory, IXscrScriptReader 
 
     public IList<XscrScriptArgument> ParseArguments(XscrArgument[] arguments, ScriptStringTable? stringTable = null)
     {
-        using IBinaryReaderX? stringReader = stringTable is null ? null : binaryFactory.CreateReader(stringTable.Stream, true);
+        using BinaryReaderX? stringReader = stringTable is null ? null : new BinaryReaderX(stringTable.Stream, SjisEncoding, true);
         return ParseArguments(arguments, stringReader, stringTable?.BaseOffset ?? 0);
     }
 
-    private IList<XscrScriptArgument> ParseArguments(XscrArgument[] arguments, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private IList<XscrScriptArgument> ParseArguments(XscrArgument[] arguments, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         var result = new XscrScriptArgument[arguments.Length];
 
@@ -63,7 +66,7 @@ internal class XscrScriptParser(IBinaryFactory binaryFactory, IXscrScriptReader 
         return result;
     }
 
-    private XscrScriptArgument ParseArgument(XscrArgument argument, IBinaryReaderX? stringReader, int stringBaseOffset)
+    private XscrScriptArgument ParseArgument(XscrArgument argument, BinaryReaderX? stringReader, int stringBaseOffset)
     {
         int rawType = -1;
         ScriptArgumentType type;
@@ -100,7 +103,7 @@ internal class XscrScriptParser(IBinaryFactory binaryFactory, IXscrScriptReader 
                     rawType = argument.type;
 
                 type = ScriptArgumentType.String;
-                value = stringReader?.ReadCStringSJIS() ?? string.Empty;
+                value = stringReader?.ReadNullTerminatedString() ?? string.Empty;
                 break;
 
             default:

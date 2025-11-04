@@ -6,7 +6,7 @@ using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.CodeAnalysis.Level5;
-using Logic.Domain.CodeAnalysis.Level5.InternalContract.DataClasses;
+using Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis;
 

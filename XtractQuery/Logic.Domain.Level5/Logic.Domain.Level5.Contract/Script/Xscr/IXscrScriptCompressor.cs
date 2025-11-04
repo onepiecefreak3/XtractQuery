@@ -1,5 +1,5 @@
-﻿using Logic.Domain.Level5.Contract.Compression.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Xscr.DataClasses;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
+using Logic.Domain.Level5.Contract.Enums.Compression;
 
 namespace Logic.Domain.Level5.Contract.Script.Xscr;
 

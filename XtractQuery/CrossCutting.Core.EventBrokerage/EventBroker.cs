@@ -37,7 +37,7 @@ public class EventBroker : IEventBroker
 
         if (!_messageSubscriptions.ContainsKey(messageType))
         {
-            _messageSubscriptions[messageType] = new List<Subscription>();
+            _messageSubscriptions[messageType] = [];
         }
 
         bool isHandlerAlreadyRegistered = _messageSubscriptions[messageType].Any(s => s.Handler == subscription.Handler);

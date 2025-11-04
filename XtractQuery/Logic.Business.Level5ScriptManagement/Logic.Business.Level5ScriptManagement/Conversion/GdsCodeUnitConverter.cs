@@ -1,10 +1,10 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract;
-using Logic.Domain.CodeAnalysis.Contract.Level5.DataClasses;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
-using Logic.Domain.Level5.Contract.Script.Gds.DataClasses;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
@@ -185,9 +185,9 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
                 value = GetNumericLiteral(literal);
                 break;
 
-            case (int)SyntaxTokenKind.UnsignedNumericLiteral:
-                type = GdsScriptArgumentType.UnsignedInt;
-                value = GetUnsignedNumericLiteral(literal);
+            case (int)SyntaxTokenKind.FloatingNumericLiteral:
+                type = GdsScriptArgumentType.Float;
+                value = GetFloatingNumericLiteral(literal);
                 break;
 
             case (int)SyntaxTokenKind.StringLiteral:
@@ -202,7 +202,7 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
 
             default:
                 throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", literal.Location,
-                    SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.StringLiteral,
+                    SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.StringLiteral,
                     SyntaxTokenKind.HashStringLiteral);
         }
 
@@ -228,14 +228,12 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
             int.Parse(literal.Literal.Text);
     }
 
-    private uint GetUnsignedNumericLiteral(LiteralExpressionSyntax literal)
+    private float GetFloatingNumericLiteral(LiteralExpressionSyntax literal)
     {
-        if (literal.Literal.RawKind != (int)SyntaxTokenKind.UnsignedNumericLiteral)
-            throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", literal.Location, SyntaxTokenKind.UnsignedNumericLiteral);
+        if (literal.Literal.RawKind != (int)SyntaxTokenKind.FloatingNumericLiteral)
+            throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", literal.Location, SyntaxTokenKind.FloatingNumericLiteral);
 
-        return literal.Literal.Text.StartsWith("0x") ?
-            uint.Parse(literal.Literal.Text[2..^1], NumberStyles.HexNumber) :
-            uint.Parse(literal.Literal.Text[..^1]);
+        return float.Parse(literal.Literal.Text[..^1], CultureInfo.GetCultureInfo("en-gb"));
     }
 
     private string GetHashStringLiteral(LiteralExpressionSyntax literal)
