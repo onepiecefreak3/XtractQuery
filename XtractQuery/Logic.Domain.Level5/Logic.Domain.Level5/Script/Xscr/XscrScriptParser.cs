@@ -1,15 +1,13 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Xscr;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-internal class XscrScriptParser(IXscrScriptReader reader) : IXscrScriptParser
+internal class XscrScriptParser(IXscrScriptReader reader, IScriptStringEncodingProvider encodingProvider) : IXscrScriptParser
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public XscrScriptFile Parse(Stream input)
     {
         XscrScriptContainer container = reader.Read(input);
@@ -52,7 +50,7 @@ internal class XscrScriptParser(IXscrScriptReader reader) : IXscrScriptParser
 
     public IList<XscrScriptArgument> ParseArguments(XscrArgument[] arguments, ScriptStringTable? stringTable = null)
     {
-        using BinaryReaderX? stringReader = stringTable is null ? null : new BinaryReaderX(stringTable.Stream, SjisEncoding, true);
+        using BinaryReaderX? stringReader = stringTable is null ? null : new BinaryReaderX(stringTable.Stream, encodingProvider.GetEncoding(), true);
         return ParseArguments(arguments, stringReader, stringTable?.BaseOffset ?? 0);
     }
 

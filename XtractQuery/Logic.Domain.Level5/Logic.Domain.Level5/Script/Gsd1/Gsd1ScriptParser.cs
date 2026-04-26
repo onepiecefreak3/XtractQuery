@@ -1,15 +1,13 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-internal class Gsd1ScriptParser(IGsd1ScriptReader reader) : IGsd1ScriptParser
+internal class Gsd1ScriptParser(IGsd1ScriptReader reader, IScriptStringEncodingProvider encodingProvider) : IGsd1ScriptParser
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public Gsd1ScriptFile Parse(Stream input)
     {
         Gsd1ScriptContainer container = reader.Read(input);
@@ -44,7 +42,7 @@ internal class Gsd1ScriptParser(IGsd1ScriptReader reader) : IGsd1ScriptParser
 
     public IList<Gsd1ScriptArgument> ParseArguments(Gsd1Argument[] arguments, ScriptStringTable? strings = null)
     {
-        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, encodingProvider.GetEncoding(), true);
         return ParseArguments(arguments, stringReader, strings?.BaseOffset ?? 0);
     }
 

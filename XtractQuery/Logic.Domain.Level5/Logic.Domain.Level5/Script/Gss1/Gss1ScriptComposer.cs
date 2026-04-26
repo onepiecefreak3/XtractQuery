@@ -1,17 +1,15 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Kryptography.Checksum;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gss1;
 using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-class Gss1ScriptComposer(IChecksumFactory checksumFactory) : IGss1ScriptComposer
+class Gss1ScriptComposer(IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider) : IGss1ScriptComposer
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     private readonly Checksum<ushort> _checksum = checksumFactory.CreateCrc16();
 
     public Gss1ScriptContainer Compose(Gss1ScriptFile script)
@@ -238,7 +236,7 @@ class Gss1ScriptComposer(IChecksumFactory checksumFactory) : IGss1ScriptComposer
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, SjisEncoding);
+        stringWriter.WriteString(value, encodingProvider.GetEncoding());
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -252,7 +250,7 @@ class Gss1ScriptComposer(IChecksumFactory checksumFactory) : IGss1ScriptComposer
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += SjisEncoding.GetByteCount(value[..1]);
+            stringOffset += encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

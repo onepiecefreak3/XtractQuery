@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Komponent.IO;
 using Kryptography.Checksum;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.InternalContract.Checksum;
 using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
@@ -8,32 +9,32 @@ namespace Logic.Domain.Level5.Script.Xseq;
 
 internal class XseqStringTable : IXseqStringTable
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     private readonly Stream _baseStream;
     private readonly BinaryReaderX _reader;
     private readonly BinaryWriterX? _writer;
     private readonly Checksum<ushort> _checksum;
+    private readonly IScriptStringEncodingProvider _encodingProvider;
 
     private readonly Dictionary<ushort, List<string>> _hashLookup = [];
 
     private long _streamPosition;
 
-    public XseqStringTable(Stream stream, IChecksumFactory checksumFactory)
+    public XseqStringTable(Stream stream, IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
     {
         _baseStream = stream;
-        _reader = new BinaryReaderX(_baseStream, SjisEncoding);
+        _reader = new BinaryReaderX(_baseStream, encodingProvider.GetEncoding());
         _checksum = checksumFactory.CreateCrc16();
+        _encodingProvider = encodingProvider;
 
         _streamPosition = _baseStream.Position;
 
         InitializeHashLookup();
     }
 
-    public XseqStringTable(IChecksumFactory checksumFactory)
+    public XseqStringTable(IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
     {
         _baseStream = new MemoryStream();
-        _reader = new BinaryReaderX(_baseStream, SjisEncoding);
+        _reader = new BinaryReaderX(_baseStream, encodingProvider.GetEncoding());
         _writer = new BinaryWriterX(_baseStream);
         _checksum = checksumFactory.CreateCrc16();
 
@@ -64,7 +65,7 @@ internal class XseqStringTable : IXseqStringTable
         long bkPos = _baseStream.Position;
         _baseStream.Position = _streamPosition;
 
-        _writer.WriteString(value, SjisEncoding);
+        _writer.WriteString(value, _encodingProvider.GetEncoding());
 
         var hash = (ushort)ComputeHash(value);
         if (!_hashLookup.TryGetValue(hash, out List<string>? values))
@@ -89,7 +90,7 @@ internal class XseqStringTable : IXseqStringTable
 
     public uint ComputeHash(string value)
     {
-        return _checksum.ComputeValue(value, SjisEncoding);
+        return _checksum.ComputeValue(value, _encodingProvider.GetEncoding());
     }
 
     private void InitializeHashLookup()

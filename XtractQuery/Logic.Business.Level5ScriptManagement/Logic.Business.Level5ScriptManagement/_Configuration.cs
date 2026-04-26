@@ -19,6 +19,9 @@ public class ScriptManagementConfiguration
     [ConfigMap("CommandLine", ["nc", "no-compression"])]
     public virtual bool WithoutCompression { get; set; } = false;
 
+    [ConfigMap("CommandLine", ["e", "encoding"])]
+    public virtual string Encoding { get; set; } = "sjis";
+
     [ConfigMap("CommandLine", ["f", "file"])]
     public virtual string InputPath { get; set; }
 

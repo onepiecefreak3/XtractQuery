@@ -1,6 +1,7 @@
 ﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Domain.Level5.InternalContract.Script.Xq32;
 
@@ -13,8 +14,8 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
     private readonly Dictionary<uint, HashSet<string>> _functionCache;
     private readonly Dictionary<uint, HashSet<string>> _jumpCache;
 
-    public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider, IXq32FunctionCache functionCache)
-        : base(decompressor, entrySizeProvider)
+    public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider, IXq32FunctionCache functionCache, IScriptStringEncodingProvider encodingProvider)
+        : base(decompressor, entrySizeProvider, encodingProvider)
     {
         _externalFunctionCache = functionCache;
 

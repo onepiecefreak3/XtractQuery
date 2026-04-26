@@ -1,17 +1,15 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gds;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
-class GdsScriptReader : IGdsScriptReader
+class GdsScriptReader(IScriptStringEncodingProvider encodingProvider) : IGdsScriptReader
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public GdsArgument[] Read(Stream input)
     {
-        using var reader = new BinaryReaderX(input, SjisEncoding, true);
+        using var reader = new BinaryReaderX(input, encodingProvider.GetEncoding(), true);
 
         int scriptSize = reader.ReadInt32();
         if (input.Length - 4 != scriptSize)

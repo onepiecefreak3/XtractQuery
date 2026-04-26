@@ -1,6 +1,7 @@
 ﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Xseq;
 using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
@@ -13,8 +14,8 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
     private readonly Dictionary<ushort, HashSet<string>> _functionCache;
     private readonly Dictionary<ushort, HashSet<string>> _jumpCache;
 
-    public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider, IXseqFunctionCache functionCache)
-        : base(decompressor, entrySizeProvider)
+    public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider, IXseqFunctionCache functionCache, IScriptStringEncodingProvider encodingProvider)
+        : base(decompressor, entrySizeProvider, encodingProvider)
     {
         _externalFunctionCache = functionCache;
 

@@ -1,14 +1,12 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gds;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
-class GdsScriptWriter(IGdsScriptComposer composer) : IGdsScriptWriter
+class GdsScriptWriter(IGdsScriptComposer composer, IScriptStringEncodingProvider encodingProvider) : IGdsScriptWriter
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public void Write(GdsScriptFile script, Stream output)
     {
         GdsArgument[] arguments = composer.Compose(script);
@@ -44,7 +42,7 @@ class GdsScriptWriter(IGdsScriptComposer composer) : IGdsScriptWriter
                 case 3:
                     var stringValue = (string)argument.value!;
 
-                    byte[] stringBytes = SjisEncoding.GetBytes(stringValue + '\0');
+                    byte[] stringBytes = encodingProvider.GetEncoding().GetBytes(stringValue + '\0');
                     writer.Write((short)stringBytes.Length);
                     writer.Write(stringBytes);
                     break;

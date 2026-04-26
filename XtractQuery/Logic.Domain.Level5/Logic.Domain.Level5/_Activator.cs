@@ -97,6 +97,8 @@ public class Level5Activator : IComponentActivator
         kernel.Register<IGdsScriptComposer, GdsScriptComposer>(ActivationScope.Unique);
         kernel.Register<IGdsScriptWriter, GdsScriptWriter>(ActivationScope.Unique);
 
+        kernel.Register<IScriptStringEncodingProvider, ScriptStringEncodingProvider>(ActivationScope.Unique);
+
         kernel.RegisterConfiguration<Level5Configuration>();
     }
 

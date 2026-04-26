@@ -13,6 +13,7 @@ internal class ScriptManagementConfigurationValidator : IScriptManagementConfigu
         ValidateFilePath(config);
         ValidatePointerLength(config);
         ValidateQueryType(config);
+        ValidateEncoding(config);
     }
 
     private void ValidateOperation(ScriptManagementConfiguration config)
@@ -55,5 +56,14 @@ internal class ScriptManagementConfigurationValidator : IScriptManagementConfigu
 
         if (config.QueryType != "xq32" && config.QueryType != "xseq" && config.QueryType != "xscr" && config.QueryType != "gss1" && config.QueryType != "gsd1" && config.QueryType != "gds")
             throw new InvalidOperationException($"The query type '{config.QueryType}' is not valid. Use -h to see a list of valid query types.");
+    }
+
+    private void ValidateEncoding(ScriptManagementConfiguration config)
+    {
+        if (string.IsNullOrWhiteSpace(config.Encoding))
+            throw new InvalidOperationException("No encoding was given. Specify an encoding by using the -e argument.");
+
+        if (config.Encoding != "sjis" && config.Encoding != "utf8")
+            throw new InvalidOperationException($"The encoding '{config.Encoding}' is not valid. Use -h to see a list of valid encodings.");
     }
 }

@@ -1,25 +1,25 @@
 ﻿using Komponent.IO;
-using Logic.Domain.Level5.Contract.Script.Xq32;
-using System.Text;
 using Kryptography.Checksum;
-using Logic.Domain.Level5.Contract.Enums.Compression;
-using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
+using Logic.Domain.Level5.Contract.Enums.Compression;
+using Logic.Domain.Level5.Contract.Script;
+using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
 internal class Xq32ScriptWriter : IXq32ScriptWriter
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     private readonly IXq32ScriptCompressor _compressor;
     private readonly Checksum<uint> _checksum;
+    private readonly IScriptStringEncodingProvider _encodingProvider;
 
-    public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IChecksumFactory checksumFactory)
+    public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
     {
         _compressor = compressor;
         _checksum = checksumFactory.CreateCrc32();
+        _encodingProvider = encodingProvider;
     }
 
     public void Write(ScriptFile script, Stream output, bool hasCompression)
@@ -303,7 +303,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         CacheStrings(value, stringWriter, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, SjisEncoding);
+        stringWriter.WriteString(value, _encodingProvider.GetEncoding());
 
         return nameOffset;
     }
@@ -413,7 +413,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         {
             writtenNames.TryAdd(value, nameOffset);
 
-            nameOffset += SjisEncoding.GetByteCount(value[..1]);
+            nameOffset += _encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

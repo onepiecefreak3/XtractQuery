@@ -3,6 +3,8 @@ using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using Logic.Business.Level5ScriptManagement.InternalContract.Decompression;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
+using Logic.Domain.Level5.Contract.Enums.Script;
+using Logic.Domain.Level5.Contract.Script;
 
 namespace Logic.Business.Level5ScriptManagement;
 
@@ -11,7 +13,8 @@ internal class ScriptManagementWorkflow(
     IScriptManagementConfigurationValidator configValidator,
     IExtractWorkflow extractWorkflow,
     ICreateWorkflow createWorkflow,
-    IDecompressWorkflow decompressWorkflow)
+    IDecompressWorkflow decompressWorkflow,
+    IScriptStringEncodingProvider encodingProvider)
     : IScriptManagementWorkflow
 {
     public int Execute()
@@ -26,6 +29,17 @@ internal class ScriptManagementWorkflow(
         {
             PrintHelp();
             return 0;
+        }
+
+        switch (config.Encoding)
+        {
+            case "sjis":
+                encodingProvider.SetEncoding(StringEncoding.Sjis);
+                break;
+
+            case "utf8":
+                encodingProvider.SetEncoding(StringEncoding.Utf8);
+                break;
         }
 
         switch (config.Operation)
@@ -75,15 +89,19 @@ internal class ScriptManagementWorkflow(
         Console.WriteLine("  -f, --file\t\tThe file to process");
         Console.WriteLine("  -nc, --no-compression\t[Optional] If the file should use a compression layer");
         Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e' and 'd'");
-        Console.WriteLine("  -l, --length\t\t[Optional]The pointer length given");
+        Console.WriteLine("  -l, --length\t\t[Optional] The pointer length given");
         Console.WriteLine("    Valid lengths are: int, long");
         Console.WriteLine("    Default value is 'int'");
         Console.WriteLine("    The length is automatically detected when extracting; This argument will not have any effect on operation 'e' and scripts of type 'gss1'");
+        Console.WriteLine("  -e, --encoding\t[Optional] The encoding to use for reading/writing string values");
+        Console.WriteLine("    Valid lengths are: sjis, utf8");
+        Console.WriteLine("    Default value is 'sjis'");
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine($"\tExtract any script to human readable text: {Environment.ProcessPath} -o e -f Path/To/File.xq");
         Console.WriteLine($"\tCreate a xq32 script from human readable text: {Environment.ProcessPath} -o c -t xq32 -f Path/To/File.txt");
         Console.WriteLine($"\tCreate a xq32 script with long pointers from human readable text: {Environment.ProcessPath} -o c -t xq32 -l long -f Path/To/File.txt");
-        Console.WriteLine($"\tCreate a xq32 script without a compression layer from human readable text: {Environment.ProcessPath} -o c -t xq32 -n -f Path/To/File.txt");
+        Console.WriteLine($"\tCreate a xq32 script with utf8 encoding from human readable text: {Environment.ProcessPath} -o c -t xq32 -e utf8 -f Path/To/File.txt");
+        Console.WriteLine($"\tCreate a xq32 script without a compression layer from human readable text: {Environment.ProcessPath} -o c -t xq32 -nc -f Path/To/File.txt");
     }
 }

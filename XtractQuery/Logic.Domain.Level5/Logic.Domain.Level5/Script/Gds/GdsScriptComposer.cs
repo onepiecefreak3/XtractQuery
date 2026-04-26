@@ -1,14 +1,12 @@
-﻿using System.Text;
-using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Gds;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gds;
 using Logic.Domain.Level5.DataClasses.Script.Gds;
 
 namespace Logic.Domain.Level5.Script.Gds;
 
-class GdsScriptComposer : IGdsScriptComposer
+class GdsScriptComposer(IScriptStringEncodingProvider encodingProvider) : IGdsScriptComposer
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public GdsArgument[] Compose(GdsScriptFile script)
     {
         GdsJumpTarget[] jumpTargets = CreateJumpTargets(script);
@@ -74,7 +72,7 @@ class GdsScriptComposer : IGdsScriptComposer
         return [.. result];
     }
 
-    private static GdsJumpTarget[] CreateJumpTargets(GdsScriptFile script)
+    private GdsJumpTarget[] CreateJumpTargets(GdsScriptFile script)
     {
         var result = new List<GdsJumpTarget>();
 
@@ -109,7 +107,7 @@ class GdsScriptComposer : IGdsScriptComposer
         };
     }
 
-    private static int CalculateInstructionSize(GdsScriptInstruction instruction)
+    private int CalculateInstructionSize(GdsScriptInstruction instruction)
     {
         switch (instruction.Type)
         {
@@ -131,12 +129,12 @@ class GdsScriptComposer : IGdsScriptComposer
         }
     }
 
-    private static int CalculateArgumentSize(GdsScriptArgument argument)
+    private int CalculateArgumentSize(GdsScriptArgument argument)
     {
         switch (argument.Type)
         {
             case GdsScriptArgumentType.String:
-                return SjisEncoding.GetByteCount((string)argument.Value!) + 5;
+                return encodingProvider.GetEncoding().GetByteCount((string)argument.Value!) + 5;
 
             case GdsScriptArgumentType.Int:
             case GdsScriptArgumentType.Float:

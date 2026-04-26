@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
@@ -8,15 +7,15 @@ namespace Logic.Domain.Level5.Script;
 
 internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, TArgument> : ICompressedScriptReader
 {
-    private readonly Encoding _sjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     private readonly IScriptDecompressor _decompressor;
     private readonly IScriptEntrySizeProvider _entrySizeProvider;
+    private readonly IScriptStringEncodingProvider _encodingProvider;
 
-    public CompressedScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider)
+    public CompressedScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider, IScriptStringEncodingProvider encodingProvider)
     {
         _decompressor = decompressor;
         _entrySizeProvider = entrySizeProvider;
+        _encodingProvider = encodingProvider;
     }
 
     public ScriptFile Read(Stream input)
@@ -88,7 +87,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
     {
         ClearFunctionCache();
 
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
 
         var result = new ScriptFunction[functions.Count];
 
@@ -103,7 +102,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
     {
         ClearJumpCache();
 
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
 
         var result = new ScriptJump[jumps.Count];
 
@@ -127,7 +126,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, IReadOnlyList<ScriptInstruction> instructions, CompressedScriptStringTable? stringTable = null)
     {
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _sjisEncoding, true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
 
         var result = new ScriptArgument[arguments.Count];
 

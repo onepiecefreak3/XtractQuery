@@ -1,15 +1,14 @@
 ﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gss1;
 using System.Text;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache functionCache) : IGss1ScriptParser
+internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache functionCache, IScriptStringEncodingProvider encodingProvider) : IGss1ScriptParser
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     private readonly Dictionary<ushort, HashSet<string>> _functionCache = [];
     private readonly Dictionary<ushort, HashSet<string>> _jumpCache = [];
 
@@ -36,7 +35,7 @@ internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache fun
     {
         _functionCache.Clear();
 
-        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, encodingProvider.GetEncoding(), true);
         return ParseFunctions(functions, stringReader, strings?.BaseOffset ?? 0);
     }
 
@@ -44,7 +43,7 @@ internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache fun
     {
         _jumpCache.Clear();
 
-        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, encodingProvider.GetEncoding(), true);
         return ParseJumps(jumps, stringReader, strings?.BaseOffset ?? 0);
     }
 
@@ -68,7 +67,7 @@ internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache fun
 
     public IList<ScriptArgument> ParseArguments(Gss1Argument[] arguments, IReadOnlyList<ScriptInstruction> instructions, ScriptStringTable? strings = null)
     {
-        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, SjisEncoding, true);
+        using BinaryReaderX? stringReader = strings is null ? null : new BinaryReaderX(strings.Stream, encodingProvider.GetEncoding(), true);
         return ParseArguments(arguments, instructions, stringReader, strings?.BaseOffset ?? 0);
     }
 

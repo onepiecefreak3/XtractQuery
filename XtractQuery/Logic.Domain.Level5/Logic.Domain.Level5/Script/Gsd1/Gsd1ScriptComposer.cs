@@ -1,15 +1,13 @@
 ﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gsd1;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gsd1;
-using System.Text;
 
 namespace Logic.Domain.Level5.Script.Gsd1;
 
-class Gsd1ScriptComposer : IGsd1ScriptComposer
+class Gsd1ScriptComposer(IScriptStringEncodingProvider encodingProvider) : IGsd1ScriptComposer
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public Gsd1ScriptContainer Compose(Gsd1ScriptFile script)
     {
         Stream stringStream = new MemoryStream();
@@ -126,7 +124,7 @@ class Gsd1ScriptComposer : IGsd1ScriptComposer
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, SjisEncoding);
+        stringWriter.WriteString(value, encodingProvider.GetEncoding());
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -140,7 +138,7 @@ class Gsd1ScriptComposer : IGsd1ScriptComposer
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += SjisEncoding.GetByteCount(value[..1]);
+            stringOffset += encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

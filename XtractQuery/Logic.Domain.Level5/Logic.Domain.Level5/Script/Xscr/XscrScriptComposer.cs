@@ -1,15 +1,13 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
+using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Xscr;
 
 namespace Logic.Domain.Level5.Script.Xscr;
 
-class XscrScriptComposer : IXscrScriptComposer
+class XscrScriptComposer(IScriptStringEncodingProvider encodingProvider) : IXscrScriptComposer
 {
-    private static readonly Encoding SjisEncoding = Encoding.GetEncoding("Shift-JIS");
-
     public XscrScriptContainer Compose(XscrScriptFile script)
     {
         Stream stringStream = new MemoryStream();
@@ -119,7 +117,7 @@ class XscrScriptComposer : IXscrScriptComposer
         CacheStrings(value, stringOffset, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, SjisEncoding);
+        stringWriter.WriteString(value, encodingProvider.GetEncoding());
 
         var nameLength = (int)(stringWriter.BaseStream.Position - nameOffset);
         stringOffset += nameLength;
@@ -133,7 +131,7 @@ class XscrScriptComposer : IXscrScriptComposer
         {
             writtenNames.TryAdd(value, stringOffset);
 
-            stringOffset += SjisEncoding.GetByteCount(value[..1]);
+            stringOffset += encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 
