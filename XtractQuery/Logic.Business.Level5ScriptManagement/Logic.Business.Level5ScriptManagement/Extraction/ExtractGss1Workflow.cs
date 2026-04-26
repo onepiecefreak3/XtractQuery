@@ -67,6 +67,7 @@ class ExtractGss1Workflow(
             string? relativeDir = Path.GetDirectoryName(relativePath);
             string relativeFileName = Path.GetFileNameWithoutExtension(scriptFile);
             string relativeName = string.IsNullOrEmpty(relativeDir) ? relativeFileName : Path.Combine(relativeDir, relativeFileName);
+            relativeName = relativeName.Replace('.', '_');
 
             using Stream scriptStream = File.OpenRead(scriptFile);
             ScriptType type = typeReader.Peek(scriptStream);
