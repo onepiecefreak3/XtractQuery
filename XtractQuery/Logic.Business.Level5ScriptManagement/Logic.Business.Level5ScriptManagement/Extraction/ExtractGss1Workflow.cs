@@ -6,10 +6,11 @@ using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gss1;
+using System.Text.RegularExpressions;
 
 namespace Logic.Business.Level5ScriptManagement.Extraction;
 
-class ExtractGss1Workflow(
+partial class ExtractGss1Workflow(
     ScriptManagementConfiguration config,
     IScriptTypeReader typeReader,
     IGss1FunctionCache functionCache,
@@ -67,7 +68,7 @@ class ExtractGss1Workflow(
             string? relativeDir = Path.GetDirectoryName(relativePath);
             string relativeFileName = Path.GetFileNameWithoutExtension(scriptFile);
             string relativeName = string.IsNullOrEmpty(relativeDir) ? relativeFileName : Path.Combine(relativeDir, relativeFileName);
-            relativeName = relativeName.Replace('.', '_');
+            relativeName = SanitizeNamespace(relativeName);
 
             using Stream scriptStream = File.OpenRead(scriptFile);
             ScriptType type = typeReader.Peek(scriptStream);
@@ -86,5 +87,18 @@ class ExtractGss1Workflow(
         }
 
         _isPopulated = true;
+    }
+
+    [GeneratedRegex(@"^\d+$", RegexOptions.Compiled)]
+    private static partial Regex IsNumber();
+
+    private static string SanitizeNamespace(string nameSpace)
+    {
+        nameSpace = nameSpace.Replace('.', '_');
+
+        string[] pathParts = nameSpace.Split(Path.DirectorySeparatorChar);
+        nameSpace = Path.Combine(pathParts.Select(p => IsNumber().IsMatch(p) ? $"_{p}" : p).ToArray());
+
+        return nameSpace;
     }
 }

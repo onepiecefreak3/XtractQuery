@@ -5,10 +5,11 @@ using Logic.Domain.CodeAnalysis.Contract.Level5;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Xq32;
+using System.Text.RegularExpressions;
 
 namespace Logic.Business.Level5ScriptManagement.Extraction;
 
-class ExtractXq32Workflow(
+partial class ExtractXq32Workflow(
     ScriptManagementConfiguration config,
     IScriptTypeReader typeReader,
     IXq32FunctionCache functionCache,
@@ -66,7 +67,7 @@ class ExtractXq32Workflow(
             string? relativeDir = Path.GetDirectoryName(relativePath);
             string relativeFileName = Path.GetFileNameWithoutExtension(scriptFile);
             string relativeName = string.IsNullOrEmpty(relativeDir) ? relativeFileName : Path.Combine(relativeDir, relativeFileName);
-            relativeName = relativeName.Replace('.', '_');
+            relativeName = SanitizeNamespace(relativeName);
 
             using Stream scriptStream = File.OpenRead(scriptFile);
             ScriptType type = typeReader.Peek(scriptStream);
@@ -87,5 +88,18 @@ class ExtractXq32Workflow(
         }
 
         _isPopulated = true;
+    }
+
+    [GeneratedRegex(@"^\d+$", RegexOptions.Compiled)]
+    private static partial Regex IsNumber();
+
+    private static string SanitizeNamespace(string nameSpace)
+    {
+        nameSpace = nameSpace.Replace('.', '_');
+
+        string[] pathParts = nameSpace.Split(Path.DirectorySeparatorChar);
+        nameSpace = Path.Combine(pathParts.Select(p => IsNumber().IsMatch(p) ? $"_{p}" : p).ToArray());
+
+        return nameSpace;
     }
 }
