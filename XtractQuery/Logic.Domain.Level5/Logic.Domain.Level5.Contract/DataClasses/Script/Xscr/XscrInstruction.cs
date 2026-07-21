@@ -4,6 +4,5 @@ public class XscrInstruction
 {
     public short instructionType;
     public short argCount;
-    public short argOffset;
-    public short zero;
+    public int argOffset;
 }

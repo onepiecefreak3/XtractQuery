@@ -82,7 +82,7 @@ internal class XscrCodeUnitConverter : IXscrCodeUnitConverter
         result.Instructions.Add(new XscrScriptInstruction
         {
             Type = (short)instructionType,
-            ArgumentIndex = (short)argumentIndex,
+            ArgumentIndex = argumentIndex,
             ArgumentCount = (short)argumentCount
         });
     }

@@ -45,8 +45,7 @@ class XscrScriptReader(IXscrScriptDecompressor decompressor) : IXscrScriptReader
         {
             instructionType = reader.ReadInt16(),
             argCount = reader.ReadInt16(),
-            argOffset = reader.ReadInt16(),
-            zero = reader.ReadInt16()
+            argOffset = reader.ReadInt32()
         };
     }
 

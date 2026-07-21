@@ -2,7 +2,7 @@
 
 public class XscrScriptInstruction
 {
-    public short ArgumentIndex { get; set; }
+    public int ArgumentIndex { get; set; }
     public short ArgumentCount { get; set; }
 
     public short Type { get; set; }

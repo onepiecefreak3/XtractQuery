@@ -856,7 +856,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
         identifierToken = identifierToken.WithLeadingTrivia(leadingTrivia);
 
-        name.SetIdentifier(identifierToken);
+        name.SetIdentifier(identifierToken, false);
     }
 
     private void NormalizeQualifiedName(QualifiedNameSyntax name, WhitespaceNormalizeContext ctx)

@@ -51,7 +51,6 @@ class XscrScriptWriter(IXscrScriptComposer composer, IXscrScriptCompressor compr
         writer.Write(instruction.instructionType);
         writer.Write(instruction.argCount);
         writer.Write(instruction.argOffset);
-        writer.Write(instruction.zero);
     }
 
     private Stream WriteArguments(XscrArgument[] arguments)
