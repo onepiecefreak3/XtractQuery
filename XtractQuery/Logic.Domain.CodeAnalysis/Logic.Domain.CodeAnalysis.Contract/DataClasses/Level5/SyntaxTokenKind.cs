@@ -42,6 +42,7 @@ public enum SyntaxTokenKind
     Greater,
     LeftShift,
     RightShift,
+    Infinite,
 
     ParenOpen,
     ParenClose,
@@ -75,6 +76,10 @@ public enum SyntaxTokenKind
     IntKeyword,
     BoolKeyword,
     FloatKeyword,
+    NanKeyword,
+    InfinityKeyword,
+    InfKeyword,
+    UndefinedKeyword,
 
     EndOfFile
 }

@@ -323,7 +323,10 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
                 break;
 
             default:
-                throw new InvalidOperationException($"Unknown argument type {argument.type}.");
+                type = ScriptArgumentType.Raw;
+                rawType = argument.type;
+                value = argument.value;
+                break;
         }
 
         return new ScriptArgument

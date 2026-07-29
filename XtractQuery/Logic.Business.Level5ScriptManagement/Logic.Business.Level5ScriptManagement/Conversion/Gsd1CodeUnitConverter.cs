@@ -91,6 +91,10 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
     {
         switch (parameter.Value)
         {
+            case UnaryExpressionSyntax unaryExpression:
+                AddArgument(result, unaryExpression, parameter.MetadataParameters);
+                break;
+
             case LiteralExpressionSyntax literalExpression:
                 AddArgument(result, literalExpression, parameter.MetadataParameters);
                 break;
@@ -100,14 +104,26 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
         }
     }
 
+    private void AddArgument(Gsd1ScriptFile result, UnaryExpressionSyntax unary, ValueMetadataParametersSyntax? metadata)
+    {
+        var type = ScriptArgumentType.Float;
+        float value = GetFloatingNumericLiteral(unary);
+
+        AddArgument(result, type, value, metadata);
+    }
+
     private void AddArgument(Gsd1ScriptFile result, LiteralExpressionSyntax literal, ValueMetadataParametersSyntax? metadata)
     {
-        int rawArgumentType = -1;
         ScriptArgumentType type;
         object value;
 
         switch (literal.Literal.RawKind)
         {
+            case (int)SyntaxTokenKind.UndefinedKeyword:
+                type = ScriptArgumentType.Raw;
+                value = 0;
+                break;
+
             case (int)SyntaxTokenKind.NumericLiteral:
                 type = ScriptArgumentType.Int;
                 value = GetNumericLiteral(literal);
@@ -124,14 +140,15 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
                 break;
 
             case (int)SyntaxTokenKind.FloatingNumericLiteral:
+            case (int)SyntaxTokenKind.Infinite:
+            case (int)SyntaxTokenKind.InfinityKeyword:
+            case (int)SyntaxTokenKind.InfKeyword:
+            case (int)SyntaxTokenKind.NanKeyword:
                 type = ScriptArgumentType.Float;
                 value = GetFloatingNumericLiteral(literal);
                 break;
 
             case (int)SyntaxTokenKind.StringLiteral:
-                if (metadata != null)
-                    rawArgumentType = GetNumericLiteral(metadata.Parameter);
-
                 type = ScriptArgumentType.String;
                 value = GetStringLiteral(literal);
                 break;
@@ -139,8 +156,18 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
             default:
                 throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", literal.Location,
                     SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral,
-                    SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.StringLiteral);
+                    SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword,
+                    SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword, SyntaxTokenKind.StringLiteral);
         }
+
+        AddArgument(result, type, value, metadata);
+    }
+
+    private void AddArgument(Gsd1ScriptFile result, ScriptArgumentType type, object value, ValueMetadataParametersSyntax? metadata)
+    {
+        var rawArgumentType = -1;
+        if (metadata != null)
+            rawArgumentType = GetNumericLiteral(metadata.Parameter);
 
         AddArgument(result, type, value, rawArgumentType);
     }
@@ -198,12 +225,34 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
         return literal.Literal.Text[1..^2];
     }
 
-    private float GetFloatingNumericLiteral(LiteralExpressionSyntax literal)
+    private float GetFloatingNumericLiteral(ExpressionSyntax expression)
     {
-        if (literal.Literal.RawKind != (int)SyntaxTokenKind.FloatingNumericLiteral)
-            throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", literal.Location, SyntaxTokenKind.FloatingNumericLiteral);
+        if (expression is LiteralExpressionSyntax literal)
+        {
+            if (literal.Literal.RawKind is (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword)
+                return float.PositiveInfinity;
 
-        return float.Parse(literal.Literal.Text[..^1], CultureInfo.GetCultureInfo("en-gb"));
+            if (literal.Literal.RawKind is (int)SyntaxTokenKind.NanKeyword)
+                return float.NaN;
+
+            if (literal.Literal.RawKind is (int)SyntaxTokenKind.FloatingNumericLiteral)
+                return float.Parse(literal.Literal.Text[..^1], CultureInfo.GetCultureInfo("en-gb"));
+
+            throw CreateException($"Invalid literal {(SyntaxTokenKind)literal.Literal.RawKind}.", expression.Location, SyntaxTokenKind.FloatingNumericLiteral,
+                SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword);
+        }
+
+        if (expression is UnaryExpressionSyntax unary)
+        {
+            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
+                return float.NegativeInfinity;
+
+            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
+                return float.NaN;
+        }
+
+        throw CreateException("Invalid floating literal.", expression.Location, SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword, SyntaxTokenKind.Minus);
     }
 
     private string GetStringLiteral(LiteralExpressionSyntax literal)

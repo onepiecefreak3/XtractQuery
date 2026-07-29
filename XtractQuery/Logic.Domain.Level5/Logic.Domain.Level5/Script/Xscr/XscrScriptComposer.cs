@@ -65,36 +65,41 @@ class XscrScriptComposer(IScriptStringEncodingProvider encodingProvider) : IXscr
 
     private XscrArgument CreateArgument(XscrScriptArgument argument, BinaryWriterX stringWriter, ref int stringOffset, IDictionary<string, long> writtenNames)
     {
-        byte type;
+        int type;
         uint value;
 
         switch (argument.Type)
         {
+            case ScriptArgumentType.Raw:
+                type = argument.RawArgumentType <= 0 ? 0 : argument.RawArgumentType;
+                value = unchecked((uint)(int)argument.Value);
+                break;
+
             case ScriptArgumentType.Int:
-                type = 1;
+                type = argument.RawArgumentType <= 0 ? 1 : argument.RawArgumentType;
                 value = unchecked((uint)(int)argument.Value);
                 break;
 
             case ScriptArgumentType.StringHash:
-                type = 2;
+                type = argument.RawArgumentType <= 0 ? 2 : argument.RawArgumentType;
                 value = (uint)argument.Value;
 
                 break;
 
             case ScriptArgumentType.Float:
-                type = 3;
+                type = argument.RawArgumentType <= 0 ? 3 : argument.RawArgumentType;
                 value = BitConverter.SingleToUInt32Bits((float)argument.Value);
                 break;
 
             case ScriptArgumentType.Variable:
-                type = 4;
+                type = argument.RawArgumentType <= 0 ? 4 : argument.RawArgumentType;
                 value = unchecked((uint)(int)argument.Value);
                 break;
 
             case ScriptArgumentType.String:
                 long nameOffset = WriteString((string)argument.Value, stringWriter, ref stringOffset, writtenNames);
 
-                type = (byte)(argument.RawArgumentType <= 0 ? 24 : argument.RawArgumentType);
+                type = argument.RawArgumentType <= 0 ? 24 : argument.RawArgumentType;
                 value = (uint)nameOffset;
                 break;
 

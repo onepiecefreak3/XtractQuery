@@ -6,5 +6,6 @@ public enum ScriptArgumentType
     StringHash,
     Float,
     Variable,
-    String
+    String,
+    Raw
 }

@@ -328,7 +328,10 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
                 break;
 
             default:
-                throw new InvalidOperationException($"Unknown argument type {argument.type}.");
+                type = ScriptArgumentType.Raw;
+                rawType = argument.type;
+                value = argument.value;
+                break;
         }
 
         return new ScriptArgument

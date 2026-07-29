@@ -55,6 +55,7 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
             case SyntaxTokenKind.Greater: return new(">", (int)kind);
             case SyntaxTokenKind.LeftShift: return new("<<", (int)kind);
             case SyntaxTokenKind.RightShift: return new(">>", (int)kind);
+            case SyntaxTokenKind.Infinite: return new("∞", (int)kind);
 
             case SyntaxTokenKind.ParenOpen: return new("(", (int)kind);
             case SyntaxTokenKind.ParenClose: return new(")", (int)kind);
@@ -76,6 +77,10 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
             case SyntaxTokenKind.IntKeyword: return new("int", (int)kind);
             case SyntaxTokenKind.BoolKeyword: return new("bool", (int)kind);
             case SyntaxTokenKind.FloatKeyword: return new("float", (int)kind);
+            case SyntaxTokenKind.NanKeyword: return new("NaN", (int)kind);
+            case SyntaxTokenKind.InfinityKeyword: return new("Infinity", (int)kind);
+            case SyntaxTokenKind.InfKeyword: return new("inf", (int)kind);
+            case SyntaxTokenKind.UndefinedKeyword: return new("undefined", (int)kind);
             default: throw new InvalidOperationException($"Cannot create simple token from kind {kind}. Use other methods instead.");
         }
     }

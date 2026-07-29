@@ -737,7 +737,7 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
             return null;
 
         SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
-        var value = CreateLiteralExpression(script.Arguments[instruction.ArgumentIndex].RawArgumentType, ScriptArgumentType.Int);
+        var value = CreateNumericLiteralExpression(script.Arguments[instruction.ArgumentIndex].RawArgumentType);
         SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
 
         return new MethodInvocationMetadataSyntax(relSmaller, value, relBigger);
@@ -791,7 +791,7 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         ExpressionSyntax parameter = CreateArgumentExpression(value, argumentType);
 
         ValueMetadataParametersSyntax? parameters = null;
-        if (rawArgumentType >= 0)
+        if (rawArgumentType >= 0 && parameter is not LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.UndefinedKeyword })
             parameters = CreateValueMetadataParameters(rawArgumentType);
 
         return new ValueExpressionSyntax(parameter, parameters);
@@ -818,10 +818,15 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         }
     }
 
-    private LiteralExpressionSyntax CreateLiteralExpression(object value, ScriptArgumentType argumentType)
+    private ExpressionSyntax CreateLiteralExpression(object value, ScriptArgumentType argumentType)
     {
         switch (argumentType)
         {
+            case ScriptArgumentType.Raw:
+                return value is 0u ?
+                    CreateUndefinedLiteralExpression() :
+                    CreateNumericLiteralExpression((uint)value);
+
             case ScriptArgumentType.Int:
                 return CreateNumericLiteralExpression((int)value);
 
@@ -851,7 +856,7 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         // Values 1000+ are function local values
         // 0000+ ?
 
-        if (variableSlot is >= 0 and <= 999)
+        if (variableSlot <= 999)
             return new VariableExpressionSyntax(_syntaxFactory.Variable("unk", variableSlot));
         if (variableSlot is >= 1000 and <= 1999)
             return new VariableExpressionSyntax(_syntaxFactory.Variable("local", variableSlot - 1000));
@@ -863,6 +868,16 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
             return new VariableExpressionSyntax(_syntaxFactory.Variable("global", variableSlot - 4000));
 
         throw new InvalidOperationException($"Unknown variable slot {variableSlot}.");
+    }
+
+    private LiteralExpressionSyntax CreateUndefinedLiteralExpression()
+    {
+        return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.UndefinedKeyword));
+    }
+
+    private LiteralExpressionSyntax CreateNumericLiteralExpression(uint value)
+    {
+        return new LiteralExpressionSyntax(_syntaxFactory.NumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateNumericLiteralExpression(int value)
@@ -880,8 +895,17 @@ internal class Gss1ScriptFileConverter : IGss1ScriptFileConverter
         return new LiteralExpressionSyntax(_syntaxFactory.HashNumericLiteral(value));
     }
 
-    private LiteralExpressionSyntax CreateFloatingNumericLiteralExpression(float value)
+    private ExpressionSyntax CreateFloatingNumericLiteralExpression(float value)
     {
+        if (value is float.PositiveInfinity)
+            return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.InfKeyword));
+
+        if (value is float.NegativeInfinity)
+            return new UnaryExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.Minus), CreateValueExpression(float.PositiveInfinity, ScriptArgumentType.Float));
+
+        if (value is float.NaN)
+            return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.NanKeyword));
+
         return new LiteralExpressionSyntax(_syntaxFactory.FloatingNumericLiteral(value));
     }
 

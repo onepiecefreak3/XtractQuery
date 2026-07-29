@@ -441,7 +441,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.NewKeyword))
             return ParseArrayInstantiationExpression(buffer);
 
-        if (IsUnaryExpression(buffer))
+        if (IsUnaryExpression(buffer) && !IsFloatingNumberLiteralExpression(buffer))
             return ParseUnaryExpression(buffer);
 
         if (HasTokenKind(buffer, SyntaxTokenKind.Identifier)
@@ -809,7 +809,21 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                HasTokenKind(buffer, SyntaxTokenKind.UnsignedNumericLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.HashStringLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.HashNumericLiteral) ||
-               HasTokenKind(buffer, SyntaxTokenKind.FloatingNumericLiteral);
+               HasTokenKind(buffer, SyntaxTokenKind.UndefinedKeyword) ||
+               IsFloatingNumberLiteralExpression(buffer);
+    }
+
+    private bool IsFloatingNumberLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return HasTokenKind(buffer, SyntaxTokenKind.FloatingNumericLiteral) ||
+               (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.InfinityKeyword)) ||
+               HasTokenKind(buffer, SyntaxTokenKind.InfinityKeyword) ||
+               (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.InfKeyword)) ||
+               HasTokenKind(buffer, SyntaxTokenKind.InfKeyword) ||
+               (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.Infinite)) ||
+               HasTokenKind(buffer, SyntaxTokenKind.Infinite) ||
+               (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.NanKeyword)) ||
+               HasTokenKind(buffer, SyntaxTokenKind.NanKeyword);
     }
 
     private ValueExpressionSyntax ParseValueExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -832,12 +846,16 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.HashStringLiteral))
             return new ValueExpressionSyntax(ParseHashStringLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
-        if (HasTokenKind(buffer, SyntaxTokenKind.FloatingNumericLiteral))
+        if (HasTokenKind(buffer, SyntaxTokenKind.UndefinedKeyword))
+            return new ValueExpressionSyntax(ParseUndefinedLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
+
+        if (IsFloatingNumberLiteralExpression(buffer))
             return new ValueExpressionSyntax(ParseFloatingNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
         throw CreateException(buffer, "Unknown value expression.", SyntaxTokenKind.Variable, SyntaxTokenKind.StringLiteral,
-            SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
-            SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral);
+            SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.HashNumericLiteral,
+            SyntaxTokenKind.HashStringLiteral, SyntaxTokenKind.UndefinedKeyword, SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.Infinite, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.NanKeyword);
     }
 
     private ValueMetadataParametersSyntax? ParseValueMetadataParameters(IBuffer<Level5SyntaxToken> buffer)
@@ -846,7 +864,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             return null;
 
         SyntaxToken relSmaller = ParseSmallerToken(buffer);
-        var parameter = ParseStringLiteralExpression(buffer);
+        var parameter = ParseNumericLiteralExpression(buffer);
         SyntaxToken relBigger = ParseGreaterToken(buffer);
 
         return new ValueMetadataParametersSyntax(relSmaller, parameter, relBigger);
@@ -880,6 +898,13 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return new LiteralExpressionSyntax(literal);
     }
 
+    private LiteralExpressionSyntax ParseUndefinedLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken literal = ParseUndefinedLiteralToken(buffer);
+
+        return new LiteralExpressionSyntax(literal);
+    }
+
     private LiteralExpressionSyntax ParseHashStringLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken literal = ParseHashStringLiteralToken(buffer);
@@ -887,11 +912,37 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return new LiteralExpressionSyntax(literal);
     }
 
-    private LiteralExpressionSyntax ParseFloatingNumericLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
+    private ExpressionSyntax ParseFloatingNumericLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
     {
-        SyntaxToken literal = ParseFloatingNumericLiteralToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.FloatingNumericLiteral))
+            return new LiteralExpressionSyntax(ParseFloatingNumericLiteralToken(buffer));
 
-        return new LiteralExpressionSyntax(literal);
+        if (HasTokenKind(buffer, SyntaxTokenKind.InfinityKeyword))
+            return new LiteralExpressionSyntax(ParseInfinityKeywordToken(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.InfinityKeyword))
+            return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseValueExpression(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.InfKeyword))
+            return new LiteralExpressionSyntax(ParseInfKeywordToken(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.InfKeyword))
+            return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseValueExpression(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Infinite))
+            return new LiteralExpressionSyntax(ParseInfiniteToken(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.Infinite))
+            return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseValueExpression(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.NanKeyword))
+            return new LiteralExpressionSyntax(ParseNanKeywordToken(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus) && HasTokenKind(buffer, 1, SyntaxTokenKind.NanKeyword))
+            return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseValueExpression(buffer));
+
+        throw CreateException(buffer, "Unknown floating point literal expression.", SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.Infinite, SyntaxTokenKind.NanKeyword);
     }
 
     private VariableExpressionSyntax ParseVariableExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -1228,6 +1279,31 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseFloatingNumericLiteralToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.FloatingNumericLiteral);
+    }
+
+    private SyntaxToken ParseInfiniteToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.Infinite);
+    }
+
+    private SyntaxToken ParseNanKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.NanKeyword);
+    }
+
+    private SyntaxToken ParseInfinityKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.InfinityKeyword);
+    }
+
+    private SyntaxToken ParseInfKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.InfKeyword);
+    }
+
+    private SyntaxToken ParseUndefinedLiteralToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.UndefinedKeyword);
     }
 
     private SyntaxToken ParseStringLiteralToken(IBuffer<Level5SyntaxToken> buffer)

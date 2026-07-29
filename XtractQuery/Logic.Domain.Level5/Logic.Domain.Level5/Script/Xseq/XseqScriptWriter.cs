@@ -254,13 +254,18 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
         switch (argument.Type)
         {
+            case ScriptArgumentType.Raw:
+                type = argument.RawArgumentType <= 0 ? 0 : argument.RawArgumentType;
+                value = unchecked((uint)(int)argument.Value);
+                break;
+
             case ScriptArgumentType.Int:
-                type = 1;
+                type = argument.RawArgumentType <= 0 ? 1 : argument.RawArgumentType;
                 value = unchecked((uint)(int)argument.Value);
                 break;
 
             case ScriptArgumentType.StringHash:
-                type = 2;
+                type = argument.RawArgumentType <= 0 ? 2 : argument.RawArgumentType;
                 if (argument.Value is string stringValue)
                     value = _checksum.ComputeValue(stringValue.Split('.')[^1]);
                 else
@@ -269,12 +274,12 @@ internal class XseqScriptWriter : IXseqScriptWriter
                 break;
 
             case ScriptArgumentType.Float:
-                type = 3;
+                type = argument.RawArgumentType <= 0 ? 3 : argument.RawArgumentType;
                 value = BitConverter.SingleToUInt32Bits((float)argument.Value);
                 break;
 
             case ScriptArgumentType.Variable:
-                type = 4;
+                type = argument.RawArgumentType <= 0 ? 4 : argument.RawArgumentType;
                 value = unchecked((uint)(int)argument.Value);
                 break;
 

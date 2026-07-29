@@ -3,7 +3,6 @@ using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.Contract.Script.Gss1;
-using System.Text;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
@@ -205,7 +204,10 @@ internal class Gss1ScriptParser(IGss1ScriptReader reader, IGss1FunctionCache fun
                 break;
 
             default:
-                throw new InvalidOperationException($"Unknown argument type {argument.type}.");
+                type = ScriptArgumentType.Raw;
+                rawType = argument.type;
+                value = argument.value;
+                break;
         }
 
         return new ScriptArgument

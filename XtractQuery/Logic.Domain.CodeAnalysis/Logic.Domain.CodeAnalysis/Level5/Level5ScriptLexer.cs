@@ -138,6 +138,9 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
 
                 return new Level5SyntaxToken(SyntaxTokenKind.Xor, Position, Line, Column, $"{ReadChar()}");
 
+            case '∞':
+                return new Level5SyntaxToken(SyntaxTokenKind.Infinite, Position, Line, Column, $"{ReadChar()}");
+
             case '-':
                 if (IsPeekedChar(1, '.') || (TryPeekChar(1, out character) && character is >= '0' and <= '9'))
                     goto case '.';
@@ -171,7 +174,7 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
             case '.':
                 if (TryPeekChar(1, out character) && character is >= '0' and <= '9')
                     goto case '0';
-                
+
                 return new Level5SyntaxToken(SyntaxTokenKind.Dot, Position, Line, Column, $"{ReadChar()}");
 
             case '0':
@@ -593,6 +596,18 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
 
             case "float":
                 return new Level5SyntaxToken(SyntaxTokenKind.FloatKeyword, position, line, column, finalValue);
+
+            case "undefined":
+                return new Level5SyntaxToken(SyntaxTokenKind.UndefinedKeyword, position, line, column, finalValue);
+
+            case "NaN":
+                return new Level5SyntaxToken(SyntaxTokenKind.NanKeyword, position, line, column, finalValue);
+
+            case "Infinity":
+                return new Level5SyntaxToken(SyntaxTokenKind.InfinityKeyword, position, line, column, finalValue);
+
+            case "inf":
+                return new Level5SyntaxToken(SyntaxTokenKind.InfKeyword, position, line, column, finalValue);
 
             default:
                 return new Level5SyntaxToken(SyntaxTokenKind.Identifier, position, line, column, finalValue);

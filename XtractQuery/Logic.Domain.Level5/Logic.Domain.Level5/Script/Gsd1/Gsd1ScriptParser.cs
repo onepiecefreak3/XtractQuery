@@ -97,7 +97,10 @@ internal class Gsd1ScriptParser(IGsd1ScriptReader reader, IScriptStringEncodingP
                 break;
 
             default:
-                throw new InvalidOperationException($"Unknown argument type {argument.type}.");
+                type = ScriptArgumentType.Raw;
+                rawType = argument.type;
+                value = argument.value;
+                break;
         }
 
         return new Gsd1ScriptArgument
