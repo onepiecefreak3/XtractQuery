@@ -145,7 +145,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | - | - |
 | 120 | Coerces a literal value or variable to boolean and negates it.<br>Decompilation prefers the operator `not`.<br>Compilation accepts operators `not` and `!`.<br>```$local1 = not $local2;``` |
 | 121 | Coerces two literal values or variables to boolean and runs a logical AND operation on them.<br>Decompilation prefers the operator `and`.<br>Compilation accepts operators `and` and `&&`.<br>```$local1 = 1 and 1;```<br>```$local1 = $local2 and 1;```<br>```$local1 = $local2 and $local3;``` |
-| 122 | Coerces two literal values or variables to boolean and runs a logical OR operation on them.<br>Decompilation prefers the operator `or`.<br>Compilation accepts operators `or` and `||`.<br>```$local1 = 1 or 1;```<br>```$local1 = $local2 or 1;```<br>```$local1 = $local2 or $local3;``` |
+| 122 | Coerces two literal values or variables to boolean and runs a logical OR operation on them.<br>Decompilation prefers the operator `or`.<br>Compilation accepts operators `or` and `\|\|`.<br>```$local1 = 1 or 1;```<br>```$local1 = $local2 or 1;```<br>```$local1 = $local2 or $local3;``` |
 
 #### Strings
 | Type | Description |
