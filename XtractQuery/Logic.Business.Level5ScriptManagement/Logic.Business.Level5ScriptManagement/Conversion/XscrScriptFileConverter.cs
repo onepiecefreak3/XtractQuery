@@ -209,11 +209,11 @@ internal class XscrScriptFileConverter : IXscrScriptFileConverter
         // 0000+ ?
 
         if (variableSlot <= 999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("unk", variableSlot));
+            return new VariableExpressionSyntax(_syntaxFactory.Variable("engine", variableSlot));
         if (variableSlot is >= 1000 and <= 1999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("local", variableSlot - 1000));
+            return new VariableExpressionSyntax(_syntaxFactory.Variable("temp", variableSlot - 1000));
         if (variableSlot is >= 2000 and <= 2999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("object", variableSlot - 2000));
+            return new VariableExpressionSyntax(_syntaxFactory.Variable("local", variableSlot - 2000));
         if (variableSlot is >= 3000 and <= 3999)
             return new VariableExpressionSyntax(_syntaxFactory.Variable("param", variableSlot - 3000));
         if (variableSlot is >= 4000 and <= 4999)
