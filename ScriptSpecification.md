@@ -64,11 +64,11 @@ Everything after the number will be ignored for compilation and follows no speci
 
 | Notation | Description |
 | - | - |
-| ```$unk0``` | A value, that persists through multiple scripts. |
-| ```$local0``` | A value, that persists only in the function it was set in. |
-| ```$object0``` | A value, that persists only in the function it was set in. Frequently used for UI objects in some games. |
-| ```$param0``` | A value, that exclusively holds input parameters to the function. |
-| ```$global0``` | A value, that persists through multiple functions only in the script it was set in. |
+| ```$engine0``` | Holds values important to engine operations across scripts. |
+| ```$temp0``` | Holds temporary or intermediate values used in complex expressions and conditions. |
+| ```$local0``` | Holds values only in the function it was set in.<br>Equivalent to a common variable in other programming languages. |
+| ```$param0``` | Holds input parameters into the function. |
+| ```$global0``` | Holds values through multiple functions only in the script it was set in. |
 
 ## Instructions
 
