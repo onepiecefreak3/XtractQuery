@@ -15,7 +15,7 @@ public interface ILevel5ScriptComposer
     string ComposeGotoLabelStatement(GotoLabelStatementSyntax gotoLabelStatement);
     string ComposeMethodInvocationExpression(MethodInvocationExpressionSyntax invocation);
     string ComposeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters);
-    string ComposeValueList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList);
+    string ComposeCreateMethodInvocationParameterList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList);
     string ComposeValue(ValueExpressionSyntax valueExpression);
     string ComposeValueMetadataParameters(ValueMetadataParametersSyntax valueMetadataParameters);
 }

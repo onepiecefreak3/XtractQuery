@@ -560,7 +560,12 @@ internal class XseqCodeUnitConverter : IXseqCodeUnitConverter
 
                 if (methodInvocation.Parameters.ParameterList != null)
                     foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)
-                        AddArgument(result, parameter);
+                    {
+                        if (parameter is not ValueExpressionSyntax valueParameter)
+                            throw CreateException($"Invalid expression {parameter.GetType().Name} for method invocation parameter.", parameter.Location);
+
+                        AddArgument(result, valueParameter);
+                    }
                 break;
 
             default:

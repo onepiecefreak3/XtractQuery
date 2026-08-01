@@ -102,11 +102,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return ParseMethodInvocationParameters(buffer);
     }
 
-    public CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(string text)
+    public CommaSeparatedSyntaxList<ExpressionSyntax>? ParseMethodInvocationParameterList(string text)
     {
         IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
 
-        return ParseValueList(buffer);
+        return ParseMethodInvocationParameterList(buffer);
     }
 
     public ValueExpressionSyntax ParseValueExpression(string text)
@@ -331,12 +331,39 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private GotoStatementSyntax ParseGotoStatement(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken gotoToken = ParseGotoKeywordToken(buffer);
-        var value = ParseValueList(buffer);
-        if (value is null)
+        var labelList = ParseGotoLabelList(buffer);
+        if (labelList is null)
             throw CreateException(buffer, "Could not parse goto statement");
         SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
-        return new GotoStatementSyntax(gotoToken, value, semicolon);
+        return new GotoStatementSyntax(gotoToken, labelList, semicolon);
+    }
+
+    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseGotoLabelList(IBuffer<Level5SyntaxToken> buffer)
+    {
+        if (!IsValueExpression(buffer))
+            return null;
+
+        var result = new List<ValueExpressionSyntax>();
+
+        ValueExpressionSyntax parameter = ParseValueExpression(buffer);
+        result.Add(parameter);
+
+        while (HasTokenKind(buffer, SyntaxTokenKind.Comma))
+        {
+            SkipTokenKind(buffer, SyntaxTokenKind.Comma);
+
+            if (!IsValueExpression(buffer))
+                throw CreateException(buffer, "Invalid end of parameter list.", SyntaxTokenKind.Variable,
+                    SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral,
+                    SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral,
+                    SyntaxTokenKind.FloatingNumericLiteral);
+
+            parameter = ParseValueExpression(buffer);
+            result.Add(parameter);
+        }
+
+        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
     }
 
     private YieldStatementSyntax ParseYieldStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -763,20 +790,20 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private MethodInvocationParametersSyntax ParseMethodInvocationParameters(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken parenOpen = ParseParenOpenToken(buffer);
-        var parameters = ParseValueList(buffer);
+        var parameters = ParseMethodInvocationParameterList(buffer);
         SyntaxToken parenClose = ParseParenCloseToken(buffer);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameters, parenClose);
     }
 
-    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(IBuffer<Level5SyntaxToken> buffer)
+    private CommaSeparatedSyntaxList<ExpressionSyntax>? ParseMethodInvocationParameterList(IBuffer<Level5SyntaxToken> buffer)
     {
         if (!IsValueExpression(buffer))
             return null;
 
-        var result = new List<ValueExpressionSyntax>();
+        var result = new List<ExpressionSyntax>();
 
-        ValueExpressionSyntax parameter = ParseValueExpression(buffer);
+        ExpressionSyntax parameter = ParseValueExpression(buffer);
         result.Add(parameter);
 
         while (HasTokenKind(buffer, SyntaxTokenKind.Comma))
@@ -793,7 +820,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             result.Add(parameter);
         }
 
-        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
+        return new CommaSeparatedSyntaxList<ExpressionSyntax>(result);
     }
 
     private bool IsValueExpression(IBuffer<Level5SyntaxToken> buffer)

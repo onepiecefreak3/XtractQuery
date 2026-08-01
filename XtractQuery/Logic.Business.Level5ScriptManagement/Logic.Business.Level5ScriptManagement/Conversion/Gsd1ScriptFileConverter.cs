@@ -109,13 +109,13 @@ internal class Gsd1ScriptFileConverter : IGsd1ScriptFileConverter
     private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(Gsd1ScriptInstruction instruction, Gsd1ScriptFile script)
     {
         SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
-        var parameterList = CreateValueList(instruction, script);
+        var parameterList = CreateMethodInvocationParameterList(instruction, script);
         SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
 
-    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateValueList(Gsd1ScriptInstruction instruction, Gsd1ScriptFile script)
+    private CommaSeparatedSyntaxList<ExpressionSyntax>? CreateMethodInvocationParameterList(Gsd1ScriptInstruction instruction, Gsd1ScriptFile script)
     {
         int argumentCount = instruction.ArgumentCount;
         int argumentIndex = instruction.ArgumentIndex;
@@ -126,11 +126,11 @@ internal class Gsd1ScriptFileConverter : IGsd1ScriptFileConverter
         if (script.Arguments.Count < argumentIndex + argumentCount)
             throw new InvalidOperationException($"Can't fetch all arguments ({script.Arguments.Count} >= {argumentIndex + argumentCount})");
 
-        var result = new List<ValueExpressionSyntax>();
+        var result = new List<ExpressionSyntax>();
         for (int i = argumentIndex; i < argumentIndex + argumentCount; i++)
             result.Add(CreateValueExpression(script.Arguments[i]));
 
-        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
+        return new CommaSeparatedSyntaxList<ExpressionSyntax>(result);
     }
 
     private ValueExpressionSyntax CreateValueExpression(Gsd1ScriptArgument argument)

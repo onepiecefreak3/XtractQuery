@@ -757,7 +757,19 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         invocationParameters.SetParenOpen(parenOpen, false);
         invocationParameters.SetParenClose(parenClose, false);
 
-        NormalizeValueExpressions(invocationParameters.ParameterList, ctx);
+        NormalizeExpressions(invocationParameters.ParameterList, ctx);
+    }
+
+    private void NormalizeExpressions(CommaSeparatedSyntaxList<ExpressionSyntax>? valueList, WhitespaceNormalizeContext ctx)
+    {
+        if (valueList == null)
+            return;
+
+        foreach (ExpressionSyntax value in valueList.Elements)
+        {
+            ctx.IsFirstElement = valueList.Elements[0] == value;
+            NormalizeExpression(value, ctx);
+        }
     }
 
     private void NormalizeValueExpressions(CommaSeparatedSyntaxList<ValueExpressionSyntax>? valueList, WhitespaceNormalizeContext ctx)

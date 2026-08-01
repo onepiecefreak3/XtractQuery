@@ -57,8 +57,13 @@ internal class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
         int argumentIndex = result.Arguments.Count;
 
         if (methodInvocation.Parameters.ParameterList != null)
-            foreach (ValueExpressionSyntax parameter in methodInvocation.Parameters.ParameterList.Elements)
-                AddArgument(result, parameter);
+            foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)
+            {
+                if (parameter is not ValueExpressionSyntax valueParameter)
+                    throw CreateException($"Invalid expression {parameter.GetType().Name} for method invocation parameter.", parameter.Location);
+
+                AddArgument(result, valueParameter);
+            }
 
         int argumentCount = result.Arguments.Count - argumentIndex;
         AddInstruction(result, instructionType, argumentIndex, argumentCount);

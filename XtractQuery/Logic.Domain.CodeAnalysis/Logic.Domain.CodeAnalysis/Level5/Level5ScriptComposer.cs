@@ -115,7 +115,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         return sb.ToString();
     }
 
-    public string ComposeValueList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList)
+    public string ComposeCreateMethodInvocationParameterList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList)
     {
         var sb = new StringBuilder();
 
@@ -508,8 +508,22 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters, StringBuilder sb)
     {
         ComposeSyntaxToken(invocationParameters.ParenOpen, sb);
-        ComposeValueExpressions(invocationParameters.ParameterList, sb);
+        ComposeExpressions(invocationParameters.ParameterList, sb);
         ComposeSyntaxToken(invocationParameters.ParenClose, sb);
+    }
+
+    private void ComposeExpressions(CommaSeparatedSyntaxList<ExpressionSyntax>? valueList, StringBuilder sb)
+    {
+        if (valueList == null || valueList.Elements.Count <= 0)
+            return;
+
+        for (var i = 0; i < valueList.Elements.Count - 1; i++)
+        {
+            ComposeExpression(valueList.Elements[i], sb);
+            ComposeSyntaxToken(_syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
+        }
+
+        ComposeExpression(valueList.Elements[^1], sb);
     }
 
     private void ComposeValueExpressions(CommaSeparatedSyntaxList<ValueExpressionSyntax>? valueList, StringBuilder sb)
