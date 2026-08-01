@@ -3,14 +3,14 @@
 public class IfGotoStatementSyntax : StatementSyntax
 {
     public SyntaxToken If { get; private set; }
-    public ValueExpressionSyntax Value { get; private set; }
+    public ExpressionSyntax Value { get; private set; }
     public GotoExpressionSyntax Goto { get; private set; }
     public SyntaxToken Semicolon { get; private set; }
 
     public override SyntaxLocation Location => If.FullLocation;
     public override SyntaxSpan Span => new(If.FullSpan.Position, Goto.Span.EndPosition);
 
-    public IfGotoStatementSyntax(SyntaxToken ifToken, ValueExpressionSyntax value, GotoExpressionSyntax gotoStatement, SyntaxToken semicolon)
+    public IfGotoStatementSyntax(SyntaxToken ifToken, ExpressionSyntax value, GotoExpressionSyntax gotoStatement, SyntaxToken semicolon)
     {
         ifToken.Parent = this;
         value.Parent = this;
@@ -30,6 +30,16 @@ public class IfGotoStatementSyntax : StatementSyntax
         ifToken.Parent = this;
 
         If = ifToken;
+
+        if (updatePositions)
+            Root.Update();
+    }
+
+    public void SetValue(ExpressionSyntax value, bool updatePositions = true)
+    {
+        value.Parent = this;
+
+        Value = value;
 
         if (updatePositions)
             Root.Update();

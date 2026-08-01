@@ -262,7 +262,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeIfGotoStatement(IfGotoStatementSyntax ifGotoStatement, StringBuilder sb)
     {
         ComposeSyntaxToken(ifGotoStatement.If, sb);
-        ComposeValueExpression(ifGotoStatement.Value, sb);
+        ComposeExpression(ifGotoStatement.Value, sb);
         ComposeGotoExpression(ifGotoStatement.Goto, sb);
         ComposeSyntaxToken(ifGotoStatement.Semicolon, sb);
     }
@@ -338,6 +338,10 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeTypeCastValueExpression(typeCastValueExpression, sb);
                 break;
 
+            case ParenthesizedExpressionSyntax parenthesizedExpression:
+                ComposeParenthesizedExpression(parenthesizedExpression, sb);
+                break;
+
             case PostfixUnaryExpressionSyntax postfixUnaryExpression:
                 ComposePostfixUnaryExpression(postfixUnaryExpression, sb);
                 break;
@@ -388,6 +392,13 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     {
         ComposeTypeCastExpression(typeCastValueExpression.TypeCast, sb);
         ComposeValueExpression(typeCastValueExpression.Value, sb);
+    }
+
+    private void ComposeParenthesizedExpression(ParenthesizedExpressionSyntax parenthesizedExpression, StringBuilder sb)
+    {
+        ComposeSyntaxToken(parenthesizedExpression.ParenOpen, sb);
+        ComposeExpression(parenthesizedExpression.Expression, sb);
+        ComposeSyntaxToken(parenthesizedExpression.ParenClose, sb);
     }
 
     private void ComposeTypeCastExpression(TypeCastExpressionSyntax typeCastExpression, StringBuilder sb)
@@ -456,7 +467,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeUnaryExpression(UnaryExpressionSyntax unaryExpression, StringBuilder sb)
     {
         ComposeSyntaxToken(unaryExpression.Operation, sb);
-        ComposeValueExpression(unaryExpression.Value, sb);
+        ComposeExpression(unaryExpression.Value, sb);
     }
 
     private void ComposeBinaryExpression(BinaryExpressionSyntax binaryExpression, StringBuilder sb)

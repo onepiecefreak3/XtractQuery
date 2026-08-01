@@ -10,6 +10,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateXq32Workflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
+    IXq32LowLevelCodeUnitConverter lowLevelConverter,
     IXq32CodeUnitConverter treeConverter,
     IXq32ScriptWriter scriptWriter)
     : ICreateXq32Workflow
@@ -23,6 +24,7 @@ class CreateXq32Workflow(
 
         // Convert to script data
         CodeUnitSyntax codeUnit = scriptParser.ParseCodeUnit(readableScript);
+        codeUnit = lowLevelConverter.Convert(codeUnit);
 
         ScriptFile script = treeConverter.CreateScriptFile(codeUnit);
         script.Length = DeterminePointerLength(config.Length);

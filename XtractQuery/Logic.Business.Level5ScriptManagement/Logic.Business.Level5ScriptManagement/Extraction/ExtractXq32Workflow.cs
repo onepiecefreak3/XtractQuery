@@ -16,6 +16,7 @@ partial class ExtractXq32Workflow(
     IXq32ScriptDecompressor scriptDecompressor,
     IXq32ScriptReader scriptReader,
     IXq32ScriptFileConverter scriptConverter,
+    IXq32HighLevelCodeUnitConverter highLevelConverter,
     ILevel5ScriptWhitespaceNormalizer whiteSpaceNormalizer,
     ILevel5ScriptComposer scriptComposer)
     : IExtractXq32Workflow
@@ -34,6 +35,7 @@ partial class ExtractXq32Workflow(
 
         // Convert to readable script
         CodeUnitSyntax codeUnit = scriptConverter.CreateCodeUnit(script);
+        codeUnit = highLevelConverter.Convert(codeUnit);
         whiteSpaceNormalizer.NormalizeCodeUnit(codeUnit);
 
         string readableScript = scriptComposer.ComposeCodeUnit(codeUnit);

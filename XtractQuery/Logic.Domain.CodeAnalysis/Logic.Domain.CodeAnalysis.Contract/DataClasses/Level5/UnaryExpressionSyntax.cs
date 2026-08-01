@@ -3,12 +3,12 @@
 public class UnaryExpressionSyntax : ExpressionSyntax
 {
     public SyntaxToken Operation { get; private set; }
-    public ValueExpressionSyntax Value { get; private set; }
+    public ExpressionSyntax Value { get; private set; }
 
     public override SyntaxLocation Location => Operation.FullLocation;
     public override SyntaxSpan Span => new(Operation.FullSpan.Position, Value.Span.EndPosition);
 
-    public UnaryExpressionSyntax(SyntaxToken operation, ValueExpressionSyntax value)
+    public UnaryExpressionSyntax(SyntaxToken operation, ExpressionSyntax value)
     {
         operation.Parent = this;
         value.Parent = this;
@@ -29,7 +29,7 @@ public class UnaryExpressionSyntax : ExpressionSyntax
             Root.Update();
     }
 
-    public void SetValue(ValueExpressionSyntax value, bool updatePositions = true)
+    public void SetValue(ExpressionSyntax value, bool updatePositions = true)
     {
         value.Parent = this;
 

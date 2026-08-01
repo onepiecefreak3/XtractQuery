@@ -602,6 +602,19 @@ internal class XseqCodeUnitConverter : IXseqCodeUnitConverter
         });
     }
 
+    private void AddArgument(ScriptFile result, ExpressionSyntax parameter)
+    {
+        switch (parameter)
+        {
+            case ValueExpressionSyntax value:
+                AddArgument(result, value);
+                break;
+
+            default:
+                throw CreateException($"Invalid argument expression {parameter.GetType().Name}.", parameter.Location);
+        }
+    }
+
     private void AddArgument(ScriptFile result, ValueExpressionSyntax parameter)
     {
         switch (parameter.Value)
@@ -803,12 +816,12 @@ internal class XseqCodeUnitConverter : IXseqCodeUnitConverter
                 SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword);
         }
 
-        if (expression is UnaryExpressionSyntax unary)
+        if (expression is UnaryExpressionSyntax { Value: ValueExpressionSyntax value })
         {
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
                 return float.NegativeInfinity;
 
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
                 return float.NaN;
         }
 

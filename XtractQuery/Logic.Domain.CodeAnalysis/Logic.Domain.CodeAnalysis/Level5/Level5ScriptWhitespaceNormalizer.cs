@@ -173,6 +173,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         ctx.ShouldLineBreak = false;
         NormalizeLiteralExpression(methodDeclarationMetadataParameterList.Parameter1, ctx);
         methodDeclarationMetadataParameterList.SetComma(newComma, false);
+        ctx.IsFirstElement = false;
         NormalizeLiteralExpression(methodDeclarationMetadataParameterList.Parameter2, ctx);
     }
 
@@ -300,7 +301,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         ctx.ShouldIndent = false;
         ctx.ShouldLineBreak = false;
         ctx.IsFirstElement = true;
-        NormalizeValueExpression(ifGotoStatement.Value, ctx);
+        NormalizeExpression(ifGotoStatement.Value, ctx);
         NormalizeGotoExpression(ifGotoStatement.Goto, ctx);
 
         ifGotoStatement.SetIf(newIf, false);
@@ -478,6 +479,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
                 NormalizeTypeCastValueExpression(typeCastValueExpression, ctx);
                 break;
 
+            case ParenthesizedExpressionSyntax parenthesizedExpression:
+                NormalizeParenthesizedExpression(parenthesizedExpression, ctx);
+                break;
+
             case PostfixUnaryExpressionSyntax postfixUnaryExpression:
                 NormalizePostfixUnaryExpression(postfixUnaryExpression, ctx);
                 break;
@@ -487,27 +492,22 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
                 break;
 
             case LogicalExpressionSyntax logicalExpression:
-                ctx.IsFirstElement = true;
                 NormalizeLogicalExpression(logicalExpression, ctx);
                 break;
 
             case UnaryExpressionSyntax rightUnaryExpression:
-                ctx.IsFirstElement = true;
                 NormalizeUnaryExpression(rightUnaryExpression, ctx);
                 break;
 
             case BinaryExpressionSyntax rightBinaryExpression:
-                ctx.IsFirstElement = true;
                 NormalizeBinaryExpression(rightBinaryExpression, ctx);
                 break;
 
             case ArrayInstantiationExpressionSyntax rightArrayInstantiation:
-                ctx.IsFirstElement = true;
                 NormalizeArrayInstantiationExpression(rightArrayInstantiation, ctx);
                 break;
 
             case ArrayIndexExpressionSyntax rightArrayIndex:
-                ctx.IsFirstElement = true;
                 NormalizeArrayIndexExpression(rightArrayIndex, ctx);
                 break;
 
@@ -540,6 +540,24 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         ctx.ShouldIndent = false;
         ctx.ShouldLineBreak = false;
         NormalizeValueExpression(typeCastValueExpression.Value, ctx);
+    }
+
+    private void NormalizeParenthesizedExpression(ParenthesizedExpressionSyntax parenthesizedExpression, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken parenOpen = parenthesizedExpression.ParenOpen.WithNoTrivia();
+        SyntaxToken parenClose = parenthesizedExpression.ParenClose.WithNoTrivia();
+
+        // List args: `foo(a, (b + c))`. Unary `not(...)` keeps IsFirstElement true after the operator.
+        if (!ctx.IsFirstElement)
+            parenOpen = parenOpen.WithLeadingTrivia(" ");
+
+        ctx.IsFirstElement = true;
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        NormalizeExpression(parenthesizedExpression.Expression, ctx);
+
+        parenthesizedExpression.SetParenOpen(parenOpen, false);
+        parenthesizedExpression.SetParenClose(parenClose, false);
     }
 
     private void NormalizeTypeCastExpression(TypeCastExpressionSyntax typeCasExpression, WhitespaceNormalizeContext ctx)
@@ -650,14 +668,23 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
     {
         SyntaxToken operation = unaryExpression.Operation.WithNoTrivia();
 
-        ctx.IsFirstElement = operation.RawKind != (int)SyntaxTokenKind.NotKeyword;
-        NormalizeValueExpression(unaryExpression.Value, ctx);
+        // Preserve list-separator spacing on the operator (`foo(a, not b)`).
+        if (!ctx.IsFirstElement)
+            operation = operation.WithLeadingTrivia(" ");
+
+        // Always separate the `not` keyword from its operand (`not $x`, `not sub()`, `not (...)`).
+        if (operation.RawKind == (int)SyntaxTokenKind.NotKeyword)
+            operation = operation.WithTrailingTrivia(" ");
+
+        ctx.IsFirstElement = true;
+        NormalizeExpression(unaryExpression.Value, ctx);
 
         unaryExpression.SetOperation(operation, false);
     }
 
     private void NormalizeLogicalExpression(LogicalExpressionSyntax logicalExpression, WhitespaceNormalizeContext ctx)
     {
+        // Keep IsFirstElement for the left operand so comma-separated args get a leading space.
         NormalizeExpression(logicalExpression.Left, ctx);
 
         SyntaxToken operation = logicalExpression.Operation.WithLeadingTrivia(" ").WithTrailingTrivia(" ");
@@ -670,10 +697,12 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
     private void NormalizeBinaryExpression(BinaryExpressionSyntax binaryExpression, WhitespaceNormalizeContext ctx)
     {
+        // Keep IsFirstElement for the left operand so comma-separated args get a leading space.
         NormalizeExpression(binaryExpression.Left, ctx);
 
         SyntaxToken operation = binaryExpression.Operation.WithLeadingTrivia(" ").WithTrailingTrivia(" ");
 
+        ctx.IsFirstElement = true;
         NormalizeExpression(binaryExpression.Right, ctx);
 
         binaryExpression.SetOperation(operation, false);
@@ -683,7 +712,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         WhitespaceNormalizeContext ctx)
     {
         SyntaxToken newToken = arrayInstantiation.New.WithNoTrivia();
+        if (!ctx.IsFirstElement)
+            newToken = newToken.WithLeadingTrivia(" ");
 
+        ctx.IsFirstElement = true;
         foreach (var index in arrayInstantiation.Indexer)
             NormalizeArrayIndexExpression(index, ctx);
 
@@ -726,6 +758,8 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         if (ctx.ShouldLineBreak)
             newSemicolon = newSemicolon.WithTrailingTrivia("\r\n");
 
+        // Statement start is separated by indent, not by IsFirstElement list spacing.
+        ctx.IsFirstElement = true;
         NormalizeName(invocation.Name, ctx);
 
         invocation.SetSemicolon(newSemicolon, false);
@@ -745,7 +779,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         SyntaxToken newRelBigger = metadata.RelBigger.WithNoTrivia();
 
         metadata.SetRelSmaller(newRelSmaller, false);
+
+        ctx.IsFirstElement = true;
         NormalizeLiteralExpression(metadata.Parameter, ctx);
+
         metadata.SetRelBigger(newRelBigger, false);
     }
 
@@ -865,6 +902,8 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         string? leadingTrivia = null;
         if (ctx is { ShouldIndent: true, Indent: > 0 })
             leadingTrivia = new string('\t', ctx.Indent);
+        if (!ctx.IsFirstElement)
+            leadingTrivia += " ";
 
         identifierToken = identifierToken.WithLeadingTrivia(leadingTrivia);
 
