@@ -310,10 +310,54 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     {
         SyntaxToken ifToken = ParseIfKeywordToken(buffer);
 
+        ExpressionSyntax condition;
         if (HasTokenKind(buffer, SyntaxTokenKind.NotKeyword) || HasTokenKind(buffer, SyntaxTokenKind.Not))
-            return new IfNotGotoStatementSyntax(ifToken, ParseUnaryExpression(buffer), ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+            condition = ParseUnaryExpression(buffer);
+        else
+            condition = ParseExpression(buffer);
 
-        return new IfGotoStatementSyntax(ifToken, ParseExpression(buffer), ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.GotoKeyword))
+        {
+            if (condition is UnaryExpressionSyntax unary &&
+                unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
+                return new IfNotGotoStatementSyntax(ifToken, unary, ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+
+            return new IfGotoStatementSyntax(ifToken, condition, ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+        }
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.CurlyOpen))
+        {
+            BlockSyntax body = ParseBlock(buffer);
+            ElseClauseSyntax? elseClause = null;
+            if (HasTokenKind(buffer, SyntaxTokenKind.ElseKeyword))
+                elseClause = ParseElseClause(buffer);
+
+            return new IfStatementSyntax(ifToken, condition, body, elseClause);
+        }
+
+        throw CreateException(buffer, "Invalid if statement.", SyntaxTokenKind.GotoKeyword, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private ElseClauseSyntax ParseElseClause(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken elseKeyword = ParseElseKeywordToken(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.IfKeyword))
+            return new ElseClauseSyntax(elseKeyword, ParseIfStatement(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.CurlyOpen))
+            return new ElseClauseSyntax(elseKeyword, ParseBlock(buffer));
+
+        throw CreateException(buffer, "Invalid else clause.", SyntaxTokenKind.IfKeyword, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private BlockSyntax ParseBlock(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken curlyOpen = ParseCurlyOpenToken(buffer);
+        IReadOnlyList<StatementSyntax> statements = ParseStatements(buffer);
+        SyntaxToken curlyClose = ParseCurlyCloseToken(buffer);
+
+        return new BlockSyntax(curlyOpen, statements, curlyClose);
     }
 
     private GotoExpressionSyntax ParseGotoExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -1263,6 +1307,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseIfKeywordToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.IfKeyword);
+    }
+
+    private SyntaxToken ParseElseKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.ElseKeyword);
     }
 
     private SyntaxToken ParseIntKeywordToken(IBuffer<Level5SyntaxToken> buffer)

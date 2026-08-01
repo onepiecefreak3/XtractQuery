@@ -73,6 +73,7 @@ public enum SyntaxTokenKind
     SwitchKeyword,
     GotoKeyword,
     IfKeyword,
+    ElseKeyword,
     IntKeyword,
     BoolKeyword,
     FloatKeyword,

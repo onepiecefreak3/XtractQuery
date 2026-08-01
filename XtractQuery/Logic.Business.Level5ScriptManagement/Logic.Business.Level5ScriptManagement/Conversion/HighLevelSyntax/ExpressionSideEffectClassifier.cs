@@ -31,6 +31,16 @@ internal static class ExpressionSideEffectClassifier
                     return false;
                 return gotoStatement.Targets.Elements.Any(IsEffectful);
 
+            case IfStatementSyntax ifStatement:
+                if (IsEffectful(ifStatement.Condition))
+                    return true;
+                if (ifStatement.Body.Statements.Any(IsEffectful))
+                    return true;
+                return ifStatement.Else != null && IsEffectful(ifStatement.Else.Statement);
+
+            case BlockSyntax block:
+                return block.Statements.Any(IsEffectful);
+
             default:
                 return false;
         }

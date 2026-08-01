@@ -74,6 +74,7 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
             case SyntaxTokenKind.SwitchKeyword: return new("switch", (int)kind);
             case SyntaxTokenKind.GotoKeyword: return new("goto", (int)kind);
             case SyntaxTokenKind.IfKeyword: return new("if", (int)kind);
+            case SyntaxTokenKind.ElseKeyword: return new("else", (int)kind);
             case SyntaxTokenKind.IntKeyword: return new("int", (int)kind);
             case SyntaxTokenKind.BoolKeyword: return new("bool", (int)kind);
             case SyntaxTokenKind.FloatKeyword: return new("float", (int)kind);

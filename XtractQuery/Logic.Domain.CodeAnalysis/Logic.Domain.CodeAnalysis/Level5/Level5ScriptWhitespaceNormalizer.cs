@@ -259,6 +259,14 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
                 NormalizeIfNotGotoStatement(ifNotGotoStatement, ctx);
                 break;
 
+            case IfStatementSyntax ifStatement:
+                NormalizeIfStatement(ifStatement, ctx);
+                break;
+
+            case BlockSyntax block:
+                NormalizeBlock(block, ctx);
+                break;
+
             case PostfixUnaryStatementSyntax postfixUnaryStatement:
                 NormalizePostfixUnaryStatement(postfixUnaryStatement, ctx);
                 break;
@@ -327,6 +335,99 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
         ifNotGotoStatement.SetIf(newIf, false);
         ifNotGotoStatement.SetSemicolon(newSemicolon, false);
+    }
+
+    private void NormalizeIfStatement(IfStatementSyntax ifStatement, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newIf = ifStatement.If.WithNoTrivia().WithTrailingTrivia(" ");
+
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newIf = newIf.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        ctx.IsFirstElement = true;
+        NormalizeExpression(ifStatement.Condition, ctx);
+
+        bool hasElse = ifStatement.Else != null;
+        NormalizeBlock(ifStatement.Body, ctx, attachElseOnSameLine: hasElse);
+
+        if (ifStatement.Else != null)
+            NormalizeElseClause(ifStatement.Else, ctx);
+
+        ifStatement.SetIf(newIf, false);
+    }
+
+    private void NormalizeElseClause(ElseClauseSyntax elseClause, WhitespaceNormalizeContext ctx)
+    {
+        bool isElseIf = elseClause.Statement is IfStatementSyntax;
+        SyntaxToken newElse = elseClause.ElseKeyword.WithNoTrivia().WithLeadingTrivia(" ");
+
+        if (isElseIf)
+            newElse = newElse.WithTrailingTrivia(" ");
+        else
+            newElse = newElse.WithTrailingTrivia(" ");
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        ctx.IsFirstElement = true;
+
+        if (elseClause.Statement is IfStatementSyntax elseIf)
+        {
+            // Keep "} else if cond {" on one line — if keyword has no leading indent.
+            SyntaxToken nestedIf = elseIf.If.WithNoTrivia().WithTrailingTrivia(" ");
+            ctx.ShouldIndent = false;
+            NormalizeExpression(elseIf.Condition, ctx);
+            bool hasElse = elseIf.Else != null;
+            NormalizeBlock(elseIf.Body, ctx, attachElseOnSameLine: hasElse);
+            if (elseIf.Else != null)
+                NormalizeElseClause(elseIf.Else, ctx);
+            elseIf.SetIf(nestedIf, false);
+        }
+        else if (elseClause.Statement is BlockSyntax block)
+        {
+            NormalizeBlock(block, ctx, attachElseOnSameLine: false);
+        }
+        else
+        {
+            NormalizeStatement(elseClause.Statement, ctx);
+        }
+
+        elseClause.SetElseKeyword(newElse, false);
+    }
+
+    private void NormalizeBlock(BlockSyntax block, WhitespaceNormalizeContext ctx, bool attachElseOnSameLine = false)
+    {
+        SyntaxToken newCurlyOpen = block.CurlyOpen.WithNoTrivia().WithLeadingTrivia(" ").WithTrailingTrivia("\r\n");
+        SyntaxToken newCurlyClose = block.CurlyClose.WithNoTrivia();
+
+        if (ctx is { Indent: > 0 })
+            newCurlyClose = newCurlyClose.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        if (attachElseOnSameLine)
+            newCurlyClose = newCurlyClose.WithTrailingTrivia(null);
+        else
+            newCurlyClose = newCurlyClose.WithTrailingTrivia("\r\n");
+
+        int previousIndent = ctx.Indent;
+        ctx.Indent++;
+        foreach (StatementSyntax statement in block.Statements)
+        {
+            ctx.IsFirstElement = true;
+            ctx.ShouldLineBreak = true;
+            ctx.ShouldIndent = true;
+            NormalizeStatement(statement, ctx);
+        }
+        ctx.Indent = previousIndent;
+
+        // Closing brace should force a line break for the next top-level statement
+        // unless an else clause continues on the same line.
+        if (!attachElseOnSameLine)
+            ctx.ShouldLineBreak = true;
+
+        block.SetCurlyOpen(newCurlyOpen, false);
+        block.SetCurlyClose(newCurlyClose, false);
+        block.SetStatements(block.Statements, false);
     }
 
     private void NormalizeGotoStatement(GotoStatementSyntax gotoStatement, WhitespaceNormalizeContext ctx)

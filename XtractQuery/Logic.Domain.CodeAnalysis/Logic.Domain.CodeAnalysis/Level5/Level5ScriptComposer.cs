@@ -239,6 +239,14 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeIfNotGotoStatement(ifNotGotoStatement, sb);
                 break;
 
+            case IfStatementSyntax ifStatement:
+                ComposeIfStatement(ifStatement, sb);
+                break;
+
+            case BlockSyntax block:
+                ComposeBlock(block, sb);
+                break;
+
             case PostfixUnaryStatementSyntax postfixUnaryStatement:
                 ComposePostfixUnaryStatement(postfixUnaryStatement, sb);
                 break;
@@ -286,6 +294,31 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeUnaryExpression(ifNotGotoStatement.Comparison, sb);
         ComposeGotoExpression(ifNotGotoStatement.Goto, sb);
         ComposeSyntaxToken(ifNotGotoStatement.Semicolon, sb);
+    }
+
+    private void ComposeIfStatement(IfStatementSyntax ifStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(ifStatement.If, sb);
+        ComposeExpression(ifStatement.Condition, sb);
+        ComposeBlock(ifStatement.Body, sb);
+        if (ifStatement.Else != null)
+            ComposeElseClause(ifStatement.Else, sb);
+    }
+
+    private void ComposeElseClause(ElseClauseSyntax elseClause, StringBuilder sb)
+    {
+        ComposeSyntaxToken(elseClause.ElseKeyword, sb);
+        ComposeStatement(elseClause.Statement, sb);
+    }
+
+    private void ComposeBlock(BlockSyntax block, StringBuilder sb)
+    {
+        ComposeSyntaxToken(block.CurlyOpen, sb);
+
+        foreach (StatementSyntax statement in block.Statements)
+            ComposeStatement(statement, sb);
+
+        ComposeSyntaxToken(block.CurlyClose, sb);
     }
 
     private void ComposeGotoLabelStatement(GotoLabelStatementSyntax gotoLabelStatement, StringBuilder sb)
