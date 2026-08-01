@@ -856,7 +856,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         // 0000+ ?
 
         if (variableSlot <= 999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("engine", variableSlot));
+            return new VariableExpressionSyntax(_syntaxFactory.Variable("ctx", variableSlot));
         if (variableSlot is >= 1000 and <= 1999)
             return new VariableExpressionSyntax(_syntaxFactory.Variable("temp", variableSlot - 1000));
         if (variableSlot is >= 2000 and <= 2999)

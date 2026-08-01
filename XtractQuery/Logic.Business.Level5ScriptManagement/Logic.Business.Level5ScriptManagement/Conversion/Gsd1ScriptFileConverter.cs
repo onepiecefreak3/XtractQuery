@@ -162,9 +162,6 @@ internal class Gsd1ScriptFileConverter : IGsd1ScriptFileConverter
     {
         switch (argumentType)
         {
-            case ScriptArgumentType.Variable:
-                return CreateVariableExpression((uint)value);
-
             default:
                 return CreateLiteralExpression(value, argumentType);
         }
@@ -197,29 +194,6 @@ internal class Gsd1ScriptFileConverter : IGsd1ScriptFileConverter
             default:
                 throw new InvalidOperationException($"Unknown argument type {argumentType}.");
         }
-    }
-
-    private VariableExpressionSyntax CreateVariableExpression(uint variableSlot)
-    {
-        // 5000+ ?
-        // Values 4000+ are script global values
-        // Values 3000+ are input parameters to the function
-        // 2000+ ?
-        // Values 1000+ are function local values
-        // 0000+ ?
-
-        if (variableSlot <= 999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("engine", variableSlot));
-        if (variableSlot is >= 1000 and <= 1999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("temp", variableSlot - 1000));
-        if (variableSlot is >= 2000 and <= 2999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("local", variableSlot - 2000));
-        if (variableSlot is >= 3000 and <= 3999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("param", variableSlot - 3000));
-        if (variableSlot is >= 4000 and <= 4999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("global", variableSlot - 4000));
-
-        throw new InvalidOperationException($"Unknown variable slot {variableSlot}.");
     }
 
     private LiteralExpressionSyntax CreateUndefinedLiteralExpression()

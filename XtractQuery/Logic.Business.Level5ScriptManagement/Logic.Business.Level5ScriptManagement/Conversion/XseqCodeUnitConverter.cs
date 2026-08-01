@@ -718,7 +718,7 @@ internal class XseqCodeUnitConverter : IXseqCodeUnitConverter
         string varName = variable.Variable.Text[1..slotIndex];
         switch (varName)
         {
-            case "engine":
+            case "ctx":
                 return slot;
 
             case "temp":
