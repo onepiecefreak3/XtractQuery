@@ -64,7 +64,7 @@ Everything after the number will be ignored for compilation and follows no speci
 
 | Notation | Description |
 | - | - |
-| ```$engine0``` | Holds values important to engine operations across scripts. |
+| ```$ctx0``` | Holds values important to engine operations across scripts. |
 | ```$temp0``` | Holds temporary or intermediate values used in complex expressions and conditions. |
 | ```$local0``` | Holds values only in the function it was set in.<br>Equivalent to a common variable in other programming languages. |
 | ```$param0``` | Holds input parameters into the function. |
