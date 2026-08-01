@@ -5,11 +5,13 @@ using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
 using CrossCutting.Core.Contract.EventBrokerage;
 using Logic.Business.Level5ScriptManagement.Contract;
 using Logic.Business.Level5ScriptManagement.Conversion;
+using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 using Logic.Business.Level5ScriptManagement.Creation;
 using Logic.Business.Level5ScriptManagement.Decompression;
 using Logic.Business.Level5ScriptManagement.Extraction;
 using Logic.Business.Level5ScriptManagement.InternalContract;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using Logic.Business.Level5ScriptManagement.InternalContract.Decompression;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
@@ -60,8 +62,8 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IDecompressXscrWorkflow, DecompressXscrWorkflow>(ActivationScope.Unique);
 
         kernel.Register<IXq32ScriptFileConverter, Xq32ScriptFileConverter>(ActivationScope.Unique);
-        kernel.Register<IXq32HighLevelCodeUnitConverter, Xq32HighLevelCodeUnitConverter>(ActivationScope.Unique);
-        kernel.Register<IXq32LowLevelCodeUnitConverter, Xq32LowLevelCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IHighLevelCodeUnitConverter, HighLevelCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<ILowLevelCodeUnitConverter, LowLevelCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IControlFlowGraphBuilder, ControlFlowGraphBuilder>(ActivationScope.Unique);
         kernel.Register<ITempPropagationPass, TempPropagationPass>(ActivationScope.Unique);
         kernel.Register<IXseqScriptFileConverter, XseqScriptFileConverter>(ActivationScope.Unique);

@@ -1,9 +1,9 @@
-using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
-namespace Logic.Business.Level5ScriptManagement.Conversion;
+namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
-internal class Xq32HighLevelCodeUnitConverter(ITempPropagationPass tempPropagationPass) : IXq32HighLevelCodeUnitConverter
+internal class HighLevelCodeUnitConverter(ITempPropagationPass tempPropagationPass) : IHighLevelCodeUnitConverter
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {

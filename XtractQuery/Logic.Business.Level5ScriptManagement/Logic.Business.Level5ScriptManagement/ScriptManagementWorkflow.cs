@@ -89,6 +89,8 @@ internal class ScriptManagementWorkflow(
         Console.WriteLine("  -f, --file\t\tThe file to process");
         Console.WriteLine("  -nc, --no-compression\t[Optional] If the file should use a compression layer");
         Console.WriteLine("    This option is automatically detected when extracting; This argument will not have any effect on operation 'e' and 'd'");
+        Console.WriteLine("  -ns, --no-syntax\t[Optional] If the file should emit high-level syntax");
+        Console.WriteLine("    This argument will not have any effect on operation 'c'");
         Console.WriteLine("  -l, --length\t\t[Optional] The pointer length given");
         Console.WriteLine("    Valid lengths are: int, long");
         Console.WriteLine("    Default value is 'int'");

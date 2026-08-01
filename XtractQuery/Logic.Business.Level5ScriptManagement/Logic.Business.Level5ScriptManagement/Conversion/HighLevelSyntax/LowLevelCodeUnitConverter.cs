@@ -1,11 +1,10 @@
-using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 
-namespace Logic.Business.Level5ScriptManagement.Conversion;
+namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
-internal class Xq32LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : IXq32LowLevelCodeUnitConverter
+internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : ILowLevelCodeUnitConverter
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {

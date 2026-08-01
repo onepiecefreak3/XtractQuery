@@ -4,13 +4,14 @@ using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 
 namespace Logic.Business.Level5ScriptManagement.Creation;
 
 class CreateXq32Workflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
-    IXq32LowLevelCodeUnitConverter lowLevelConverter,
+    ILowLevelCodeUnitConverter lowLevelConverter,
     IXq32CodeUnitConverter treeConverter,
     IXq32ScriptWriter scriptWriter)
     : ICreateXq32Workflow

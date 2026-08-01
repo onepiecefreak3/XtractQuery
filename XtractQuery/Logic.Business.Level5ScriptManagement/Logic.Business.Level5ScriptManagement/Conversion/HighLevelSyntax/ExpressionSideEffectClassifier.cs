@@ -1,7 +1,6 @@
-using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
-namespace Logic.Business.Level5ScriptManagement.Conversion;
+namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
 internal static class ExpressionSideEffectClassifier
 {
