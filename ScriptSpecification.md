@@ -7,7 +7,7 @@ It also describes its relation to the instruction types read from the format, as
 
 ## Functions
 
-Functions in the script are a finite sequence of instructions to be executed. Some instructions can jump to labels to immitate higher level programming concepts, like ``if ... else ...`` or loops. A function always has a name consisting of only lower- and uppercase letters and alphanumerical digits. A function can have up to 1000 parameters to pass into.<br>
+Functions in the script are a finite sequence of instructions to be executed. A function always has a name consisting of only lower- and uppercase letters and alphanumerical digits. A function can have up to 1000 parameters to pass into.<br>
 ```
 MyFunction($param0, $param1, ...)
 {
@@ -15,14 +15,69 @@ MyFunction($param0, $param1, ...)
 }
 ```
 
-## Jumps
+## High-Level Syntax
 
-Jumps in the script are string literals suffixed by a colon `:` above an instruction. An instruction can have multiple labels. If called by any operation, that can execute a jump (see "Instructions" > "Jumps") the function will jump to that instruction and continue execution there.<br>
+### If Else
+
+A high-level syntax that allows executing different logic based on certain conditions.
+
+Reference:
 ```
-    if 1 goto "@000@"h;
-"@000@":
-"@001@":
-    $local1 = log("Jumped here.");
+if $local0 < 0 {
+  return;
+} else if $local1 > 1 {
+  $local1 = 1;
+} else {
+  $local0 = 1;
+}
+```
+
+### While
+
+A high-level syntax that allows recurring or looping logic, optionally based on certain conditions.
+
+Reference:
+```
+while (0 < $param0) {
+  $param0--;
+}
+```
+```
+while (true) {  // while (false) is not valid syntax
+  if 0 < $param0 {
+    break;
+  }
+}
+```
+```
+while (not sub5610($param0)); // Self-looping while for engine functions that might return a different value over time
+```
+
+## Expressions
+
+Every assignment statement and condition can hold complex expressions.
+
+Combining multiple operations in the same expression follows this operator precedence (highest to lowest):
+| Operators |
+| x++ |
+| not x, !x, ~x |
+| x*y, x/y, x%y |
+| x+y, x-y |
+| x<<y, x>>y |
+| x>y, x>=y, x<y, x<=y |
+| x==y, x!=y |
+| x&y |
+| x^y |
+| x\|y |
+| x and y, x && y |
+| x or y, x \|\| y |
+
+Reference:
+```
+$local0 = $local1++ * 5; // Resolves postfix addition first; Does NOT only increment variable after the expression is resolved
+$local0 = ~(5 * $local1); // Resolves multiplication first
+$local0 = 5 * ($local0 + 4); // Resolves addition first
+$local0 = 5 * $local1 == $local2; // Resolves multiplication first
 ```
 
 ## Comments
@@ -65,7 +120,7 @@ Everything after the number will be ignored for compilation and follows no speci
 | Notation | Description |
 | - | - |
 | ```$ctx0``` | Holds values important to engine operations across scripts. |
-| ```$temp0``` | Holds temporary or intermediate values used in complex expressions and conditions. |
+| ```$temp0``` | Holds temporary or intermediate values used in complex expressions and conditions.<br>Compiler-generated. Should only be manually used by **advanced users** who know what they're doing. |
 | ```$local0``` | Holds values only in the function it was set in.<br>Equivalent to a common variable in other programming languages. |
 | ```$param0``` | Holds input parameters into the function. |
 | ```$global0``` | Holds values through multiple functions only in the script it was set in. |
@@ -82,8 +137,8 @@ Everything after the number will be ignored for compilation and follows no speci
 #### Calls
 | Type | Description |
 | - | - |
-| 20 | Calls any function from any currently loaded script in the engine, either by name or by its CRC32-B or CRC16-X25 checksum.<br>```$local1 = call("MyOtherFunction"h, arg1, arg2, ...);```<br>```$local1 = call("MyOtherFunction", arg1, arg2, ...);```<br>```$local1 = MyOtherFunction(arg1, arg2, ...);```<br><br>If the function name can be resolved via a reference script, the path to the reference script is used as a namespace to identify its source.<br>```$local1 = program.ui.common_012_00.MyOtherFunction(arg1, arg2, ...);``` |
-| 21 | Alias for instruction 20; due to some hardcoding within XtractQuery it is currently *not* recommended to use this alias.                                                                                                                                                                                   |
+| 20 | Calls any function from any currently loaded script in the engine, either by name or by its CRC32-B or CRC16-X25 checksum.<br><br>```$local1 = call("MyOtherFunction"h, arg1, arg2, ...);```<br>```$local1 = call("MyOtherFunction", arg1, arg2, ...);```<br>```$local1 = MyOtherFunction(arg1, arg2, ...);```<br>```call("MyOtherFunction"h, arg1, arg2, ...);```<br>```call("MyOtherFunction", arg1, arg2, ...);```<br>```MyOtherFunction(arg1, arg2, ...);```<br><br>If the function name can be resolved via a reference script, the path to the reference script is used as a namespace to identify its source.<br>```$local1 = program.ui.common_012_00.MyOtherFunction(arg1, arg2, ...);```<br>```program.ui.common_012_00.MyOtherFunction(arg1, arg2, ...);``` |
+| 21 | Alias for instruction 20; due to some hardcoding within XtractQuery it is currently *not* recommended to use this alias. |
 
 #### Jumps
 | Type | Description |
@@ -103,18 +158,18 @@ Everything after the number will be ignored for compilation and follows no speci
 | 112 | Sets the negation of a literal value or variable to another variable.<br>```$local1 = -0;```<br>```$local1 = -$local2;``` |
 | 140 | Adds 1 to a variable and sets to another variable.<br>```$local1 = $local2 + 1;``` |
 | 141 | Subtracts 1 from a variable and sets to another variable.<br>```$local1 = $local2 - 1;``` |
-| 150 | Adds a literal value or variable to another variable and sets to another variable. Returns `0` if a non-numeric type is used.<br>```$local1 = $local2 + 30;```<br>```$local1 = $local2 + $object1;```<br>```$local1 = "hi!" + 3; // 0 because "hi" isn't numeric``` |
-| 151 | Subtracts a literal value or variable from another variable and sets to another variable.<br>```$local1 = $local2 - 30;```<br>```$local1 = $local2 - $object1;``` |
-| 152 | Multiplies a literal value or variable with another variable and sets to another variable.<br>```$local1 = $local2 * 30;```<br>```$local1 = $local2 * $object1;``` |
-| 153 | Divides a variable by a literal value or another variable and sets to another variable.<br>```$local1 = $local2 / 30;```<br>```$local1 = $local2 / $object1;``` |
-| 154 | Modulates variable by a literal value or another variable and sets to another variable.<br>```$local1 = $local2 % 30;```<br>```$local1 = $local2 % $object1;``` |
+| 150 | Adds a literal value or variable to another variable and sets to another variable. Returns `0` if a non-numeric type is used.<br>```$local1 = $local2 + 30;```<br>```$local1 = $local2 + $local3;```<br>```$local1 = "hi!" + 3; // 0 because "hi" isn't numeric``` |
+| 151 | Subtracts a literal value or variable from another variable and sets to another variable.<br>```$local1 = $local2 - 30;```<br>```$local1 = $local2 - $local3;``` |
+| 152 | Multiplies a literal value or variable with another variable and sets to another variable.<br>```$local1 = $local2 * 30;```<br>```$local1 = $local2 * $local3;``` |
+| 153 | Divides a variable by a literal value or another variable and sets to another variable.<br>```$local1 = $local2 / 30;```<br>```$local1 = $local2 / $local3;``` |
+| 154 | Modulates variable by a literal value or another variable and sets to another variable.<br>```$local1 = $local2 % 30;```<br>```$local1 = $local2 % $local3;``` |
 | 240 | Increments a variable by 1.<br>```$local1++;``` |
 | 241 | Decrements a variable by 1.<br>```$local1--;``` |
-| 250 | Adds a literal value or variable to another variable.<br>```$local1 += 30;```<br>```$local1 += $object1;``` |
-| 251 | Subtracts a literal value or variable from another variable.<br>```$local1 -= 30;```<br>```$local1 -= $object1;``` |
-| 252 | Multiplies a literal value or variable to another variable.<br>```$local1 *= 30;```<br>```$local1 *= $object1;``` |
-| 253 | Divides a variable by a literal value or variable.<br>```$local1 /= 30;```<br>```$local1 /= $object1;``` |
-| 254 | Modulates a variable by a literal value or variable.<br>```$local1 %= 30;```<br>```$local1 % = $object1;``` |
+| 250 | Adds a literal value or variable to another variable.<br>```$local1 += 30;```<br>```$local1 += $local2;``` |
+| 251 | Subtracts a literal value or variable from another variable.<br>```$local1 -= 30;```<br>```$local1 -= $local2;``` |
+| 252 | Multiplies a literal value or variable to another variable.<br>```$local1 *= 30;```<br>```$local1 *= $local21;``` |
+| 253 | Divides a variable by a literal value or variable.<br>```$local1 /= 30;```<br>```$local1 /= $local2;``` |
+| 254 | Modulates a variable by a literal value or variable.<br>```$local1 %= 30;```<br>```$local1 %= $local2;``` |
 
 #### Bit operations
 | Type | Description |
@@ -200,4 +255,4 @@ The array index notation can be used in all shorthand assignments of type 240 - 
 | 520 | Gets a random value from 0 to a maximum defined by a literal value or variable and sets it to another variable.<br> The results for each data type are listed below:<br><ul><li>Integer: Returns a random integer in the range 0 to input - 1.</li><li>Float: Returns a random float in the range 0.0 to input.</li><li>Empty: Returns a random float in the range 0.0 - 1.0.</li><li>Other: Clears the variable it returns to.</li></ul>```$local1 = random(5); // can return an int from 0-4```<br>```$local2 = random(5f); // can return a float from 0.0-5.0```<br>```$local2 = random(); // can return a float from 0.0-1.0```<br>```$local2 = random("hi"); // clears $local2``` | <!-- no <br> needed; due to the list block-->
 | 521 | Gets the CRC32-B checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc32($local2);``` |
 | 522 | Gets the CRC16-X25 checksum of a literal value or variable and sets to another variable. Arrays return `0`. <br>```$local1 = crc16($local2);``` |
-| 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $object1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
+| 523 | Remaps the value of a variable to another literal value or variable or sets a default.<br><pre>$local1 = switch $local2<br>{<br>    1 => 99<br>    2 => $ctx1<br>    3 => $local3<br>    _ => 0<br>}</pre> |
