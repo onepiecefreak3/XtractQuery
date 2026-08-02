@@ -481,11 +481,34 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
             case ContinueStatementSyntax:
                 return true;
 
+            // Explicit developer labels/gotos stay as-is inside structured bodies.
+            // Compiler-generated @NNN@ control flow must already be resolved.
+            case GotoLabelStatementSyntax label:
+                return TryGetLabelName(label.Label, out string? labelName) &&
+                       labelName is not null &&
+                       !IsNumericJumpLabel(labelName);
+
+            case GotoStatementSyntax gotoStatement:
+                return gotoStatement.Targets.Elements.All(IsDeveloperLabelTarget);
+
+            case IfGotoStatementSyntax ifGoto:
+                return IsDeveloperLabelTarget(ifGoto.Goto.Target);
+
+            case IfNotGotoStatementSyntax ifNotGoto:
+                return IsDeveloperLabelTarget(ifNotGoto.Goto.Target);
+
             case BlockSyntax:
                 return false;
 
             default:
                 return false;
         }
+    }
+
+    private static bool IsDeveloperLabelTarget(ValueExpressionSyntax target)
+    {
+        return TryGetLabelName(target, out string? name) &&
+               name is not null &&
+               !IsNumericJumpLabel(name);
     }
 }

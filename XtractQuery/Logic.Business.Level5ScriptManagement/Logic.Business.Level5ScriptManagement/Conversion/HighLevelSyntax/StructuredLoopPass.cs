@@ -334,9 +334,13 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
                 return false;
         }
 
-        // No external jump into the middle of the body (other than falling into head).
+        // Compiler-generated labels must not be entered from outside the loop.
+        // Explicit developer labels are kept as-is and may still be targeted externally.
         foreach (string label in internalLabels)
         {
+            if (!IsNumericJumpLabel(label))
+                continue;
+
             if (CountLabelReferencesOutsideRange(allStatements, label, loopStart, loopEnd + 1) != 0)
                 return false;
         }
@@ -373,7 +377,13 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
             case IfNotGotoStatementSyntax ifNotGoto:
                 return IsAllowedTarget(ifNotGoto.Goto.Target, headLabel, exitLabel, internalLabels);
 
-            case GotoLabelStatementSyntax:
+            case GotoLabelStatementSyntax label:
+                // Leftover compiler labels inside the body mean unresolved structure.
+                // Developer labels are retained verbatim.
+                return TryGetLabelName(label.Label, out string? name) &&
+                       name is not null &&
+                       !IsNumericJumpLabel(name);
+
             case AssignmentStatementSyntax:
             case MethodInvocationStatementSyntax:
             case YieldStatementSyntax:
@@ -407,7 +417,11 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
         if (exitLabel is not null && name == exitLabel)
             return true;
 
-        return internalLabels.Contains(name);
+        if (internalLabels.Contains(name))
+            return true;
+
+        // Explicit developer labels (including targets outside the loop) stay as gotos.
+        return !IsNumericJumpLabel(name);
     }
 
     private IReadOnlyList<StatementSyntax> RewriteLoopBody(
