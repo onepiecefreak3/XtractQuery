@@ -31,8 +31,21 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
                     break;
                 }
 
-                if (TryMatchTopTestedWhile(result, i, out WhileStatementSyntax? topWhile, out int topLength) && topWhile is not null)
+                if (TryMatchTopTestedWhile(
+                        result,
+                        i,
+                        out WhileStatementSyntax? topWhile,
+                        out int topLength,
+                        out int exitLabelIndex,
+                        out bool removeExitLabel) &&
+                    topWhile is not null)
                 {
+                    // Exit and any co-located fallthrough labels sit after the loop content.
+                    // Remove the exit first (higher index), then replace the content span so
+                    // intervening labels such as an outer if-join stay in the stream.
+                    if (removeExitLabel)
+                        result.RemoveAt(exitLabelIndex);
+
                     result.RemoveRange(i, topLength);
                     result.Insert(i, topWhile);
                     changed = true;
@@ -153,10 +166,14 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
         IReadOnlyList<StatementSyntax> statements,
         int index,
         out WhileStatementSyntax? replacement,
-        out int length)
+        out int length,
+        out int exitLabelIndex,
+        out bool removeExitLabel)
     {
         replacement = null;
         length = 0;
+        exitLabelIndex = -1;
+        removeExitLabel = false;
 
         if (!TryGetLabel(statements[index], out string? headLabel) || headLabel is null)
             return false;
@@ -190,14 +207,18 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
         if (!IsNumericJumpLabel(exitLabel))
             return false;
 
-        int exitLabelIndex = FindLabelIndex(statements, exitLabel, index + 2);
+        exitLabelIndex = FindLabelIndex(statements, exitLabel, index + 2);
         if (exitLabelIndex < 0)
             return false;
 
         if (CountLabelReferences(statements, exitLabel) < 1)
             return false;
 
-        var rawBody = statements.Skip(index + 2).Take(exitLabelIndex - index - 2).ToList();
+        // Nested while often shares a merge instruction with an outer if-join, so other
+        // fallthrough labels may sit between the back-edge and this exit (e.g. "@003@":
+        // before "@005@":). Those labels are not part of the loop body and must stay put.
+        int bodyEnd = FindContentEndBeforeJoin(statements, index + 2, exitLabelIndex);
+        var rawBody = statements.Skip(index + 2).Take(bodyEnd - index - 2).ToList();
         if (rawBody.Count == 0)
             return false;
 
@@ -207,11 +228,11 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
             return false;
 
         var bodyWithoutBackEdge = rawBody.Take(rawBody.Count - 1).ToList();
-        if (!IsValidLoopBody(bodyWithoutBackEdge, headLabel, exitLabel, statements, index, exitLabelIndex))
+        if (!IsValidLoopBody(bodyWithoutBackEdge, headLabel, exitLabel, statements, index, bodyEnd - 1))
             return false;
 
         // Head may only be targeted by the trailing back-edge and continues inside the body.
-        int headRefsOutsideBody = CountLabelReferencesOutsideRange(statements, headLabel, index + 2, exitLabelIndex);
+        int headRefsOutsideBody = CountLabelReferencesOutsideRange(statements, headLabel, index + 2, bodyEnd);
         if (headRefsOutsideBody != 0)
             return false;
 
@@ -221,11 +242,32 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
         int exitRefsInBody = CountLabelReferencesInStatements(bodyWithoutBackEdge, exitLabel);
         int exitRefsTotal = CountLabelReferences(statements, exitLabel);
         // Header if-not contributes 1; body contributes breaks. After rewrite those become break.
-        bool removeExitLabel = exitRefsTotal == exitRefsInBody + 1;
+        removeExitLabel = exitRefsTotal == exitRefsInBody + 1;
 
         replacement = CreateWhile(whileCondition, rewrittenBody);
-        length = exitLabelIndex - index + (removeExitLabel ? 1 : 0);
+        // Replace head..back-edge only; coalesced join labels between bodyEnd and exit stay.
+        length = bodyEnd - index;
         return true;
+    }
+
+    // Exclusive end of loop-body statements, skipping trailing numeric labels that share the exit instruction.
+    private static int FindContentEndBeforeJoin(
+        IReadOnlyList<StatementSyntax> statements,
+        int contentStart,
+        int joinLabelIndex)
+    {
+        int end = joinLabelIndex;
+        while (end > contentStart && IsNumericJumpLabelDefinition(statements[end - 1]))
+            end--;
+
+        return end;
+    }
+
+    private static bool IsNumericJumpLabelDefinition(StatementSyntax statement)
+    {
+        return TryGetLabel(statement, out string? name) &&
+               name is not null &&
+               IsNumericJumpLabel(name);
     }
 
     private bool TryMatchDoWhile(
