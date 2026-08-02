@@ -64,7 +64,7 @@ $local1 = $local2 = 5 * (2 + 3);
 
 ## Expressions
 
-Every assignment statement and condition can hold complex expressions.
+Every assignment, array indexer, return, and condition can hold complex expressions.
 
 Combining multiple operations in the same expression follows this operator precedence (highest to lowest):
 | Operators |
