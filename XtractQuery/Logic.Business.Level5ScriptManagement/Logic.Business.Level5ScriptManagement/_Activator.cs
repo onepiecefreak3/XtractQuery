@@ -6,6 +6,7 @@ using CrossCutting.Core.Contract.EventBrokerage;
 using Logic.Business.Level5ScriptManagement.Contract;
 using Logic.Business.Level5ScriptManagement.Conversion;
 using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
+using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
 using Logic.Business.Level5ScriptManagement.Creation;
 using Logic.Business.Level5ScriptManagement.Decompression;
 using Logic.Business.Level5ScriptManagement.Extraction;
@@ -65,6 +66,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IHighLevelCodeUnitConverter, HighLevelCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<ILowLevelCodeUnitConverter, LowLevelCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<IControlFlowGraphBuilder, ControlFlowGraphBuilder>(ActivationScope.Unique);
+        kernel.Register<IControlFlowRegionAnalyzer, ControlFlowRegionAnalyzer>(ActivationScope.Unique);
         kernel.Register<ITempPropagationPass, TempPropagationPass>(ActivationScope.Unique);
         kernel.Register<IChainAssignmentFoldPass, ChainAssignmentFoldPass>(ActivationScope.Unique);
         kernel.Register<IStructuredLoopPass, StructuredLoopPass>(ActivationScope.Unique);

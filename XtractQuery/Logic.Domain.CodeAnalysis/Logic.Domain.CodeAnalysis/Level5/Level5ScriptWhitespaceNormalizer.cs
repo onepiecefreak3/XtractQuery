@@ -746,7 +746,16 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
     private void NormalizeTypeCastValueExpression(TypeCastValueExpressionSyntax typeCastValueExpression, WhitespaceNormalizeContext ctx)
     {
-        NormalizeTypeCastExpression(typeCastValueExpression.TypeCast, ctx);
+        // Same list-separator spacing as other unaries (`foo($a, (float)$b)`).
+        SyntaxToken parenOpen = typeCastValueExpression.TypeCast.ParenOpen.WithNoTrivia();
+        if (!ctx.IsFirstElement)
+            parenOpen = parenOpen.WithLeadingTrivia(" ");
+
+        SyntaxToken typeKeyword = typeCastValueExpression.TypeCast.TypeKeyword.WithNoTrivia();
+        SyntaxToken parenClose = typeCastValueExpression.TypeCast.ParenClose.WithNoTrivia();
+        typeCastValueExpression.TypeCast.SetParenOpen(parenOpen, false);
+        typeCastValueExpression.TypeCast.SetType(typeKeyword, false);
+        typeCastValueExpression.TypeCast.SetParenClose(parenClose, false);
 
         ctx.IsFirstElement = true;
         ctx.ShouldIndent = false;
@@ -770,17 +779,6 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
         parenthesizedExpression.SetParenOpen(parenOpen, false);
         parenthesizedExpression.SetParenClose(parenClose, false);
-    }
-
-    private void NormalizeTypeCastExpression(TypeCastExpressionSyntax typeCasExpression, WhitespaceNormalizeContext ctx)
-    {
-        SyntaxToken parenOpen = typeCasExpression.ParenOpen.WithNoTrivia();
-        SyntaxToken typeKeyword = typeCasExpression.TypeKeyword.WithNoTrivia();
-        SyntaxToken parenClose = typeCasExpression.ParenClose.WithNoTrivia();
-
-        typeCasExpression.SetParenOpen(parenOpen, false);
-        typeCasExpression.SetType(typeKeyword, false);
-        typeCasExpression.SetParenClose(parenClose, false);
     }
 
     private void NormalizePostfixUnaryExpression(PostfixUnaryExpressionSyntax postfixUnaryExpression, WhitespaceNormalizeContext ctx)

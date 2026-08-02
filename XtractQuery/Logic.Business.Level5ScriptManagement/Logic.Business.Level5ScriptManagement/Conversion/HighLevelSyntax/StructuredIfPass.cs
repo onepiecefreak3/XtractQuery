@@ -1,15 +1,24 @@
+﻿using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
+using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
-internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructuredIfPass
+/// <summary>
+/// Raises if / if-else from CFG branch shapes. Dominator branch regions prefer
+/// innermost candidates; matching still uses local shape rules so raise quality
+/// matches the pre-region pass.
+/// </summary>
+internal class StructuredIfPass(
+    IControlFlowGraphBuilder cfgBuilder,
+    IControlFlowRegionAnalyzer regionAnalyzer,
+    ILevel5SyntaxFactory syntaxFactory) : IStructuredIfPass
 {
     public IReadOnlyList<StatementSyntax> Apply(IReadOnlyList<StatementSyntax> statements)
     {
-        var result = ApplyFlat(statements);
-        return RecurseIntoNested(result);
+        return StructuredSyntaxRecursor.Apply(statements, ApplyFlat, syntaxFactory);
     }
 
     private IReadOnlyList<StatementSyntax> ApplyFlat(IReadOnlyList<StatementSyntax> statements)
@@ -20,33 +29,44 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         while (changed)
         {
             changed = false;
+            ControlFlowGraph cfg = cfgBuilder.Build(result);
+            ControlFlowRegions regions = regionAnalyzer.Analyze(cfg);
 
-            for (var i = 0; i < result.Count; i++)
+            foreach (int headerIndex in CollectBranchHeaderCandidates(cfg, regions))
             {
                 if (TryMatchIfElse(
-                        result,
-                        i,
+                        cfg,
+                        headerIndex,
                         out IfStatementSyntax? ifElse,
                         out int ifElseContentLength,
+                        out IReadOnlyList<int>? extraRemovals,
                         out int ifElseJoinIndex,
                         out bool removeIfElseJoin) &&
                     ifElse is not null)
                 {
-                    // Join and any co-located fallthrough labels sit after the if/else content.
-                    // Remove the join first (higher index), then replace the content span so
-                    // intervening labels such as an outer join stay in the stream.
+                    // Highest indices first so earlier indices stay valid.
                     if (removeIfElseJoin)
                         result.RemoveAt(ifElseJoinIndex);
 
-                    result.RemoveRange(i, ifElseContentLength);
-                    result.Insert(i, ifElse);
+                    if (extraRemovals is not null)
+                    {
+                        foreach (int index in extraRemovals.OrderByDescending(i => i))
+                        {
+                            if (removeIfElseJoin && index == ifElseJoinIndex)
+                                continue;
+                            result.RemoveAt(index);
+                        }
+                    }
+
+                    result.RemoveRange(headerIndex, ifElseContentLength);
+                    result.Insert(headerIndex, ifElse);
                     changed = true;
                     break;
                 }
 
                 if (TryMatchIfThen(
-                        result,
-                        i,
+                        cfg,
+                        headerIndex,
                         out IfStatementSyntax? ifThen,
                         out int ifThenContentLength,
                         out int ifThenEndIndex,
@@ -56,8 +76,8 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
                     if (removeIfThenEnd)
                         result.RemoveAt(ifThenEndIndex);
 
-                    result.RemoveRange(i, ifThenContentLength);
-                    result.Insert(i, ifThen);
+                    result.RemoveRange(headerIndex, ifThenContentLength);
+                    result.Insert(headerIndex, ifThen);
                     changed = true;
                     break;
                 }
@@ -67,146 +87,221 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         return result;
     }
 
-    private IReadOnlyList<StatementSyntax> RecurseIntoNested(IReadOnlyList<StatementSyntax> statements)
+    private static IEnumerable<int> CollectBranchHeaderCandidates(ControlFlowGraph cfg, ControlFlowRegions regions)
     {
-        var result = new List<StatementSyntax>(statements.Count);
-        foreach (StatementSyntax statement in statements)
-            result.Add(RecurseStatement(statement));
-        return result;
-    }
+        var seen = new HashSet<int>();
 
-    private StatementSyntax RecurseStatement(StatementSyntax statement)
-    {
-        switch (statement)
+        // Smallest branch regions first (analyzer orders by ascending arm size).
+        foreach (BranchRegion region in regions.Branches)
         {
-            case WhileStatementSyntax { Body: not null } whileStatement:
-            {
-                IReadOnlyList<StatementSyntax> body = Apply(whileStatement.Body.Statements);
-                whileStatement.SetBody(CreateBlock(body), false);
-                return whileStatement;
-            }
+            int index = region.Header.EndStatementIndex - 1;
+            if (index >= 0 && seen.Add(index))
+                yield return index;
+        }
 
-            case DoWhileStatementSyntax doWhile:
-            {
-                IReadOnlyList<StatementSyntax> body = Apply(doWhile.Body.Statements);
-                doWhile.SetBody(CreateBlock(body), false);
-                return doWhile;
-            }
+        foreach (StatementBlock block in cfg.Blocks)
+        {
+            if (block.IsExit || block.StatementCount <= 0)
+                continue;
 
-            case IfStatementSyntax ifStatement:
-            {
-                IReadOnlyList<StatementSyntax> thenBody = Apply(ifStatement.Body.Statements);
-                ifStatement.SetBody(CreateBlock(thenBody), false);
-                if (ifStatement.Else != null)
-                {
-                    StatementSyntax elseStmt = RecurseStatement(ifStatement.Else.Statement);
-                    ifStatement.Else.SetStatement(elseStmt, false);
-                }
-
-                return ifStatement;
-            }
-
-            case BlockSyntax block:
-            {
-                IReadOnlyList<StatementSyntax> nested = Apply(block.Statements);
-                block.SetStatements(nested, false);
-                return block;
-            }
-
-            default:
-                return statement;
+            int index = block.EndStatementIndex - 1;
+            if (seen.Add(index))
+                yield return index;
         }
     }
 
     private bool TryMatchIfElse(
-        IReadOnlyList<StatementSyntax> statements,
-        int index,
+        ControlFlowGraph cfg,
+        int headerIndex,
         out IfStatementSyntax? replacement,
         out int contentLength,
+        out IReadOnlyList<int>? extraRemovals,
         out int joinLabelIndex,
         out bool removeJoinLabel)
     {
         replacement = null;
         contentLength = 0;
+        extraRemovals = null;
         joinLabelIndex = -1;
         removeJoinLabel = false;
-
-        if (!TryGetBranchSkip(statements[index], out ExpressionSyntax? condition, out string? elseLabel) ||
-            condition is null || elseLabel is null)
+        if (!cfg.BlockByStatementIndex.TryGetValue(headerIndex, out StatementBlock? headerBlock))
+            return false;
+        if (!ControlFlowGraphQueries.TryGetBranchSkip(
+                cfg.Statements[headerIndex],
+                syntaxFactory,
+                out ExpressionSyntax? condition,
+                out string? elseLabel) ||
+            condition is null ||
+            elseLabel is null)
+            return false;
+        if (!ControlFlowLabels.IsNumericJumpLabel(elseLabel))
+            return false;
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, elseLabel, out int elseLabelIndex) ||
+            elseLabelIndex <= headerIndex)
+            return false;
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, elseLabel, out StatementBlock? elseBlock) ||
+            elseBlock is null)
+            return false;
+        // Header must branch to the else block and fall through into the then region.
+        if (!ControlFlowGraphQueries.HasBranchTo(cfg, headerBlock, elseBlock) ||
+            !ControlFlowGraphQueries.HasFallThrough(cfg, headerBlock))
+            return false;
+        if (ControlFlowLabels.CountLabelReferences(cfg.Statements, elseLabel) != 1)
             return false;
 
-        if (!IsNumericJumpLabel(elseLabel))
-            return false;
+        // Empty else after jump-table hash sort: `goto JOIN; JOIN: ELSE:` or `ELSE: JOIN:`
+        // with no else body — join goto sits just before a contiguous label run that
+        // contains both ELSE and JOIN in either order.
+        if (TryMatchEmptyElse(
+                cfg,
+                headerIndex,
+                elseLabel,
+                elseLabelIndex,
+                condition,
+                out replacement,
+                out contentLength,
+                out extraRemovals,
+                out joinLabelIndex,
+                out removeJoinLabel))
+            return true;
 
-        int elseLabelIndex = FindLabelIndex(statements, elseLabel, index + 1);
-        if (elseLabelIndex < 0)
+        // Standard if/else: join goto immediately before ELSE (no co-located siblings).
+        // Patterns with sibling labels in between are handled after loop raising (fixpoint).
+        if (elseLabelIndex - 1 <= headerIndex)
             return false;
-
-        if (CountLabelReferences(statements, elseLabel) != 1)
-            return false;
-
-        if (elseLabelIndex - 1 <= index)
-            return false;
-
-        if (statements[elseLabelIndex - 1] is not GotoStatementSyntax joinGoto ||
-            !TryGetSingleGotoTarget(joinGoto, out string? joinLabel) ||
+        if (cfg.Statements[elseLabelIndex - 1] is not GotoStatementSyntax joinGoto ||
+            !ControlFlowLabels.TryGetSingleGotoTarget(joinGoto, out string? joinLabel) ||
             joinLabel is null)
             return false;
-
-        if (!IsNumericJumpLabel(joinLabel))
+        if (!ControlFlowLabels.IsNumericJumpLabel(joinLabel))
             return false;
-
-        joinLabelIndex = FindLabelIndex(statements, joinLabel, elseLabelIndex + 1);
-        if (joinLabelIndex < 0)
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, joinLabel, out joinLabelIndex) ||
+            joinLabelIndex <= elseLabelIndex)
             return false;
-
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, joinLabel, out StatementBlock? joinBlock) ||
+            joinBlock is null)
+            return false;
+        // The join goto must target the join block in the CFG.
+        if (!cfg.BlockByStatementIndex.TryGetValue(elseLabelIndex - 1, out StatementBlock? thenTailBlock) ||
+            !ControlFlowGraphQueries.HasBranchTo(cfg, thenTailBlock, joinBlock))
+            return false;
         // Nested if/else often shares a merge instruction with an outer join, so other
         // fallthrough labels may sit between the else body and this join (e.g. "@015@":
         // before "@021@":). Those labels are not part of the else body and must stay put.
         int elseContentStart = elseLabelIndex + 1;
-        int elseContentEnd = FindContentEndBeforeJoin(statements, elseContentStart, joinLabelIndex);
-
-        var thenBody = statements.Skip(index + 1).Take(elseLabelIndex - index - 2).ToList();
-        var elseBody = statements.Skip(elseContentStart).Take(elseContentEnd - elseContentStart).ToList();
-
-        if (!IsStructuredBody(thenBody) || !IsStructuredBody(elseBody))
+        int elseContentEnd = ControlFlowGraphQueries.FindContentEndBeforeJoin(
+            cfg.Statements, elseContentStart, joinLabelIndex);
+        var thenBody = ControlFlowGraphQueries.Slice(cfg.Statements, headerIndex + 1, elseLabelIndex - 1);
+        var elseBody = ControlFlowGraphQueries.Slice(cfg.Statements, elseContentStart, elseContentEnd);
+        if (!ControlFlowGraphQueries.IsStructuredBody(thenBody) ||
+            !ControlFlowGraphQueries.IsStructuredBody(elseBody))
             return false;
-
-        if (ContainsLabelReference(thenBody, elseLabel) || ContainsLabelReference(elseBody, elseLabel))
+        if (ControlFlowLabels.ContainsLabelReference(thenBody, elseLabel) ||
+            ControlFlowLabels.ContainsLabelReference(elseBody, elseLabel))
             return false;
-
-        if (ContainsLabelReference(thenBody, joinLabel) || ContainsLabelReference(elseBody, joinLabel))
+        if (ControlFlowLabels.ContainsLabelReference(thenBody, joinLabel) ||
+            ControlFlowLabels.ContainsLabelReference(elseBody, joinLabel))
             return false;
-
-        removeJoinLabel = CountLabelReferences(statements, joinLabel) == 1;
-
-        replacement = CreateIfStatement(condition, thenBody, CreateElseClause(elseBody));
-        contentLength = elseContentEnd - index;
+        removeJoinLabel = ControlFlowLabels.CountLabelReferences(cfg.Statements, joinLabel) == 1;
+        ElseClauseSyntax? elseClause = elseBody.Count == 0 ? null : CreateElseClause(elseBody);
+        replacement = CreateIfStatement(condition, thenBody, elseClause);
+        contentLength = elseContentEnd - headerIndex;
         return true;
     }
 
-    // Exclusive end of body statements, skipping trailing labels that share the join
-    // instruction (compiler @NNN@ joins and co-located developer labels such as "TEST":).
-    private static int FindContentEndBeforeJoin(
-        IReadOnlyList<StatementSyntax> statements,
-        int contentStart,
-        int joinLabelIndex)
+    /// <summary>
+    /// Matches lowered empty-else: <c>if not C goto ELSE; then; goto JOIN; [JOIN:/ELSE: in any order]</c>.
+    /// Jump tables sort labels by name hash, so co-located ELSE/JOIN often swap on round-trip.
+    /// Raises to plain <c>if</c> (no empty else clause). Sibling labels in the same run stay.
+    /// </summary>
+    private bool TryMatchEmptyElse(
+        ControlFlowGraph cfg,
+        int headerIndex,
+        string elseLabel,
+        int elseLabelIndex,
+        ExpressionSyntax condition,
+        out IfStatementSyntax? replacement,
+        out int contentLength,
+        out IReadOnlyList<int>? extraRemovals,
+        out int joinLabelIndex,
+        out bool removeJoinLabel)
     {
-        int end = joinLabelIndex;
-        while (end > contentStart && IsLabelDefinition(statements[end - 1]))
-            end--;
+        replacement = null;
+        contentLength = 0;
+        extraRemovals = null;
+        joinLabelIndex = -1;
+        removeJoinLabel = false;
 
-        return end;
-    }
+        // Walk back over co-located labels to the join goto that closes the then arm.
+        int cursor = elseLabelIndex;
+        while (cursor > headerIndex + 1 && cfg.Statements[cursor - 1] is GotoLabelStatementSyntax)
+            cursor--;
 
-    private static bool IsLabelDefinition(StatementSyntax statement)
-    {
-        return statement is GotoLabelStatementSyntax;
+        int joinGotoIndex = cursor - 1;
+        if (joinGotoIndex <= headerIndex)
+            return false;
+        if (cfg.Statements[joinGotoIndex] is not GotoStatementSyntax joinGoto ||
+            !ControlFlowLabels.TryGetSingleGotoTarget(joinGoto, out string? joinLabel) ||
+            joinLabel is null ||
+            !ControlFlowLabels.IsNumericJumpLabel(joinLabel))
+            return false;
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, joinLabel, out joinLabelIndex))
+            return false;
+
+        // Contiguous label run immediately after the join goto must contain BOTH labels.
+        int runStart = joinGotoIndex + 1;
+        int runEnd = ControlFlowLabelRuns.FindRunEnd(cfg.Statements, runStart);
+
+        if (runEnd - runStart < 2)
+            return false;
+        if (joinLabelIndex < runStart || joinLabelIndex >= runEnd)
+            return false;
+        if (elseLabelIndex < runStart || elseLabelIndex >= runEnd)
+            return false;
+
+        // No real else body between ELSE and JOIN when JOIN follows ELSE in the stream.
+        int elseContentStart = elseLabelIndex + 1;
+        int elseContentEnd = ControlFlowGraphQueries.FindContentEndBeforeJoin(
+            cfg.Statements, elseContentStart, joinLabelIndex);
+        if (joinLabelIndex > elseLabelIndex && elseContentEnd > elseContentStart)
+            return false;
+
+        // Nothing after the run before JOIN either (JOIN is inside the run for empty else).
+        if (runEnd < cfg.Statements.Count &&
+            cfg.Statements[runEnd] is not GotoLabelStatementSyntax &&
+            joinLabelIndex >= runEnd)
+            return false;
+
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, joinLabel, out StatementBlock? joinBlock) ||
+            joinBlock is null)
+            return false;
+        if (!cfg.BlockByStatementIndex.TryGetValue(joinGotoIndex, out StatementBlock? thenTailBlock) ||
+            !ControlFlowGraphQueries.HasBranchTo(cfg, thenTailBlock, joinBlock))
+            return false;
+
+        var thenBody = ControlFlowGraphQueries.Slice(cfg.Statements, headerIndex + 1, joinGotoIndex);
+        if (!ControlFlowGraphQueries.IsStructuredBody(thenBody))
+            return false;
+        if (ControlFlowLabels.ContainsLabelReference(thenBody, elseLabel) ||
+            ControlFlowLabels.ContainsLabelReference(thenBody, joinLabel))
+            return false;
+
+        // Replace through the join goto only; remove ELSE/JOIN labels individually so
+        // unrelated co-located labels (outer joins) remain.
+        contentLength = joinGotoIndex + 1 - headerIndex;
+        extraRemovals = ControlFlowLabelRuns.IndicesOfLabels(
+            cfg.Statements,
+            runStart,
+            runEnd,
+            name => name == elseLabel || name == joinLabel);
+        removeJoinLabel = false;
+        replacement = CreateIfStatement(condition, thenBody, elseClause: null);
+        return true;
     }
 
     private bool TryMatchIfThen(
-        IReadOnlyList<StatementSyntax> statements,
-        int index,
+        ControlFlowGraph cfg,
+        int headerIndex,
         out IfStatementSyntax? replacement,
         out int contentLength,
         out int endLabelIndex,
@@ -216,46 +311,52 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         contentLength = 0;
         endLabelIndex = -1;
         removeEndLabel = false;
-
-        if (!TryGetBranchSkip(statements[index], out ExpressionSyntax? condition, out string? endLabel) ||
-            condition is null || endLabel is null)
+        if (!cfg.BlockByStatementIndex.TryGetValue(headerIndex, out StatementBlock? headerBlock))
             return false;
-
-        if (!IsNumericJumpLabel(endLabel))
+        if (!ControlFlowGraphQueries.TryGetBranchSkip(
+                cfg.Statements[headerIndex],
+                syntaxFactory,
+                out ExpressionSyntax? condition,
+                out string? endLabel) ||
+            condition is null ||
+            endLabel is null)
             return false;
-
-        endLabelIndex = FindLabelIndex(statements, endLabel, index + 1);
-        if (endLabelIndex < 0)
+        if (!ControlFlowLabels.IsNumericJumpLabel(endLabel))
             return false;
-
-        if (CountLabelReferences(statements, endLabel) != 1)
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, endLabel, out endLabelIndex) ||
+            endLabelIndex <= headerIndex)
             return false;
-
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, endLabel, out StatementBlock? endBlock) ||
+            endBlock is null)
+            return false;
+        if (!ControlFlowGraphQueries.HasBranchTo(cfg, headerBlock, endBlock) ||
+            !ControlFlowGraphQueries.HasFallThrough(cfg, headerBlock))
+            return false;
+        if (ControlFlowLabels.CountLabelReferences(cfg.Statements, endLabel) != 1)
+            return false;
         // Same coalesced-join case as if/else: an outer join label may sit between the then
         // body and this end label (e.g. "@014@": before "@023@":).
-        int thenContentEnd = FindContentEndBeforeJoin(statements, index + 1, endLabelIndex);
-        var thenBody = statements.Skip(index + 1).Take(thenContentEnd - index - 1).ToList();
-        if (!IsStructuredBody(thenBody))
+        int thenContentEnd = ControlFlowGraphQueries.FindContentEndBeforeJoin(
+            cfg.Statements, headerIndex + 1, endLabelIndex);
+        var thenBody = ControlFlowGraphQueries.Slice(cfg.Statements, headerIndex + 1, thenContentEnd);
+        if (!ControlFlowGraphQueries.IsStructuredBody(thenBody))
             return false;
-
-        if (ContainsLabelReference(thenBody, endLabel))
+        if (ControlFlowLabels.ContainsLabelReference(thenBody, endLabel))
             return false;
-
         removeEndLabel = true;
         replacement = CreateIfStatement(condition, thenBody, elseClause: null);
-        contentLength = thenContentEnd - index;
+        contentLength = thenContentEnd - headerIndex;
         return true;
     }
-
     private ElseClauseSyntax CreateElseClause(IReadOnlyList<StatementSyntax> elseBody)
     {
         // Collapse a single nested if into `else if`.
         if (elseBody.Count == 1 && elseBody[0] is IfStatementSyntax nestedIf)
             return new ElseClauseSyntax(syntaxFactory.Token(SyntaxTokenKind.ElseKeyword), nestedIf);
-
-        return new ElseClauseSyntax(syntaxFactory.Token(SyntaxTokenKind.ElseKeyword), CreateBlock(elseBody));
+        return new ElseClauseSyntax(
+            syntaxFactory.Token(SyntaxTokenKind.ElseKeyword),
+            StructuredSyntaxRecursor.CreateBlock(elseBody, syntaxFactory));
     }
-
     private IfStatementSyntax CreateIfStatement(
         ExpressionSyntax condition,
         IReadOnlyList<StatementSyntax> thenBody,
@@ -264,259 +365,7 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         return new IfStatementSyntax(
             syntaxFactory.Token(SyntaxTokenKind.IfKeyword),
             condition,
-            CreateBlock(thenBody),
+            StructuredSyntaxRecursor.CreateBlock(thenBody, syntaxFactory),
             elseClause);
-    }
-
-    private BlockSyntax CreateBlock(IReadOnlyList<StatementSyntax> statements)
-    {
-        return new BlockSyntax(
-            syntaxFactory.Token(SyntaxTokenKind.CurlyOpen),
-            statements,
-            syntaxFactory.Token(SyntaxTokenKind.CurlyClose));
-    }
-
-    private bool TryGetBranchSkip(
-        StatementSyntax statement,
-        out ExpressionSyntax? thenCondition,
-        out string? targetLabel)
-    {
-        thenCondition = null;
-        targetLabel = null;
-
-        // if not X goto L; body; L:  ≡  if X { body }
-        if (statement is IfNotGotoStatementSyntax ifNotGoto)
-        {
-            if (!TryGetLabelName(ifNotGoto.Goto.Target, out targetLabel) || targetLabel is null)
-                return false;
-
-            thenCondition = UnwrapCondition(ifNotGoto.Comparison.Value);
-            return true;
-        }
-
-        // if X goto L; body; L:  ≡  if not X { body }
-        // (EmitIfNotGoto peels a leading not into this form.)
-        if (statement is IfGotoStatementSyntax ifGoto)
-        {
-            if (!TryGetLabelName(ifGoto.Goto.Target, out targetLabel) || targetLabel is null)
-                return false;
-
-            thenCondition = CreateNotCondition(UnwrapCondition(ifGoto.Value));
-            return true;
-        }
-
-        return false;
-    }
-
-    private ExpressionSyntax CreateNotCondition(ExpressionSyntax expression)
-    {
-        ExpressionSyntax operand = ExpressionParenthesizer.MaybeParenthesize(
-            expression,
-            ExpressionPrecedence.Unary,
-            isRightOperand: true,
-            syntaxFactory);
-
-        if (operand is ParenthesizedExpressionSyntax)
-            return new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), operand);
-
-        ValueExpressionSyntax value = operand is ValueExpressionSyntax valueExpression
-            ? valueExpression
-            : new ValueExpressionSyntax(operand);
-
-        return new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), value);
-    }
-
-    private static ExpressionSyntax UnwrapCondition(ExpressionSyntax expression)
-    {
-        expression = ExpressionParenthesizer.UnwrapParentheses(expression);
-
-        if (expression is ValueExpressionSyntax { MetadataParameters: null } value)
-            return UnwrapCondition(value.Value);
-
-        return expression;
-    }
-
-    private static bool TryGetSingleGotoTarget(GotoStatementSyntax gotoStatement, out string? label)
-    {
-        label = null;
-
-        if (gotoStatement.Targets.Elements.Count != 1)
-            return false;
-
-        return TryGetLabelName(gotoStatement.Targets.Elements[0], out label);
-    }
-
-    private static bool TryGetLabelName(ValueExpressionSyntax target, out string? label)
-    {
-        label = null;
-
-        if (target.Value is not LiteralExpressionSyntax literal)
-            return false;
-
-        return TryGetLabelName(literal, out label);
-    }
-
-    private static bool TryGetLabelName(LiteralExpressionSyntax literal, out string? label)
-    {
-        label = null;
-
-        switch (literal.Literal.RawKind)
-        {
-            case (int)SyntaxTokenKind.StringLiteral:
-                // "name"
-                label = literal.Literal.Text[1..^1].Replace("\\\"", "\"");
-                return true;
-
-            case (int)SyntaxTokenKind.HashStringLiteral:
-                // "name"h — developer jump targets often use hashed string literals.
-                label = literal.Literal.Text[1..^2].Replace("\\\"", "\"");
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
-    private static int FindLabelIndex(IReadOnlyList<StatementSyntax> statements, string labelName, int startIndex)
-    {
-        for (int i = startIndex; i < statements.Count; i++)
-        {
-            if (statements[i] is GotoLabelStatementSyntax labelStatement &&
-                TryGetLabelName(labelStatement.Label, out string? name) &&
-                name == labelName)
-                return i;
-        }
-
-        return -1;
-    }
-
-    private static int CountLabelReferences(IReadOnlyList<StatementSyntax> statements, string labelName)
-    {
-        var count = 0;
-
-        foreach (StatementSyntax statement in statements)
-            count += CountLabelReferences(statement, labelName);
-
-        return count;
-    }
-
-    private static int CountLabelReferences(StatementSyntax statement, string labelName)
-    {
-        switch (statement)
-        {
-            case IfNotGotoStatementSyntax ifNotGoto:
-                return IsLabel(ifNotGoto.Goto.Target, labelName) ? 1 : 0;
-
-            case IfGotoStatementSyntax ifGoto:
-                return IsLabel(ifGoto.Goto.Target, labelName) ? 1 : 0;
-
-            case GotoStatementSyntax gotoStatement:
-                return gotoStatement.Targets.Elements.Count(t => IsLabel(t, labelName));
-
-            case IfStatementSyntax ifStatement:
-                var count = CountLabelReferencesInBlock(ifStatement.Body, labelName);
-                if (ifStatement.Else != null)
-                    count += CountLabelReferences(ifStatement.Else.Statement, labelName);
-                return count;
-
-            case WhileStatementSyntax { Body: not null } whileStatement:
-                return CountLabelReferencesInBlock(whileStatement.Body, labelName);
-
-            case DoWhileStatementSyntax doWhile:
-                return CountLabelReferencesInBlock(doWhile.Body, labelName);
-
-            case BlockSyntax block:
-                return CountLabelReferencesInBlock(block, labelName);
-
-            default:
-                return 0;
-        }
-    }
-
-    private static int CountLabelReferencesInBlock(BlockSyntax block, string labelName)
-    {
-        return block.Statements.Sum(s => CountLabelReferences(s, labelName));
-    }
-
-    private static bool ContainsLabelReference(IReadOnlyList<StatementSyntax> statements, string labelName)
-    {
-        return statements.Any(s => CountLabelReferences(s, labelName) > 0);
-    }
-
-    private static bool IsLabel(ValueExpressionSyntax target, string labelName)
-    {
-        return TryGetLabelName(target, out string? name) && name == labelName;
-    }
-
-    private static bool IsNumericJumpLabel(string label)
-    {
-        // "@000@", "@1234@", ... — at least 3 digits between '@'
-        if (label.Length < 5 || label[0] != '@' || label[^1] != '@')
-            return false;
-
-        ReadOnlySpan<char> digits = label.AsSpan(1, label.Length - 2);
-        if (digits.Length < 3)
-            return false;
-
-        foreach (char c in digits)
-        {
-            if (c is < '0' or > '9')
-                return false;
-        }
-
-        return true;
-    }
-
-    private static bool IsStructuredBody(IReadOnlyList<StatementSyntax> statements)
-    {
-        return statements.All(IsStructuredBodyStatement);
-    }
-
-    private static bool IsStructuredBodyStatement(StatementSyntax statement)
-    {
-        switch (statement)
-        {
-            case AssignmentStatementSyntax:
-            case MethodInvocationStatementSyntax:
-            case YieldStatementSyntax:
-            case ReturnStatementSyntax:
-            case ExitStatementSyntax:
-            case PostfixUnaryStatementSyntax:
-            case IfStatementSyntax:
-            case WhileStatementSyntax:
-            case DoWhileStatementSyntax:
-            case BreakStatementSyntax:
-            case ContinueStatementSyntax:
-                return true;
-
-            // Explicit developer labels/gotos stay as-is inside structured bodies.
-            // Compiler-generated @NNN@ control flow must already be resolved.
-            case GotoLabelStatementSyntax label:
-                return TryGetLabelName(label.Label, out string? labelName) &&
-                       labelName is not null &&
-                       !IsNumericJumpLabel(labelName);
-
-            case GotoStatementSyntax gotoStatement:
-                return gotoStatement.Targets.Elements.All(IsDeveloperLabelTarget);
-
-            case IfGotoStatementSyntax ifGoto:
-                return IsDeveloperLabelTarget(ifGoto.Goto.Target);
-
-            case IfNotGotoStatementSyntax ifNotGoto:
-                return IsDeveloperLabelTarget(ifNotGoto.Goto.Target);
-
-            case BlockSyntax:
-                return false;
-
-            default:
-                return false;
-        }
-    }
-
-    private static bool IsDeveloperLabelTarget(ValueExpressionSyntax target)
-    {
-        return TryGetLabelName(target, out string? name) &&
-               name is not null &&
-               !IsNumericJumpLabel(name);
     }
 }

@@ -88,6 +88,7 @@ public static class ExpressionPrecedence
                 return Postfix;
 
             case UnaryExpressionSyntax:
+            case TypeCastValueExpressionSyntax:
                 return Unary;
 
             case BinaryExpressionSyntax binary:
