@@ -388,7 +388,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     {
         ComposeSyntaxToken(returnStatement.Return, sb);
         if (returnStatement.ValueExpression != null)
-            ComposeValueExpression(returnStatement.ValueExpression, sb);
+            ComposeExpression(returnStatement.ValueExpression, sb);
         ComposeSyntaxToken(returnStatement.Semicolon, sb);
     }
 

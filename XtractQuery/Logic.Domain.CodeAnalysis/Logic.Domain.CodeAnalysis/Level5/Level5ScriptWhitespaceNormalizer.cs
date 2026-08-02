@@ -629,7 +629,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         ctx.IsFirstElement = true;
         ctx.ShouldIndent = false;
         ctx.ShouldLineBreak = false;
-        NormalizeValueExpression(returnStatement.ValueExpression, ctx);
+        NormalizeExpression(returnStatement.ValueExpression, ctx);
     }
 
     private void NormalizeExitStatement(ExitStatementSyntax exitStatement, WhitespaceNormalizeContext ctx)

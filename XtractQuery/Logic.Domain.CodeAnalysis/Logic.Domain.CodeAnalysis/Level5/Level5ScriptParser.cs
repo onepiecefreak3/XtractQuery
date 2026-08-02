@@ -469,9 +469,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private ReturnStatementSyntax ParseReturnStatement(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken returnToken = ParseReturnKeywordToken(buffer);
-        ValueExpressionSyntax? valueExpression = null;
+        ExpressionSyntax? valueExpression = null;
         if (!HasTokenKind(buffer, SyntaxTokenKind.Semicolon))
-            valueExpression = ParseValueExpression(buffer);
+            valueExpression = ParseExpression(buffer);
         SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
         return new ReturnStatementSyntax(returnToken, valueExpression, semicolon);

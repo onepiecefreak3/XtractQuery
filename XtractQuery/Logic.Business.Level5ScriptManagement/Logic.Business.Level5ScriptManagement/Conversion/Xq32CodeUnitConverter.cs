@@ -204,7 +204,7 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
         var argumentCount = 0;
         if (returnStatement.ValueExpression != null)
         {
-            AddArgument(result, returnStatement.ValueExpression);
+            AddArgument(result, RequireValueExpression(returnStatement.ValueExpression, returnStatement.Location));
             argumentCount = 1;
         }
 

@@ -50,7 +50,7 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
                     return null;
                 return new ReturnStatementSyntax(
                     returnStatement.Return,
-                    returnValue as ValueExpressionSyntax ?? WrapAsValue(returnValue),
+                    returnValue,
                     returnStatement.Semicolon);
 
             case GotoStatementSyntax gotoStatement:
