@@ -3,32 +3,42 @@ using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
+
 namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
+
+/// <summary>
+/// Raises top-tested / spin / do-while loops. Natural-loop regions (innermost first)
+/// drive candidate ordering; matching still uses CFG shape rules so break-only blocks
+/// omitted from classic latch-reachability bodies do not block raising.
+/// </summary>
 internal class StructuredLoopPass(
     IControlFlowGraphBuilder cfgBuilder,
+    IControlFlowRegionAnalyzer regionAnalyzer,
     ILevel5SyntaxFactory syntaxFactory) : IStructuredLoopPass
 {
     public IReadOnlyList<StatementSyntax> Apply(IReadOnlyList<StatementSyntax> statements)
     {
         return StructuredSyntaxRecursor.Apply(statements, ApplyFlat, syntaxFactory);
     }
+
     private IReadOnlyList<StatementSyntax> ApplyFlat(IReadOnlyList<StatementSyntax> statements)
     {
         var result = statements.ToList();
         var changed = true;
+
         while (changed)
         {
             changed = false;
             ControlFlowGraph cfg = cfgBuilder.Build(result);
-            foreach (StatementBlock block in cfg.Blocks)
+            ControlFlowRegions regions = regionAnalyzer.Analyze(cfg);
+
+            foreach (int headIndex in CollectLoopHeadCandidates(cfg, regions))
             {
-                if (block.IsExit || block.StatementCount <= 0)
-                    continue;
-                int headIndex = block.InstructionIndex;
                 if (!ControlFlowLabels.TryGetLabelDefinition(cfg.Statements[headIndex], out string? headLabel) ||
                     headLabel is null ||
                     !ControlFlowLabels.IsNumericJumpLabel(headLabel))
                     continue;
+
                 if (TryMatchSpinLoop(cfg, headIndex, headLabel, out WhileStatementSyntax? spin, out int spinLength) &&
                     spin is not null)
                 {
@@ -37,6 +47,7 @@ internal class StructuredLoopPass(
                     changed = true;
                     break;
                 }
+
                 if (TryMatchTopTestedWhile(
                         cfg,
                         headIndex,
@@ -52,11 +63,13 @@ internal class StructuredLoopPass(
                     // intervening labels such as an outer if-join stay in the stream.
                     if (removeExitLabel)
                         result.RemoveAt(exitLabelIndex);
+
                     result.RemoveRange(headIndex, topLength);
                     result.Insert(headIndex, topWhile);
                     changed = true;
                     break;
                 }
+
                 if (TryMatchDoWhile(cfg, headIndex, headLabel, out DoWhileStatementSyntax? doWhile, out int doLength) &&
                     doWhile is not null)
                 {
@@ -67,8 +80,34 @@ internal class StructuredLoopPass(
                 }
             }
         }
+
         return result;
     }
+
+    private static IEnumerable<int> CollectLoopHeadCandidates(ControlFlowGraph cfg, ControlFlowRegions regions)
+    {
+        var seen = new HashSet<int>();
+
+        // Innermost natural loops first (analyzer orders by ascending body size).
+        foreach (NaturalLoop loop in regions.Loops)
+        {
+            int index = loop.Header.InstructionIndex;
+            if (seen.Add(index))
+                yield return index;
+        }
+
+        foreach (StatementBlock block in cfg.Blocks)
+        {
+            if (block.IsExit || block.StatementCount <= 0)
+                continue;
+
+            if (!seen.Add(block.InstructionIndex))
+                continue;
+
+            yield return block.InstructionIndex;
+        }
+    }
+
     private bool TryMatchSpinLoop(
         ControlFlowGraph cfg,
         int headIndex,

@@ -3,28 +3,37 @@ using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
+
 namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
+
+/// <summary>
+/// Raises if / if-else from CFG branch shapes. Dominator branch regions prefer
+/// innermost candidates; matching still uses local shape rules so raise quality
+/// matches the pre-region pass.
+/// </summary>
 internal class StructuredIfPass(
     IControlFlowGraphBuilder cfgBuilder,
+    IControlFlowRegionAnalyzer regionAnalyzer,
     ILevel5SyntaxFactory syntaxFactory) : IStructuredIfPass
 {
     public IReadOnlyList<StatementSyntax> Apply(IReadOnlyList<StatementSyntax> statements)
     {
         return StructuredSyntaxRecursor.Apply(statements, ApplyFlat, syntaxFactory);
     }
+
     private IReadOnlyList<StatementSyntax> ApplyFlat(IReadOnlyList<StatementSyntax> statements)
     {
         var result = statements.ToList();
         var changed = true;
+
         while (changed)
         {
             changed = false;
             ControlFlowGraph cfg = cfgBuilder.Build(result);
-            foreach (StatementBlock block in cfg.Blocks)
+            ControlFlowRegions regions = regionAnalyzer.Analyze(cfg);
+
+            foreach (int headerIndex in CollectBranchHeaderCandidates(cfg, regions))
             {
-                if (block.IsExit || block.StatementCount <= 0)
-                    continue;
-                int headerIndex = block.EndStatementIndex - 1;
                 if (TryMatchIfElse(
                         cfg,
                         headerIndex,
@@ -39,11 +48,13 @@ internal class StructuredIfPass(
                     // intervening labels such as an outer join stay in the stream.
                     if (removeIfElseJoin)
                         result.RemoveAt(ifElseJoinIndex);
+
                     result.RemoveRange(headerIndex, ifElseContentLength);
                     result.Insert(headerIndex, ifElse);
                     changed = true;
                     break;
                 }
+
                 if (TryMatchIfThen(
                         cfg,
                         headerIndex,
@@ -55,6 +66,7 @@ internal class StructuredIfPass(
                 {
                     if (removeIfThenEnd)
                         result.RemoveAt(ifThenEndIndex);
+
                     result.RemoveRange(headerIndex, ifThenContentLength);
                     result.Insert(headerIndex, ifThen);
                     changed = true;
@@ -62,8 +74,33 @@ internal class StructuredIfPass(
                 }
             }
         }
+
         return result;
     }
+
+    private static IEnumerable<int> CollectBranchHeaderCandidates(ControlFlowGraph cfg, ControlFlowRegions regions)
+    {
+        var seen = new HashSet<int>();
+
+        // Smallest branch regions first (analyzer orders by ascending arm size).
+        foreach (BranchRegion region in regions.Branches)
+        {
+            int index = region.Header.EndStatementIndex - 1;
+            if (index >= 0 && seen.Add(index))
+                yield return index;
+        }
+
+        foreach (StatementBlock block in cfg.Blocks)
+        {
+            if (block.IsExit || block.StatementCount <= 0)
+                continue;
+
+            int index = block.EndStatementIndex - 1;
+            if (seen.Add(index))
+                yield return index;
+        }
+    }
+
     private bool TryMatchIfElse(
         ControlFlowGraph cfg,
         int headerIndex,
