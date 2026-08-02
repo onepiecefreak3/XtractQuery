@@ -56,15 +56,13 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             case AssignmentStatementSyntax assignment:
             {
-                ExpressionSyntax left = FlattenExpression(assignment.Left, output, temps, forceValue: false);
-                ExpressionSyntax right = FlattenExpression(assignment.Right, output, temps, forceValue: false);
-                output.Add(new AssignmentStatementSyntax(
-                    left,
+                FlattenAssignment(
+                    assignment.Left,
                     assignment.EqualsOperator,
-                    right,
-                    assignment.Semicolon));
-                temps.ReleaseExpression(right);
-                temps.ReleaseExpression(left);
+                    assignment.Right,
+                    assignment.Semicolon,
+                    output,
+                    temps);
                 break;
             }
 
@@ -471,6 +469,61 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         return new MethodInvocationExpressionSyntax(invocation.Name, invocation.Metadata, parameters);
     }
 
+    private void FlattenAssignment(
+        ExpressionSyntax left,
+        SyntaxToken operation,
+        ExpressionSyntax right,
+        SyntaxToken semicolon,
+        List<StatementSyntax> output,
+        TempAllocator temps)
+    {
+        if (right is AssignmentExpressionSyntax nested)
+        {
+            if (operation.RawKind != (int)SyntaxTokenKind.EqualsSign ||
+                nested.Operation.RawKind != (int)SyntaxTokenKind.EqualsSign)
+                throw CreateException("Only '=' can be chained in assignments.", nested.Location);
+
+            FlattenAssignment(nested.Left, nested.Operation, nested.Right, semicolon, output, temps);
+
+            ExpressionSyntax flatLeft = FlattenExpression(left, output, temps, forceValue: false);
+            ValueExpressionSyntax copyRight = EnsureValueExpression(
+                FlattenExpression(nested.Left, output, temps, forceValue: true), output, temps);
+
+            output.Add(new AssignmentStatementSyntax(flatLeft, operation, copyRight, semicolon));
+            temps.ReleaseExpression(copyRight);
+            temps.ReleaseExpression(flatLeft);
+            return;
+        }
+
+        ExpressionSyntax flatTarget = FlattenExpression(left, output, temps, forceValue: false);
+        ExpressionSyntax flatValue = FlattenExpression(right, output, temps, forceValue: false);
+        output.Add(new AssignmentStatementSyntax(flatTarget, operation, flatValue, semicolon));
+        temps.ReleaseExpression(flatValue);
+        temps.ReleaseExpression(flatTarget);
+    }
+
+    private ValueExpressionSyntax FlattenAssignmentExpression(
+        AssignmentExpressionSyntax assignment,
+        List<StatementSyntax> output,
+        TempAllocator temps)
+    {
+        if (assignment.Operation.RawKind != (int)SyntaxTokenKind.EqualsSign)
+            throw CreateException("Only '=' can be chained in assignments.", assignment.Location);
+
+        FlattenAssignment(
+            assignment.Left,
+            assignment.Operation,
+            assignment.Right,
+            syntaxFactory.Token(SyntaxTokenKind.Semicolon),
+            output,
+            temps);
+
+        return EnsureValueExpression(
+            FlattenExpression(assignment.Left, output, temps, forceValue: true),
+            output,
+            temps);
+    }
+
     private ExpressionSyntax FlattenExpression(
         ExpressionSyntax expression,
         List<StatementSyntax> output,
@@ -544,6 +597,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                     FlattenExpression(switchExpression.Value, output, temps, false), output, temps);
                 var flatSwitch = new SwitchExpressionSyntax(switchValue, switchExpression.Switch, switchExpression.CaseBlock);
                 return forceValue ? Spill(flatSwitch, output, temps) : flatSwitch;
+
+            case AssignmentExpressionSyntax assignment:
+            {
+                return FlattenAssignmentExpression(assignment, output, temps);
+            }
 
             case ParenthesizedExpressionSyntax parenthesized:
                 return FlattenExpression(parenthesized.Expression, output, temps, forceValue);
@@ -777,6 +835,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             case SwitchExpressionSyntax switchExpression:
                 CollectUsedTempSlots(switchExpression.Value, usedTemps);
                 break;
+
+            case AssignmentExpressionSyntax assignment:
+                CollectUsedTempSlots(assignment.Left, usedTemps);
+                CollectUsedTempSlots(assignment.Right, usedTemps);
+                break;
         }
     }
 
@@ -870,6 +933,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
                 case SwitchExpressionSyntax switchExpression:
                     ReleaseExpression(switchExpression.Value);
+                    break;
+
+                case AssignmentExpressionSyntax assignment:
+                    ReleaseExpression(assignment.Left);
+                    ReleaseExpression(assignment.Right);
                     break;
             }
         }

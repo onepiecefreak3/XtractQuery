@@ -388,7 +388,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     {
         ComposeSyntaxToken(returnStatement.Return, sb);
         if (returnStatement.ValueExpression != null)
-            ComposeValueExpression(returnStatement.ValueExpression, sb);
+            ComposeExpression(returnStatement.ValueExpression, sb);
         ComposeSyntaxToken(returnStatement.Semicolon, sb);
     }
 
@@ -444,6 +444,10 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
 
             case BinaryExpressionSyntax binaryExpression:
                 ComposeBinaryExpression(binaryExpression, sb);
+                break;
+
+            case AssignmentExpressionSyntax assignmentExpression:
+                ComposeAssignmentExpression(assignmentExpression, sb);
                 break;
 
             case ArrayInstantiationExpressionSyntax arrayInstantiation:
@@ -559,6 +563,13 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeExpression(binaryExpression.Left, sb);
         ComposeSyntaxToken(binaryExpression.Operation, sb);
         ComposeExpression(binaryExpression.Right, sb);
+    }
+
+    private void ComposeAssignmentExpression(AssignmentExpressionSyntax assignmentExpression, StringBuilder sb)
+    {
+        ComposeExpression(assignmentExpression.Left, sb);
+        ComposeSyntaxToken(assignmentExpression.Operation, sb);
+        ComposeExpression(assignmentExpression.Right, sb);
     }
 
     private void ComposeArrayInstantiationExpression(ArrayInstantiationExpressionSyntax arrayInstantiation,

@@ -469,9 +469,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         bool isElseIf = elseClause.Statement is IfStatementSyntax;
         SyntaxToken newElse = elseClause.ElseKeyword.WithNoTrivia().WithLeadingTrivia(" ");
 
+        // else-if needs a space before `if`. A plain else block already gets a leading
+        // space on `{` from NormalizeBlock — do not add a trailing space here or you get
+        // "} else  {".
         if (isElseIf)
-            newElse = newElse.WithTrailingTrivia(" ");
-        else
             newElse = newElse.WithTrailingTrivia(" ");
 
         ctx.ShouldIndent = false;
@@ -629,7 +630,7 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         ctx.IsFirstElement = true;
         ctx.ShouldIndent = false;
         ctx.ShouldLineBreak = false;
-        NormalizeValueExpression(returnStatement.ValueExpression, ctx);
+        NormalizeExpression(returnStatement.ValueExpression, ctx);
     }
 
     private void NormalizeExitStatement(ExitStatementSyntax exitStatement, WhitespaceNormalizeContext ctx)
@@ -708,6 +709,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
             case BinaryExpressionSyntax rightBinaryExpression:
                 NormalizeBinaryExpression(rightBinaryExpression, ctx);
+                break;
+
+            case AssignmentExpressionSyntax assignmentExpression:
+                NormalizeAssignmentExpression(assignmentExpression, ctx);
                 break;
 
             case ArrayInstantiationExpressionSyntax rightArrayInstantiation:
@@ -913,6 +918,18 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         NormalizeExpression(binaryExpression.Right, ctx);
 
         binaryExpression.SetOperation(operation, false);
+    }
+
+    private void NormalizeAssignmentExpression(AssignmentExpressionSyntax assignmentExpression, WhitespaceNormalizeContext ctx)
+    {
+        NormalizeExpression(assignmentExpression.Left, ctx);
+
+        SyntaxToken operation = assignmentExpression.Operation.WithLeadingTrivia(" ").WithTrailingTrivia(" ");
+
+        ctx.IsFirstElement = true;
+        NormalizeExpression(assignmentExpression.Right, ctx);
+
+        assignmentExpression.SetOperation(operation, false);
     }
 
     private void NormalizeArrayInstantiationExpression(ArrayInstantiationExpressionSyntax arrayInstantiation,

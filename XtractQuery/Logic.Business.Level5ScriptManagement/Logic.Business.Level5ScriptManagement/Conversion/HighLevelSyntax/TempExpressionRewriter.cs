@@ -50,7 +50,7 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
                     return null;
                 return new ReturnStatementSyntax(
                     returnStatement.Return,
-                    returnValue as ValueExpressionSyntax ?? WrapAsValue(returnValue),
+                    returnValue,
                     returnStatement.Semicolon);
 
             case GotoStatementSyntax gotoStatement:
@@ -122,6 +122,17 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
                 if (left is null && right is null)
                     return null;
                 return new BinaryExpressionSyntax(left ?? binary.Left, binary.Operation, right ?? binary.Right);
+
+            case AssignmentExpressionSyntax assignment:
+                ExpressionSyntax? assignmentLeft = ReplaceAssignmentLeftReads(assignment.Left, tempName, replacement);
+                ExpressionSyntax? assignmentRight = ReplaceTempInExpression(
+                    assignment.Right, tempName, replacement, FoldContext.None());
+                if (assignmentLeft is null && assignmentRight is null)
+                    return null;
+                return new AssignmentExpressionSyntax(
+                    assignmentLeft ?? assignment.Left,
+                    assignment.Operation,
+                    assignmentRight ?? assignment.Right);
 
             case LogicalExpressionSyntax logical:
                 int logicalPrec = ExpressionPrecedence.GetOperatorPrecedence((SyntaxTokenKind)logical.Operation.RawKind)

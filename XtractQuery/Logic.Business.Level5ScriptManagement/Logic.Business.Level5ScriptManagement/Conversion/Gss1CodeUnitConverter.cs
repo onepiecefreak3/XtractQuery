@@ -205,7 +205,7 @@ internal class Gss1CodeUnitConverter : IGss1CodeUnitConverter
         var argumentCount = 0;
         if (returnStatement.ValueExpression != null)
         {
-            AddArgument(result, returnStatement.ValueExpression);
+            AddArgument(result, RequireValueExpression(returnStatement.ValueExpression, returnStatement.Location));
             argumentCount = 1;
         }
 
@@ -857,6 +857,14 @@ internal class Gss1CodeUnitConverter : IGss1CodeUnitConverter
             startIndex--;
 
         return int.Parse(text[startIndex..]);
+    }
+
+    private ValueExpressionSyntax RequireValueExpression(ExpressionSyntax expression, SyntaxLocation location)
+    {
+        if (expression is ValueExpressionSyntax value)
+            return value;
+
+        throw CreateException($"Expected value expression, got {expression.GetType().Name}.", location);
     }
 
     private Exception CreateException(string message, SyntaxLocation location, params SyntaxTokenKind[] expected)

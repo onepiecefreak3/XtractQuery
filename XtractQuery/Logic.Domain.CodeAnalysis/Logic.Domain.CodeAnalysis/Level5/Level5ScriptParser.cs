@@ -469,9 +469,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private ReturnStatementSyntax ParseReturnStatement(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken returnToken = ParseReturnKeywordToken(buffer);
-        ValueExpressionSyntax? valueExpression = null;
+        ExpressionSyntax? valueExpression = null;
         if (!HasTokenKind(buffer, SyntaxTokenKind.Semicolon))
-            valueExpression = ParseValueExpression(buffer);
+            valueExpression = ParseExpression(buffer);
         SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
         return new ReturnStatementSyntax(returnToken, valueExpression, semicolon);
@@ -546,10 +546,45 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                 throw CreateException(buffer, "Unknown assignment operation.");
         }
 
-        var right = ParseExpression(buffer);
+        ExpressionSyntax right = equalsOperator.RawKind == (int)SyntaxTokenKind.EqualsSign
+            ? ParseAssignmentExpression(buffer)
+            : ParseExpression(buffer);
         SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
         return new AssignmentStatementSyntax(value, equalsOperator, right, semicolon);
+    }
+
+    private ExpressionSyntax ParseAssignmentExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        ExpressionSyntax left = ParseExpression(buffer);
+
+        if (!HasTokenKind(buffer, SyntaxTokenKind.EqualsSign))
+            return left;
+
+        if (!IsAssignmentTarget(left))
+            throw CreateException(buffer, "Invalid assignment target in chained assignment.");
+
+        SyntaxToken equalsOperator = ParseEqualsSignToken(buffer);
+        ExpressionSyntax right = ParseAssignmentExpression(buffer);
+
+        return new AssignmentExpressionSyntax(left, equalsOperator, right);
+    }
+
+    private static bool IsAssignmentTarget(ExpressionSyntax expression)
+    {
+        expression = UnwrapParentheses(expression);
+
+        return expression is ValueExpressionSyntax { Value: VariableExpressionSyntax }
+            or VariableExpressionSyntax
+            or ArrayIndexExpressionSyntax;
+    }
+
+    private static ExpressionSyntax UnwrapParentheses(ExpressionSyntax expression)
+    {
+        while (expression is ParenthesizedExpressionSyntax parenthesized)
+            expression = parenthesized.Expression;
+
+        return expression;
     }
 
     private ExpressionSyntax ParseExpression(IBuffer<Level5SyntaxToken> buffer)
