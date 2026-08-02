@@ -195,14 +195,32 @@ internal class XseqScriptFileConverter : IXseqScriptFileConverter
 
     private GotoStatementSyntax CreateGotoStatement(ScriptInstruction instruction, ScriptFile script)
     {
-        var list = CreateValueList(instruction, script);
-        if (list is null)
+        var labelList = CreateGotoLabelList(instruction, script);
+        if (labelList is null)
             throw new InvalidOperationException("Could not create goto statement.");
 
         SyntaxToken gotoToken = _syntaxFactory.Token(SyntaxTokenKind.GotoKeyword);
         SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
-        return new GotoStatementSyntax(gotoToken, list, semicolon);
+        return new GotoStatementSyntax(gotoToken, labelList, semicolon);
+    }
+
+    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateGotoLabelList(ScriptInstruction instruction, ScriptFile script)
+    {
+        int argumentCount = instruction.ArgumentCount;
+        int argumentIndex = instruction.ArgumentIndex;
+
+        if (argumentCount <= 0)
+            return null;
+
+        if (script.Arguments.Count < argumentIndex + argumentCount)
+            throw new InvalidOperationException($"Can't fetch all arguments ({script.Arguments.Count} >= {argumentIndex + argumentCount})");
+
+        var result = new List<ValueExpressionSyntax>();
+        for (int i = argumentIndex; i < argumentIndex + argumentCount; i++)
+            result.Add(CreateValueExpression(script.Arguments[i]));
+
+        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
     }
 
     private IfNotGotoStatementSyntax CreateIfNotGotoStatement(ScriptInstruction instruction, ScriptFile script)
@@ -745,13 +763,13 @@ internal class XseqScriptFileConverter : IXseqScriptFileConverter
     private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, ScriptFile script)
     {
         SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
-        var parameterList = CreateValueList(instruction, script);
+        var parameterList = CreateMethodInvocationParameterList(instruction, script);
         SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
 
-    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateValueList(ScriptInstruction instruction, ScriptFile script)
+    private CommaSeparatedSyntaxList<ExpressionSyntax>? CreateMethodInvocationParameterList(ScriptInstruction instruction, ScriptFile script)
     {
         int argumentCount = instruction.ArgumentCount;
         int argumentIndex = instruction.ArgumentIndex;
@@ -768,11 +786,11 @@ internal class XseqScriptFileConverter : IXseqScriptFileConverter
         if (script.Arguments.Count < argumentIndex + argumentCount)
             throw new InvalidOperationException($"Can't fetch all arguments ({script.Arguments.Count} >= {argumentIndex + argumentCount})");
 
-        var result = new List<ValueExpressionSyntax>();
+        var result = new List<ExpressionSyntax>();
         for (int i = argumentIndex; i < argumentIndex + argumentCount; i++)
             result.Add(CreateValueExpression(script.Arguments[i]));
 
-        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
+        return new CommaSeparatedSyntaxList<ExpressionSyntax>(result);
     }
 
     private ValueExpressionSyntax CreateValueExpression(ScriptArgument argument)

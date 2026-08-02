@@ -1,15 +1,17 @@
-﻿using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
-using Logic.Domain.CodeAnalysis.Contract.Level5;
-using Logic.Domain.Level5.Contract.Script.Xseq;
-using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
-using Logic.Domain.Level5.Contract.DataClasses.Script;
+﻿using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
+using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
+using Logic.Domain.CodeAnalysis.Contract.Level5;
+using Logic.Domain.Level5.Contract.DataClasses.Script;
+using Logic.Domain.Level5.Contract.Script.Xseq;
 
 namespace Logic.Business.Level5ScriptManagement.Creation;
 
 class CreateXseqWorkflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
+    ILowLevelCodeUnitConverter lowLevelConverter,
     IXseqCodeUnitConverter treeConverter,
     IXseqScriptWriter scriptWriter)
     : ICreateXseqWorkflow
@@ -23,6 +25,7 @@ class CreateXseqWorkflow(
 
         // Convert to script data
         CodeUnitSyntax codeUnit = scriptParser.ParseCodeUnit(readableScript);
+        codeUnit = lowLevelConverter.Convert(codeUnit);
 
         ScriptFile script = treeConverter.CreateScriptFile(codeUnit);
         script.Length = PointerLength.Int;

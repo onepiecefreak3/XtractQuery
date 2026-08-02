@@ -160,7 +160,7 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
         var argumentStartIndex = (short)result.Arguments.Count;
 
         AddArgument(result, ifGotoStatement.Goto.Target);
-        AddArgument(result, ifGotoStatement.Value);
+        AddArgument(result, RequireValueExpression(ifGotoStatement.Value, ifGotoStatement.Location));
         AddInstruction(result, argumentStartIndex, 2, 30, 1001);
     }
 
@@ -384,7 +384,7 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
                         throw CreateException($"Invalid unary expression operation {(SyntaxTokenKind)unaryExpression.Operation.RawKind}.", expression.Location);
                 }
 
-                AddArgument(result, unaryExpression.Value);
+                AddArgument(result, RequireValueExpression(unaryExpression.Value, unaryExpression.Location));
                 break;
 
             case LogicalExpressionSyntax logicalExpression:
@@ -560,7 +560,12 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
 
                 if (methodInvocation.Parameters.ParameterList != null)
                     foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)
-                        AddArgument(result, parameter);
+                    {
+                        if (parameter is not ValueExpressionSyntax valueParameter)
+                            throw CreateException($"Invalid expression {parameter.GetType().Name} for method invocation parameter.", parameter.Location);
+
+                        AddArgument(result, valueParameter);
+                    }
                 break;
 
             default:
@@ -646,6 +651,11 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
                 value = 0;
                 break;
 
+            case (int)SyntaxTokenKind.TrueKeyword:
+                type = ScriptArgumentType.Int;
+                value = 1;
+                break;
+
             case (int)SyntaxTokenKind.NumericLiteral:
                 type = ScriptArgumentType.Int;
                 value = GetNumericLiteral(literal);
@@ -702,6 +712,14 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
             Type = type,
             Value = value
         });
+    }
+
+    private ValueExpressionSyntax RequireValueExpression(ExpressionSyntax expression, SyntaxLocation location)
+    {
+        if (expression is ValueExpressionSyntax value)
+            return value;
+
+        throw CreateException($"Expected value expression, got {expression.GetType().Name}.", location);
     }
 
     private int GetVariable(VariableExpressionSyntax variable)
@@ -797,12 +815,12 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
                 SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword);
         }
 
-        if (expression is UnaryExpressionSyntax unary)
+        if (expression is UnaryExpressionSyntax { Value: ValueExpressionSyntax value })
         {
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
                 return float.NegativeInfinity;
 
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
                 return float.NaN;
         }
 

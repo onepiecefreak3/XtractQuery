@@ -16,7 +16,7 @@ public interface ILevel5ScriptParser
     MethodInvocationExpressionSyntax ParseMethodInvocationExpression(string text);
     MethodInvocationStatementSyntax ParseMethodInvocationStatement(string text);
     MethodInvocationParametersSyntax ParseMethodInvocationParameters(string text);
-    CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(string text);
+    CommaSeparatedSyntaxList<ExpressionSyntax>? ParseMethodInvocationParameterList(string text);
     ValueExpressionSyntax ParseValueExpression(string text);
     ValueMetadataParametersSyntax? ParseValueMetadataParameters(string text);
 }

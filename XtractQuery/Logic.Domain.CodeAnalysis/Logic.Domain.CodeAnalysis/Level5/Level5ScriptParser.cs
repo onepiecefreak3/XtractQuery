@@ -102,11 +102,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return ParseMethodInvocationParameters(buffer);
     }
 
-    public CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(string text)
+    public CommaSeparatedSyntaxList<ExpressionSyntax>? ParseMethodInvocationParameterList(string text)
     {
         IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
 
-        return ParseValueList(buffer);
+        return ParseMethodInvocationParameterList(buffer);
     }
 
     public ValueExpressionSyntax ParseValueExpression(string text)
@@ -233,13 +233,19 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                HasTokenKind(buffer, SyntaxTokenKind.ExitKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.GotoKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.IfKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.WhileKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.DoKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.BreakKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.ContinueKeyword) ||
                IsMethodInvocation(buffer);
     }
 
     private bool IsMethodInvocation(IBuffer<Level5SyntaxToken> buffer)
     {
         return HasTokenKind(buffer, SyntaxTokenKind.Identifier) &&
-               HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen);
+               (HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen) ||
+                HasTokenKind(buffer, 1, SyntaxTokenKind.Dot) ||
+                HasTokenKind(buffer, 1, SyntaxTokenKind.Smaller));
     }
 
     private StatementSyntax ParseStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -253,6 +259,12 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.ExitKeyword))
             return ParseExitStatement(buffer);
 
+        if (HasTokenKind(buffer, SyntaxTokenKind.BreakKeyword))
+            return ParseBreakStatement(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.ContinueKeyword))
+            return ParseContinueStatement(buffer);
+
         if (HasTokenKind(buffer, SyntaxTokenKind.StringLiteral))
             return ParseGotoLabelStatement(buffer);
 
@@ -261,6 +273,12 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
         if (HasTokenKind(buffer, SyntaxTokenKind.IfKeyword))
             return ParseIfStatement(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.WhileKeyword))
+            return ParseWhileStatement(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.DoKeyword))
+            return ParseDoWhileStatement(buffer);
 
         if (HasTokenKind(buffer, SyntaxTokenKind.Variable))
         {
@@ -276,7 +294,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             return ParseMethodInvocationStatement(buffer);
 
         throw CreateException(buffer, "Unknown statement.", SyntaxTokenKind.ReturnKeyword, SyntaxTokenKind.StringLiteral,
-            SyntaxTokenKind.Variable, SyntaxTokenKind.YieldKeyword, SyntaxTokenKind.ExitKeyword);
+            SyntaxTokenKind.Variable, SyntaxTokenKind.YieldKeyword, SyntaxTokenKind.ExitKeyword,
+            SyntaxTokenKind.WhileKeyword, SyntaxTokenKind.DoKeyword, SyntaxTokenKind.BreakKeyword,
+            SyntaxTokenKind.ContinueKeyword);
     }
 
     private bool IsPostfixUnaryStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -307,17 +327,89 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private StatementSyntax ParseIfStatement(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken ifToken = ParseIfKeywordToken(buffer);
+        ExpressionSyntax condition = ParseExpression(buffer);
 
-        if (HasTokenKind(buffer, SyntaxTokenKind.NotKeyword) || HasTokenKind(buffer, SyntaxTokenKind.Not))
-            return new IfNotGotoStatementSyntax(ifToken, ParseUnaryExpression(buffer), ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.GotoKeyword))
+        {
+            if (condition is UnaryExpressionSyntax unary &&
+                unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
+                return new IfNotGotoStatementSyntax(ifToken, unary, ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
 
-        if (IsValueExpression(buffer))
-            return new IfGotoStatementSyntax(ifToken, ParseValueExpression(buffer), ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+            return new IfGotoStatementSyntax(ifToken, condition, ParseGotoExpression(buffer), ParseSemicolonToken(buffer));
+        }
 
-        throw CreateException(buffer, "Unknown if statement.", SyntaxTokenKind.NotKeyword, SyntaxTokenKind.Not,
-            SyntaxTokenKind.Variable, SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral,
-            SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.HashNumericLiteral,
-            SyntaxTokenKind.HashStringLiteral);
+        if (HasTokenKind(buffer, SyntaxTokenKind.CurlyOpen))
+        {
+            BlockSyntax body = ParseBlock(buffer);
+            ElseClauseSyntax? elseClause = null;
+            if (HasTokenKind(buffer, SyntaxTokenKind.ElseKeyword))
+                elseClause = ParseElseClause(buffer);
+
+            return new IfStatementSyntax(ifToken, condition, body, elseClause);
+        }
+
+        throw CreateException(buffer, "Invalid if statement.", SyntaxTokenKind.GotoKeyword, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private WhileStatementSyntax ParseWhileStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken whileToken = ParseWhileKeywordToken(buffer);
+        SyntaxToken parenOpen = ParseParenOpenToken(buffer);
+        ExpressionSyntax condition = ParseExpression(buffer);
+        SyntaxToken parenClose = ParseParenCloseToken(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.Semicolon))
+            return new WhileStatementSyntax(whileToken, parenOpen, condition, parenClose, null, ParseSemicolonToken(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.CurlyOpen))
+            return new WhileStatementSyntax(whileToken, parenOpen, condition, parenClose, ParseBlock(buffer), null);
+
+        throw CreateException(buffer, "Invalid while statement.", SyntaxTokenKind.Semicolon, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private DoWhileStatementSyntax ParseDoWhileStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken doToken = ParseDoKeywordToken(buffer);
+        BlockSyntax body = ParseBlock(buffer);
+        SyntaxToken whileToken = ParseWhileKeywordToken(buffer);
+        SyntaxToken parenOpen = ParseParenOpenToken(buffer);
+        ExpressionSyntax condition = ParseExpression(buffer);
+        SyntaxToken parenClose = ParseParenCloseToken(buffer);
+        SyntaxToken semicolon = ParseSemicolonToken(buffer);
+
+        return new DoWhileStatementSyntax(doToken, body, whileToken, parenOpen, condition, parenClose, semicolon);
+    }
+
+    private BreakStatementSyntax ParseBreakStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return new BreakStatementSyntax(ParseBreakKeywordToken(buffer), ParseSemicolonToken(buffer));
+    }
+
+    private ContinueStatementSyntax ParseContinueStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return new ContinueStatementSyntax(ParseContinueKeywordToken(buffer), ParseSemicolonToken(buffer));
+    }
+
+    private ElseClauseSyntax ParseElseClause(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken elseKeyword = ParseElseKeywordToken(buffer);
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.IfKeyword))
+            return new ElseClauseSyntax(elseKeyword, ParseIfStatement(buffer));
+
+        if (HasTokenKind(buffer, SyntaxTokenKind.CurlyOpen))
+            return new ElseClauseSyntax(elseKeyword, ParseBlock(buffer));
+
+        throw CreateException(buffer, "Invalid else clause.", SyntaxTokenKind.IfKeyword, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private BlockSyntax ParseBlock(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken curlyOpen = ParseCurlyOpenToken(buffer);
+        IReadOnlyList<StatementSyntax> statements = ParseStatements(buffer);
+        SyntaxToken curlyClose = ParseCurlyCloseToken(buffer);
+
+        return new BlockSyntax(curlyOpen, statements, curlyClose);
     }
 
     private GotoExpressionSyntax ParseGotoExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -331,12 +423,39 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private GotoStatementSyntax ParseGotoStatement(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken gotoToken = ParseGotoKeywordToken(buffer);
-        var value = ParseValueList(buffer);
-        if (value is null)
+        var labelList = ParseGotoLabelList(buffer);
+        if (labelList is null)
             throw CreateException(buffer, "Could not parse goto statement");
         SyntaxToken semicolon = ParseSemicolonToken(buffer);
 
-        return new GotoStatementSyntax(gotoToken, value, semicolon);
+        return new GotoStatementSyntax(gotoToken, labelList, semicolon);
+    }
+
+    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseGotoLabelList(IBuffer<Level5SyntaxToken> buffer)
+    {
+        if (!IsValueExpression(buffer))
+            return null;
+
+        var result = new List<ValueExpressionSyntax>();
+
+        ValueExpressionSyntax parameter = ParseValueExpression(buffer);
+        result.Add(parameter);
+
+        while (HasTokenKind(buffer, SyntaxTokenKind.Comma))
+        {
+            SkipTokenKind(buffer, SyntaxTokenKind.Comma);
+
+            if (!IsValueExpression(buffer))
+                throw CreateException(buffer, "Invalid end of parameter list.", SyntaxTokenKind.Variable,
+                    SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral,
+                    SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral,
+                    SyntaxTokenKind.FloatingNumericLiteral);
+
+            parameter = ParseValueExpression(buffer);
+            result.Add(parameter);
+        }
+
+        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
     }
 
     private YieldStatementSyntax ParseYieldStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -435,8 +554,40 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
     private ExpressionSyntax ParseExpression(IBuffer<Level5SyntaxToken> buffer)
     {
+        return ParseBinaryExpression(buffer, ExpressionPrecedence.LogicalOr);
+    }
+
+    private ExpressionSyntax ParseBinaryExpression(IBuffer<Level5SyntaxToken> buffer, int maxPrecedence)
+    {
+        ExpressionSyntax left = ParseUnaryOrPrimaryExpression(buffer);
+
+        while (true)
+        {
+            if (HasTokenKind(buffer, SyntaxTokenKind.SwitchKeyword))
+                return ParseSwitchExpression(buffer, left);
+
+            if (!TryGetBinaryOperatorPrecedence(buffer, out int precedence) || precedence > maxPrecedence)
+                return left;
+
+            SyntaxToken operation = ParseBinaryOperatorToken(buffer);
+            ExpressionSyntax right = ParseBinaryExpression(buffer, precedence - 1);
+
+            if (IsLogicalOperator(operation))
+                left = new LogicalExpressionSyntax(left, operation, right);
+            else
+                left = new BinaryExpressionSyntax(left, operation, right);
+        }
+    }
+
+    private ExpressionSyntax ParseUnaryOrPrimaryExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
         if (HasTokenKind(buffer, SyntaxTokenKind.ParenOpen))
-            return ParseTypeCastValueExpression(buffer);
+        {
+            if (IsTypeCast(buffer))
+                return ParseTypeCastValueExpression(buffer);
+
+            return ParseParenthesizedExpression(buffer);
+        }
 
         if (HasTokenKind(buffer, SyntaxTokenKind.NewKeyword))
             return ParseArrayInstantiationExpression(buffer);
@@ -448,32 +599,103 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             && (HasTokenKind(buffer, 1, SyntaxTokenKind.ParenOpen) || HasTokenKind(buffer, 1, SyntaxTokenKind.Dot) || HasTokenKind(buffer, 1, SyntaxTokenKind.Smaller)))
             return ParseMethodInvocationExpression(buffer);
 
-        ExpressionSyntax left;
         if (IsValueExpression(buffer))
         {
             ValueExpressionSyntax value = ParseValueExpression(buffer);
-            left = value;
+            ExpressionSyntax left = value;
 
             if (HasTokenKind(buffer, SyntaxTokenKind.BracketOpen))
                 left = ParseArrayIndexExpression(buffer, value);
+
+            return left;
         }
-        else
-            throw CreateException(buffer, "Invalid expression.", SyntaxTokenKind.Variable,
-                SyntaxTokenKind.StringLiteral,
-                SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
-                SyntaxTokenKind.HashStringLiteral,
-                SyntaxTokenKind.HashNumericLiteral);
 
-        if (HasTokenKind(buffer, SyntaxTokenKind.SwitchKeyword))
-            return ParseSwitchExpression(buffer, left);
+        throw CreateException(buffer, "Invalid expression.", SyntaxTokenKind.Variable,
+            SyntaxTokenKind.StringLiteral,
+            SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.HashStringLiteral,
+            SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.ParenOpen);
+    }
 
-        if (IsBinaryExpression(buffer))
-            return ParseBinaryExpression(buffer, left);
+    private ParenthesizedExpressionSyntax ParseParenthesizedExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken parenOpen = ParseParenOpenToken(buffer);
+        ExpressionSyntax expression = ParseExpression(buffer);
+        SyntaxToken parenClose = ParseParenCloseToken(buffer);
 
-        if (IsLogicalExpression(buffer))
-            return ParseLogicalExpression(buffer, left);
+        return new ParenthesizedExpressionSyntax(parenOpen, expression, parenClose);
+    }
 
-        return left;
+    private bool IsTypeCast(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return HasTokenKind(buffer, 1, SyntaxTokenKind.IntKeyword) ||
+               HasTokenKind(buffer, 1, SyntaxTokenKind.BoolKeyword) ||
+               HasTokenKind(buffer, 1, SyntaxTokenKind.FloatKeyword);
+    }
+
+    private bool TryGetBinaryOperatorPrecedence(IBuffer<Level5SyntaxToken> buffer, out int precedence)
+    {
+        SyntaxTokenKind[] operators =
+        [
+            SyntaxTokenKind.OrKeyword, SyntaxTokenKind.OrOr,
+            SyntaxTokenKind.AndKeyword, SyntaxTokenKind.AndAnd,
+            SyntaxTokenKind.Or, SyntaxTokenKind.Xor, SyntaxTokenKind.And,
+            SyntaxTokenKind.Equals, SyntaxTokenKind.NotEquals,
+            SyntaxTokenKind.GreaterEquals, SyntaxTokenKind.SmallerEquals,
+            SyntaxTokenKind.Greater, SyntaxTokenKind.Smaller,
+            SyntaxTokenKind.LeftShift, SyntaxTokenKind.RightShift,
+            SyntaxTokenKind.Plus, SyntaxTokenKind.Minus,
+            SyntaxTokenKind.Mul, SyntaxTokenKind.Div, SyntaxTokenKind.Mod
+        ];
+
+        foreach (SyntaxTokenKind op in operators)
+        {
+            if (!HasTokenKind(buffer, op))
+                continue;
+
+            int? value = ExpressionPrecedence.GetOperatorPrecedence(op);
+            if (value is null or < 0)
+                break;
+
+            precedence = value.Value;
+            return true;
+        }
+
+        precedence = 0;
+        return false;
+    }
+
+    private bool IsLogicalOperator(SyntaxToken operation)
+    {
+        return operation.RawKind is (int)SyntaxTokenKind.AndKeyword or (int)SyntaxTokenKind.OrKeyword
+            or (int)SyntaxTokenKind.AndAnd or (int)SyntaxTokenKind.OrOr;
+    }
+
+    private SyntaxToken ParseBinaryOperatorToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        if (HasTokenKind(buffer, SyntaxTokenKind.Equals)) return ParseEqualsToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.NotEquals)) return ParseNotEqualsToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.GreaterEquals)) return ParseGreaterEqualsToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.SmallerEquals)) return ParseSmallerEqualsToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Greater)) return ParseGreaterToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Smaller)) return ParseSmallerToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Plus)) return ParsePlusToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus)) return ParseMinusToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Mul)) return ParseMulToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Div)) return ParseDivToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Mod)) return ParseModToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.And)) return ParseAndToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Or)) return ParseOrToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.Xor)) return ParseXorToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.LeftShift)) return ParseLeftShiftToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.RightShift)) return ParseRightShiftToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.AndKeyword)) return ParseAndKeywordToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.AndAnd)) return ParseAndAndToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.OrKeyword)) return ParseOrKeywordToken(buffer);
+        if (HasTokenKind(buffer, SyntaxTokenKind.OrOr)) return ParseOrOrToken(buffer);
+
+        throw CreateException(buffer, "Unknown binary expression.", SyntaxTokenKind.Equals, SyntaxTokenKind.NotEquals,
+            SyntaxTokenKind.GreaterEquals, SyntaxTokenKind.SmallerEquals, SyntaxTokenKind.Greater, SyntaxTokenKind.Smaller);
     }
 
     private TypeCastValueExpressionSyntax ParseTypeCastValueExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -564,113 +786,6 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return new LiteralSwitchCaseExpressionSyntax(caseValue, arrowRight, value);
     }
 
-    private bool IsLogicalExpression(IBuffer<Level5SyntaxToken> buffer)
-    {
-        return HasTokenKind(buffer, SyntaxTokenKind.AndKeyword) ||
-               HasTokenKind(buffer, SyntaxTokenKind.OrKeyword) ||
-               HasTokenKind(buffer, SyntaxTokenKind.AndAnd) ||
-               HasTokenKind(buffer, SyntaxTokenKind.OrOr);
-    }
-
-    private LogicalExpressionSyntax ParseLogicalExpression(IBuffer<Level5SyntaxToken> buffer, ExpressionSyntax left)
-    {
-        switch (buffer.Peek().Kind)
-        {
-            case SyntaxTokenKind.AndKeyword:
-                return new LogicalExpressionSyntax(left, ParseAndKeywordToken(buffer), ParseExpression(buffer));
-
-            case SyntaxTokenKind.AndAnd:
-                return new LogicalExpressionSyntax(left, ParseAndAndToken(buffer), ParseExpression(buffer));
-
-            case SyntaxTokenKind.OrKeyword:
-                return new LogicalExpressionSyntax(left, ParseOrKeywordToken(buffer), ParseExpression(buffer));
-
-            case SyntaxTokenKind.OrOr:
-                return new LogicalExpressionSyntax(left, ParseOrOrToken(buffer), ParseExpression(buffer));
-
-            default:
-                throw CreateException(buffer, "Unknown logical expression.", SyntaxTokenKind.AndKeyword, SyntaxTokenKind.OrKeyword);
-        }
-    }
-
-    private bool IsBinaryExpression(IBuffer<Level5SyntaxToken> buffer)
-    {
-        return HasTokenKind(buffer, SyntaxTokenKind.Equals) ||
-               HasTokenKind(buffer, SyntaxTokenKind.NotEquals) ||
-               HasTokenKind(buffer, SyntaxTokenKind.GreaterEquals) ||
-               HasTokenKind(buffer, SyntaxTokenKind.SmallerEquals) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Greater) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Smaller) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Plus) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Minus) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Mul) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Div) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Mod) ||
-               HasTokenKind(buffer, SyntaxTokenKind.And) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Or) ||
-               HasTokenKind(buffer, SyntaxTokenKind.Xor) ||
-               HasTokenKind(buffer, SyntaxTokenKind.LeftShift) ||
-               HasTokenKind(buffer, SyntaxTokenKind.RightShift);
-    }
-
-    private BinaryExpressionSyntax ParseBinaryExpression(IBuffer<Level5SyntaxToken> buffer, ExpressionSyntax left)
-    {
-        switch (buffer.Peek().Kind)
-        {
-            case SyntaxTokenKind.Equals:
-                return new BinaryExpressionSyntax(left, ParseEqualsToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.NotEquals:
-                return new BinaryExpressionSyntax(left, ParseNotEqualsToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.GreaterEquals:
-                return new BinaryExpressionSyntax(left, ParseGreaterEqualsToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.SmallerEquals:
-                return new BinaryExpressionSyntax(left, ParseSmallerEqualsToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Greater:
-                return new BinaryExpressionSyntax(left, ParseGreaterToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Smaller:
-                return new BinaryExpressionSyntax(left, ParseSmallerToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Plus:
-                return new BinaryExpressionSyntax(left, ParsePlusToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Minus:
-                return new BinaryExpressionSyntax(left, ParseMinusToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Mul:
-                return new BinaryExpressionSyntax(left, ParseMulToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Div:
-                return new BinaryExpressionSyntax(left, ParseDivToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Mod:
-                return new BinaryExpressionSyntax(left, ParseModToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.And:
-                return new BinaryExpressionSyntax(left, ParseAndToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Or:
-                return new BinaryExpressionSyntax(left, ParseOrToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.Xor:
-                return new BinaryExpressionSyntax(left, ParseXorToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.LeftShift:
-                return new BinaryExpressionSyntax(left, ParseLeftShiftToken(buffer), ParseValueExpression(buffer));
-
-            case SyntaxTokenKind.RightShift:
-                return new BinaryExpressionSyntax(left, ParseRightShiftToken(buffer), ParseValueExpression(buffer));
-
-            default:
-                throw CreateException(buffer, "Unknown binary expression.", SyntaxTokenKind.Equals, SyntaxTokenKind.NotEquals,
-                    SyntaxTokenKind.GreaterEquals, SyntaxTokenKind.SmallerEquals, SyntaxTokenKind.Greater, SyntaxTokenKind.Smaller);
-        }
-    }
-
     private ArrayInstantiationExpressionSyntax ParseArrayInstantiationExpression(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken newToken = ParseNewKeywordToken(buffer);
@@ -701,23 +816,19 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
     private UnaryExpressionSyntax ParseUnaryExpression(IBuffer<Level5SyntaxToken> buffer)
     {
-        switch (buffer.Peek().Kind)
-        {
-            case SyntaxTokenKind.Complement:
-                return new UnaryExpressionSyntax(ParseComplementToken(buffer), ParseValueExpression(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.Complement))
+            return new UnaryExpressionSyntax(ParseComplementToken(buffer), ParseUnaryOrPrimaryExpression(buffer));
 
-            case SyntaxTokenKind.Minus:
-                return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseValueExpression(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.Minus))
+            return new UnaryExpressionSyntax(ParseMinusToken(buffer), ParseUnaryOrPrimaryExpression(buffer));
 
-            case SyntaxTokenKind.NotKeyword:
-                return new UnaryExpressionSyntax(ParseNotKeywordToken(buffer), ParseValueExpression(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.NotKeyword))
+            return new UnaryExpressionSyntax(ParseNotKeywordToken(buffer), ParseUnaryOrPrimaryExpression(buffer));
 
-            case SyntaxTokenKind.Not:
-                return new UnaryExpressionSyntax(ParseNotToken(buffer), ParseValueExpression(buffer));
+        if (HasTokenKind(buffer, SyntaxTokenKind.Not))
+            return new UnaryExpressionSyntax(ParseNotToken(buffer), ParseUnaryOrPrimaryExpression(buffer));
 
-            default:
-                throw CreateException(buffer, "Unknown unary expression.", SyntaxTokenKind.Complement, SyntaxTokenKind.Minus);
-        }
+        throw CreateException(buffer, "Unknown unary expression.", SyntaxTokenKind.Complement, SyntaxTokenKind.Minus);
     }
 
     private ArrayIndexerExpressionSyntax ParseArrayIndexerExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -763,37 +874,46 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private MethodInvocationParametersSyntax ParseMethodInvocationParameters(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken parenOpen = ParseParenOpenToken(buffer);
-        var parameters = ParseValueList(buffer);
+        var parameters = ParseMethodInvocationParameterList(buffer);
         SyntaxToken parenClose = ParseParenCloseToken(buffer);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameters, parenClose);
     }
 
-    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParseValueList(IBuffer<Level5SyntaxToken> buffer)
+    private CommaSeparatedSyntaxList<ExpressionSyntax>? ParseMethodInvocationParameterList(IBuffer<Level5SyntaxToken> buffer)
     {
-        if (!IsValueExpression(buffer))
+        if (!IsExpressionStart(buffer))
             return null;
 
-        var result = new List<ValueExpressionSyntax>();
+        var result = new List<ExpressionSyntax>();
 
-        ValueExpressionSyntax parameter = ParseValueExpression(buffer);
+        ExpressionSyntax parameter = ParseExpression(buffer);
         result.Add(parameter);
 
         while (HasTokenKind(buffer, SyntaxTokenKind.Comma))
         {
             SkipTokenKind(buffer, SyntaxTokenKind.Comma);
 
-            if (!IsValueExpression(buffer))
+            if (!IsExpressionStart(buffer))
                 throw CreateException(buffer, "Invalid end of parameter list.", SyntaxTokenKind.Variable,
                     SyntaxTokenKind.StringLiteral, SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral,
                     SyntaxTokenKind.HashNumericLiteral, SyntaxTokenKind.HashStringLiteral,
-                    SyntaxTokenKind.FloatingNumericLiteral);
+                    SyntaxTokenKind.FloatingNumericLiteral, SyntaxTokenKind.ParenOpen, SyntaxTokenKind.Identifier);
 
-            parameter = ParseValueExpression(buffer);
+            parameter = ParseExpression(buffer);
             result.Add(parameter);
         }
 
-        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
+        return new CommaSeparatedSyntaxList<ExpressionSyntax>(result);
+    }
+
+    private bool IsExpressionStart(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return IsValueExpression(buffer) ||
+               HasTokenKind(buffer, SyntaxTokenKind.ParenOpen) ||
+               HasTokenKind(buffer, SyntaxTokenKind.Identifier) ||
+               HasTokenKind(buffer, SyntaxTokenKind.NewKeyword) ||
+               IsUnaryExpression(buffer);
     }
 
     private bool IsValueExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -810,6 +930,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                HasTokenKind(buffer, SyntaxTokenKind.HashStringLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.HashNumericLiteral) ||
                HasTokenKind(buffer, SyntaxTokenKind.UndefinedKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.TrueKeyword) ||
                IsFloatingNumberLiteralExpression(buffer);
     }
 
@@ -849,12 +970,16 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.UndefinedKeyword))
             return new ValueExpressionSyntax(ParseUndefinedLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
+        if (HasTokenKind(buffer, SyntaxTokenKind.TrueKeyword))
+            return new ValueExpressionSyntax(ParseTrueLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
+
         if (IsFloatingNumberLiteralExpression(buffer))
             return new ValueExpressionSyntax(ParseFloatingNumericLiteralExpression(buffer), ParseValueMetadataParameters(buffer));
 
         throw CreateException(buffer, "Unknown value expression.", SyntaxTokenKind.Variable, SyntaxTokenKind.StringLiteral,
             SyntaxTokenKind.NumericLiteral, SyntaxTokenKind.UnsignedNumericLiteral, SyntaxTokenKind.HashNumericLiteral,
-            SyntaxTokenKind.HashStringLiteral, SyntaxTokenKind.UndefinedKeyword, SyntaxTokenKind.FloatingNumericLiteral,
+            SyntaxTokenKind.HashStringLiteral, SyntaxTokenKind.UndefinedKeyword, SyntaxTokenKind.TrueKeyword,
+            SyntaxTokenKind.FloatingNumericLiteral,
             SyntaxTokenKind.Infinite, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.NanKeyword);
     }
 
@@ -903,6 +1028,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         SyntaxToken literal = ParseUndefinedLiteralToken(buffer);
 
         return new LiteralExpressionSyntax(literal);
+    }
+
+    private LiteralExpressionSyntax ParseTrueLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return new LiteralExpressionSyntax(ParseTrueKeywordToken(buffer));
     }
 
     private LiteralExpressionSyntax ParseHashStringLiteralExpression(IBuffer<Level5SyntaxToken> buffer)
@@ -1239,6 +1369,36 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseIfKeywordToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.IfKeyword);
+    }
+
+    private SyntaxToken ParseElseKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.ElseKeyword);
+    }
+
+    private SyntaxToken ParseWhileKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.WhileKeyword);
+    }
+
+    private SyntaxToken ParseDoKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.DoKeyword);
+    }
+
+    private SyntaxToken ParseBreakKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.BreakKeyword);
+    }
+
+    private SyntaxToken ParseContinueKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.ContinueKeyword);
+    }
+
+    private SyntaxToken ParseTrueKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.TrueKeyword);
     }
 
     private SyntaxToken ParseIntKeywordToken(IBuffer<Level5SyntaxToken> buffer)

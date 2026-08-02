@@ -133,7 +133,7 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
         AddArgument(arguments, GdsScriptArgumentType.Int, invocationType);
 
         if (methodInvocation.Parameters.ParameterList != null)
-            foreach (ValueExpressionSyntax parameter in methodInvocation.Parameters.ParameterList.Elements)
+            foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)
                 AddArgument(arguments, parameter);
 
         AddInstruction(instructions, 0, arguments, jump);
@@ -160,6 +160,14 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
             Arguments = [.. arguments],
             Jump = jump
         });
+    }
+
+    private void AddArgument(List<GdsScriptArgument> arguments, ExpressionSyntax parameter)
+    {
+        if (parameter is not ValueExpressionSyntax valueParameter)
+            throw CreateException($"Invalid expression {parameter.GetType().Name}.", parameter.Location);
+
+        AddArgument(arguments, valueParameter);
     }
 
     private void AddArgument(List<GdsScriptArgument> arguments, ValueExpressionSyntax parameter)

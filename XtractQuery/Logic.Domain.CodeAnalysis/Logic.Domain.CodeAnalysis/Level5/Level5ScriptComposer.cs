@@ -115,7 +115,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         return sb.ToString();
     }
 
-    public string ComposeValueList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList)
+    public string ComposeCreateMethodInvocationParameterList(CommaSeparatedSyntaxList<ValueExpressionSyntax> valueList)
     {
         var sb = new StringBuilder();
 
@@ -239,6 +239,30 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeIfNotGotoStatement(ifNotGotoStatement, sb);
                 break;
 
+            case IfStatementSyntax ifStatement:
+                ComposeIfStatement(ifStatement, sb);
+                break;
+
+            case WhileStatementSyntax whileStatement:
+                ComposeWhileStatement(whileStatement, sb);
+                break;
+
+            case DoWhileStatementSyntax doWhileStatement:
+                ComposeDoWhileStatement(doWhileStatement, sb);
+                break;
+
+            case BreakStatementSyntax breakStatement:
+                ComposeBreakStatement(breakStatement, sb);
+                break;
+
+            case ContinueStatementSyntax continueStatement:
+                ComposeContinueStatement(continueStatement, sb);
+                break;
+
+            case BlockSyntax block:
+                ComposeBlock(block, sb);
+                break;
+
             case PostfixUnaryStatementSyntax postfixUnaryStatement:
                 ComposePostfixUnaryStatement(postfixUnaryStatement, sb);
                 break;
@@ -262,7 +286,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeIfGotoStatement(IfGotoStatementSyntax ifGotoStatement, StringBuilder sb)
     {
         ComposeSyntaxToken(ifGotoStatement.If, sb);
-        ComposeValueExpression(ifGotoStatement.Value, sb);
+        ComposeExpression(ifGotoStatement.Value, sb);
         ComposeGotoExpression(ifGotoStatement.Goto, sb);
         ComposeSyntaxToken(ifGotoStatement.Semicolon, sb);
     }
@@ -286,6 +310,66 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeUnaryExpression(ifNotGotoStatement.Comparison, sb);
         ComposeGotoExpression(ifNotGotoStatement.Goto, sb);
         ComposeSyntaxToken(ifNotGotoStatement.Semicolon, sb);
+    }
+
+    private void ComposeIfStatement(IfStatementSyntax ifStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(ifStatement.If, sb);
+        ComposeExpression(ifStatement.Condition, sb);
+        ComposeBlock(ifStatement.Body, sb);
+        if (ifStatement.Else != null)
+            ComposeElseClause(ifStatement.Else, sb);
+    }
+
+    private void ComposeWhileStatement(WhileStatementSyntax whileStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(whileStatement.While, sb);
+        ComposeSyntaxToken(whileStatement.ParenOpen, sb);
+        ComposeExpression(whileStatement.Condition, sb);
+        ComposeSyntaxToken(whileStatement.ParenClose, sb);
+        if (whileStatement.Body != null)
+            ComposeBlock(whileStatement.Body, sb);
+        if (whileStatement.Semicolon != null)
+            ComposeSyntaxToken(whileStatement.Semicolon.Value, sb);
+    }
+
+    private void ComposeDoWhileStatement(DoWhileStatementSyntax doWhileStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(doWhileStatement.Do, sb);
+        ComposeBlock(doWhileStatement.Body, sb);
+        ComposeSyntaxToken(doWhileStatement.While, sb);
+        ComposeSyntaxToken(doWhileStatement.ParenOpen, sb);
+        ComposeExpression(doWhileStatement.Condition, sb);
+        ComposeSyntaxToken(doWhileStatement.ParenClose, sb);
+        ComposeSyntaxToken(doWhileStatement.Semicolon, sb);
+    }
+
+    private void ComposeBreakStatement(BreakStatementSyntax breakStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(breakStatement.Break, sb);
+        ComposeSyntaxToken(breakStatement.Semicolon, sb);
+    }
+
+    private void ComposeContinueStatement(ContinueStatementSyntax continueStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(continueStatement.Continue, sb);
+        ComposeSyntaxToken(continueStatement.Semicolon, sb);
+    }
+
+    private void ComposeElseClause(ElseClauseSyntax elseClause, StringBuilder sb)
+    {
+        ComposeSyntaxToken(elseClause.ElseKeyword, sb);
+        ComposeStatement(elseClause.Statement, sb);
+    }
+
+    private void ComposeBlock(BlockSyntax block, StringBuilder sb)
+    {
+        ComposeSyntaxToken(block.CurlyOpen, sb);
+
+        foreach (StatementSyntax statement in block.Statements)
+            ComposeStatement(statement, sb);
+
+        ComposeSyntaxToken(block.CurlyClose, sb);
     }
 
     private void ComposeGotoLabelStatement(GotoLabelStatementSyntax gotoLabelStatement, StringBuilder sb)
@@ -338,6 +422,10 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeTypeCastValueExpression(typeCastValueExpression, sb);
                 break;
 
+            case ParenthesizedExpressionSyntax parenthesizedExpression:
+                ComposeParenthesizedExpression(parenthesizedExpression, sb);
+                break;
+
             case PostfixUnaryExpressionSyntax postfixUnaryExpression:
                 ComposePostfixUnaryExpression(postfixUnaryExpression, sb);
                 break;
@@ -388,6 +476,13 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     {
         ComposeTypeCastExpression(typeCastValueExpression.TypeCast, sb);
         ComposeValueExpression(typeCastValueExpression.Value, sb);
+    }
+
+    private void ComposeParenthesizedExpression(ParenthesizedExpressionSyntax parenthesizedExpression, StringBuilder sb)
+    {
+        ComposeSyntaxToken(parenthesizedExpression.ParenOpen, sb);
+        ComposeExpression(parenthesizedExpression.Expression, sb);
+        ComposeSyntaxToken(parenthesizedExpression.ParenClose, sb);
     }
 
     private void ComposeTypeCastExpression(TypeCastExpressionSyntax typeCastExpression, StringBuilder sb)
@@ -456,7 +551,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeUnaryExpression(UnaryExpressionSyntax unaryExpression, StringBuilder sb)
     {
         ComposeSyntaxToken(unaryExpression.Operation, sb);
-        ComposeValueExpression(unaryExpression.Value, sb);
+        ComposeExpression(unaryExpression.Value, sb);
     }
 
     private void ComposeBinaryExpression(BinaryExpressionSyntax binaryExpression, StringBuilder sb)
@@ -508,8 +603,22 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
     private void ComposeMethodInvocationParameters(MethodInvocationParametersSyntax invocationParameters, StringBuilder sb)
     {
         ComposeSyntaxToken(invocationParameters.ParenOpen, sb);
-        ComposeValueExpressions(invocationParameters.ParameterList, sb);
+        ComposeExpressions(invocationParameters.ParameterList, sb);
         ComposeSyntaxToken(invocationParameters.ParenClose, sb);
+    }
+
+    private void ComposeExpressions(CommaSeparatedSyntaxList<ExpressionSyntax>? valueList, StringBuilder sb)
+    {
+        if (valueList == null || valueList.Elements.Count <= 0)
+            return;
+
+        for (var i = 0; i < valueList.Elements.Count - 1; i++)
+        {
+            ComposeExpression(valueList.Elements[i], sb);
+            ComposeSyntaxToken(_syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
+        }
+
+        ComposeExpression(valueList.Elements[^1], sb);
     }
 
     private void ComposeValueExpressions(CommaSeparatedSyntaxList<ValueExpressionSyntax>? valueList, StringBuilder sb)

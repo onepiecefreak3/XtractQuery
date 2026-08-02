@@ -561,7 +561,12 @@ internal class Gss1CodeUnitConverter : IGss1CodeUnitConverter
 
                 if (methodInvocation.Parameters.ParameterList != null)
                     foreach (var parameter in methodInvocation.Parameters.ParameterList.Elements)
-                        AddArgument(result, parameter);
+                    {
+                        if (parameter is not ValueExpressionSyntax valueParameter)
+                            throw CreateException($"Invalid expression {parameter.GetType().Name} for method invocation parameter.", parameter.Location);
+
+                        AddArgument(result, valueParameter);
+                    }
                 break;
 
             default:
@@ -596,6 +601,19 @@ internal class Gss1CodeUnitConverter : IGss1CodeUnitConverter
 
             ReturnParameter = (short)returnParameter
         });
+    }
+
+    private void AddArgument(Gss1ScriptFile result, ExpressionSyntax parameter)
+    {
+        switch (parameter)
+        {
+            case ValueExpressionSyntax value:
+                AddArgument(result, value);
+                break;
+
+            default:
+                throw CreateException($"Invalid argument expression {parameter.GetType().Name}.", parameter.Location);
+        }
     }
 
     private void AddArgument(Gss1ScriptFile result, ValueExpressionSyntax parameter)
@@ -798,12 +816,12 @@ internal class Gss1CodeUnitConverter : IGss1CodeUnitConverter
                 SyntaxTokenKind.Infinite, SyntaxTokenKind.InfinityKeyword, SyntaxTokenKind.InfKeyword, SyntaxTokenKind.NanKeyword);
         }
 
-        if (expression is UnaryExpressionSyntax unary)
+        if (expression is UnaryExpressionSyntax { Value: ValueExpressionSyntax value })
         {
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.Infinite or (int)SyntaxTokenKind.InfinityKeyword or (int)SyntaxTokenKind.InfKeyword })
                 return float.NegativeInfinity;
 
-            if (unary.Value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
+            if (value.Value is LiteralExpressionSyntax { Literal.RawKind: (int)SyntaxTokenKind.NanKeyword })
                 return float.NaN;
         }
 

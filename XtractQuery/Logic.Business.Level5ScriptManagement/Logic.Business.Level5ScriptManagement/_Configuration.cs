@@ -13,6 +13,9 @@ public class ScriptManagementConfiguration
     [ConfigMap("CommandLine", ["t", "type"])]
     public virtual string QueryType { get; set; }
 
+    [ConfigMap("CommandLine", ["ns", "no-syntax"])]
+    public virtual bool WithoutHighLevelSyntax { get; set; } = false;
+
     [ConfigMap("CommandLine", ["l", "length"])]
     public virtual string Length { get; set; } = "int";
 

@@ -1,4 +1,5 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
@@ -16,6 +17,7 @@ partial class ExtractXseqWorkflow(
     IXseqScriptDecompressor scriptDecompressor,
     IXseqScriptReader scriptReader,
     IXseqScriptFileConverter scriptConverter,
+    IHighLevelCodeUnitConverter highLevelConverter,
     ILevel5ScriptWhitespaceNormalizer whiteSpaceNormalizer,
     ILevel5ScriptComposer scriptComposer)
     : IExtractXseqWorkflow
@@ -34,6 +36,8 @@ partial class ExtractXseqWorkflow(
 
         // Convert to readable script
         CodeUnitSyntax codeUnit = scriptConverter.CreateCodeUnit(script);
+        if (!config.WithoutHighLevelSyntax)
+            codeUnit = highLevelConverter.Convert(codeUnit);
         whiteSpaceNormalizer.NormalizeCodeUnit(codeUnit);
 
         string readableScript = scriptComposer.ComposeCodeUnit(codeUnit);

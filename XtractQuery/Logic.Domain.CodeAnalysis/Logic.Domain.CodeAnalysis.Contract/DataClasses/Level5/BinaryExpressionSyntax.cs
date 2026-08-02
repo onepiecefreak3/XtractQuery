@@ -22,7 +22,7 @@ public class BinaryExpressionSyntax : ExpressionSyntax
         Root.Update();
     }
 
-    public void SetLeftExpression(ValueExpressionSyntax left, bool updatePositions = true)
+    public void SetLeftExpression(ExpressionSyntax left, bool updatePositions = true)
     {
         left.Parent = this;
 
@@ -42,7 +42,7 @@ public class BinaryExpressionSyntax : ExpressionSyntax
             Root.Update();
     }
 
-    public void SetRightExpression(ValueExpressionSyntax right, bool updatePositions = true)
+    public void SetRightExpression(ExpressionSyntax right, bool updatePositions = true)
     {
         right.Parent = this;
 

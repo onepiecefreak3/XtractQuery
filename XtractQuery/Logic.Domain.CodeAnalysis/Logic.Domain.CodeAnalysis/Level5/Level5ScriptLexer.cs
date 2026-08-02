@@ -588,6 +588,24 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
             case "if":
                 return new Level5SyntaxToken(SyntaxTokenKind.IfKeyword, position, line, column, finalValue);
 
+            case "else":
+                return new Level5SyntaxToken(SyntaxTokenKind.ElseKeyword, position, line, column, finalValue);
+
+            case "while":
+                return new Level5SyntaxToken(SyntaxTokenKind.WhileKeyword, position, line, column, finalValue);
+
+            case "do":
+                return new Level5SyntaxToken(SyntaxTokenKind.DoKeyword, position, line, column, finalValue);
+
+            case "break":
+                return new Level5SyntaxToken(SyntaxTokenKind.BreakKeyword, position, line, column, finalValue);
+
+            case "continue":
+                return new Level5SyntaxToken(SyntaxTokenKind.ContinueKeyword, position, line, column, finalValue);
+
+            case "true":
+                return new Level5SyntaxToken(SyntaxTokenKind.TrueKeyword, position, line, column, finalValue);
+
             case "int":
                 return new Level5SyntaxToken(SyntaxTokenKind.IntKeyword, position, line, column, finalValue);
 

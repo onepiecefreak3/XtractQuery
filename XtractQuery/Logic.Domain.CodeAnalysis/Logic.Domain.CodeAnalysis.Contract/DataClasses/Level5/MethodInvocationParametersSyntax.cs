@@ -3,14 +3,14 @@
 public class MethodInvocationParametersSyntax : SyntaxNode
 {
     public SyntaxToken ParenOpen { get; private set; }
-    public CommaSeparatedSyntaxList<ValueExpressionSyntax>? ParameterList { get; private set; }
+    public CommaSeparatedSyntaxList<ExpressionSyntax>? ParameterList { get; private set; }
     public SyntaxToken ParenClose { get; private set; }
 
     public override SyntaxLocation Location => ParenOpen.FullLocation;
     public override SyntaxSpan Span => new(ParenOpen.FullSpan.Position, ParenClose.FullSpan.EndPosition);
 
     public MethodInvocationParametersSyntax(SyntaxToken parenOpen,
-        CommaSeparatedSyntaxList<ValueExpressionSyntax>? parameterList,
+        CommaSeparatedSyntaxList<ExpressionSyntax>? parameterList,
         SyntaxToken parenClose)
     {
         parenOpen.Parent = this;
@@ -34,7 +34,7 @@ public class MethodInvocationParametersSyntax : SyntaxNode
             Root.Update();
     }
 
-    public void SetParameterList(CommaSeparatedSyntaxList<ValueExpressionSyntax>? parameterList, bool updatePosition = true)
+    public void SetParameterList(CommaSeparatedSyntaxList<ExpressionSyntax>? parameterList, bool updatePosition = true)
     {
         if (parameterList != null)
             parameterList.Parent = this;

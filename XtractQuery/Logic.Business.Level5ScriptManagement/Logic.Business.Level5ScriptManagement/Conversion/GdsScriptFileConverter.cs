@@ -148,13 +148,13 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
     private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(GdsScriptInstruction instruction)
     {
         SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
-        var parameterList = CreateValueList(instruction);
+        var parameterList = CreateMethodInvocationParameterList(instruction);
         SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
 
-    private CommaSeparatedSyntaxList<ValueExpressionSyntax>? CreateValueList(GdsScriptInstruction instruction)
+    private CommaSeparatedSyntaxList<ExpressionSyntax>? CreateMethodInvocationParameterList(GdsScriptInstruction instruction)
     {
         if (instruction.Arguments.Length <= 0)
             return null;
@@ -164,11 +164,11 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
         if (instruction.Type is 0)
             arguments = arguments[1..];
 
-        var result = new List<ValueExpressionSyntax>();
+        var result = new List<ExpressionSyntax>();
         foreach (GdsScriptArgument argument in arguments)
             result.Add(CreateValueExpression(argument));
 
-        return new CommaSeparatedSyntaxList<ValueExpressionSyntax>(result);
+        return new CommaSeparatedSyntaxList<ExpressionSyntax>(result);
     }
 
     private ValueExpressionSyntax CreateValueExpression(GdsScriptArgument argument)

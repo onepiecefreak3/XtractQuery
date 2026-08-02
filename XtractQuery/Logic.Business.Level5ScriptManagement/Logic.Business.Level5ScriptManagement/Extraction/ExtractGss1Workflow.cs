@@ -1,4 +1,5 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Business.Level5ScriptManagement.InternalContract.Extraction;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
@@ -17,6 +18,7 @@ partial class ExtractGss1Workflow(
     IGss1ScriptReader scriptReader,
     IGss1ScriptParser scriptParser,
     IGss1ScriptFileConverter scriptConverter,
+    IHighLevelCodeUnitConverter highLevelConverter,
     ILevel5ScriptWhitespaceNormalizer whiteSpaceNormalizer,
     ILevel5ScriptComposer scriptComposer)
     : IExtractGss1Workflow
@@ -35,6 +37,8 @@ partial class ExtractGss1Workflow(
 
         // Convert to readable script
         CodeUnitSyntax codeUnit = scriptConverter.CreateCodeUnit(script);
+        if (!config.WithoutHighLevelSyntax)
+            codeUnit = highLevelConverter.Convert(codeUnit);
         whiteSpaceNormalizer.NormalizeCodeUnit(codeUnit);
 
         string readableScript = scriptComposer.ComposeCodeUnit(codeUnit);
