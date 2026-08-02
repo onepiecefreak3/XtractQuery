@@ -1,3 +1,4 @@
+using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
 using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
@@ -135,9 +136,7 @@ internal class TempPropagationPass(
         TempDefinition definition,
         int useIndex)
     {
-        if (!cfg.BlockByStatementIndex.TryGetValue(definition.StatementIndex, out StatementBlock? defBlock) ||
-            !cfg.BlockByStatementIndex.TryGetValue(useIndex, out StatementBlock? useBlock) ||
-            !ReferenceEquals(defBlock, useBlock))
+        if (!ControlFlowGraphQueries.AreInSameBlock(cfg, definition.StatementIndex, useIndex))
             return false;
 
         bool effectfulRhs = ExpressionSideEffectClassifier.IsEffectful(definition.Right);

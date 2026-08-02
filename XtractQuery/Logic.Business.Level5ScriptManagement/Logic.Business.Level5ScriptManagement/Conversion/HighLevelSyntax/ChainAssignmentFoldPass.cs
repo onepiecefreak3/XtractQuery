@@ -1,3 +1,5 @@
+using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
+using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 using Logic.Domain.CodeAnalysis.Contract.Level5;
@@ -8,13 +10,15 @@ namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 /// Folds adjacent copy assignments into chained assignments, e.g.
 /// <c>$local2 = expr; $local1 = $local2;</c> → <c>$local1 = $local2 = expr;</c>.
 /// Unlike temp propagation, intermediate variables are kept in the chain.
+/// Only folds pairs that share a basic block in the CFG.
 /// </summary>
-internal class ChainAssignmentFoldPass(ILevel5SyntaxFactory syntaxFactory) : IChainAssignmentFoldPass
+internal class ChainAssignmentFoldPass(
+    IControlFlowGraphBuilder cfgBuilder,
+    ILevel5SyntaxFactory syntaxFactory) : IChainAssignmentFoldPass
 {
     public IReadOnlyList<StatementSyntax> Apply(IReadOnlyList<StatementSyntax> statements)
     {
-        var result = ApplyFlat(statements);
-        return RecurseIntoNested(result);
+        return StructuredSyntaxRecursor.Apply(statements, ApplyFlat, syntaxFactory);
     }
 
     private IReadOnlyList<StatementSyntax> ApplyFlat(IReadOnlyList<StatementSyntax> statements)
@@ -25,72 +29,34 @@ internal class ChainAssignmentFoldPass(ILevel5SyntaxFactory syntaxFactory) : ICh
         while (changed)
         {
             changed = false;
+            ControlFlowGraph cfg = cfgBuilder.Build(result);
 
-            for (var i = 0; i < result.Count - 1; i++)
+            foreach (StatementBlock block in cfg.Blocks)
             {
-                if (!TryFoldPair(result[i], result[i + 1], out AssignmentStatementSyntax? folded) ||
-                    folded is null)
+                if (block.IsExit || block.StatementCount < 2)
                     continue;
 
-                result[i] = folded;
-                result.RemoveAt(i + 1);
-                changed = true;
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    private IReadOnlyList<StatementSyntax> RecurseIntoNested(IReadOnlyList<StatementSyntax> statements)
-    {
-        var result = new List<StatementSyntax>(statements.Count);
-        foreach (StatementSyntax statement in statements)
-            result.Add(RecurseStatement(statement));
-        return result;
-    }
-
-    private StatementSyntax RecurseStatement(StatementSyntax statement)
-    {
-        switch (statement)
-        {
-            case WhileStatementSyntax { Body: not null } whileStatement:
-            {
-                IReadOnlyList<StatementSyntax> body = Apply(whileStatement.Body.Statements);
-                whileStatement.SetBody(CreateBlock(body), false);
-                return whileStatement;
-            }
-
-            case DoWhileStatementSyntax doWhile:
-            {
-                IReadOnlyList<StatementSyntax> body = Apply(doWhile.Body.Statements);
-                doWhile.SetBody(CreateBlock(body), false);
-                return doWhile;
-            }
-
-            case IfStatementSyntax ifStatement:
-            {
-                IReadOnlyList<StatementSyntax> thenBody = Apply(ifStatement.Body.Statements);
-                ifStatement.SetBody(CreateBlock(thenBody), false);
-                if (ifStatement.Else != null)
+                for (int index = block.InstructionIndex; index < block.EndStatementIndex - 1; index++)
                 {
-                    StatementSyntax elseStmt = RecurseStatement(ifStatement.Else.Statement);
-                    ifStatement.Else.SetStatement(elseStmt, false);
+                    if (!ControlFlowGraphQueries.AreConsecutiveInSameBlock(cfg, index, index + 1))
+                        continue;
+
+                    if (!TryFoldPair(result[index], result[index + 1], out AssignmentStatementSyntax? folded) ||
+                        folded is null)
+                        continue;
+
+                    result[index] = folded;
+                    result.RemoveAt(index + 1);
+                    changed = true;
+                    break;
                 }
 
-                return ifStatement;
+                if (changed)
+                    break;
             }
-
-            case BlockSyntax block:
-            {
-                IReadOnlyList<StatementSyntax> nested = Apply(block.Statements);
-                block.SetStatements(nested, false);
-                return block;
-            }
-
-            default:
-                return statement;
         }
+
+        return result;
     }
 
     private static bool TryFoldPair(
@@ -150,13 +116,5 @@ internal class ChainAssignmentFoldPass(ILevel5SyntaxFactory syntaxFactory) : ICh
         }
 
         return false;
-    }
-
-    private BlockSyntax CreateBlock(IReadOnlyList<StatementSyntax> statements)
-    {
-        return new BlockSyntax(
-            syntaxFactory.Token(SyntaxTokenKind.CurlyOpen),
-            statements,
-            syntaxFactory.Token(SyntaxTokenKind.CurlyClose));
     }
 }

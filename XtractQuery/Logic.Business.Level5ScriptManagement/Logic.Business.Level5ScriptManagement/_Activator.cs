@@ -6,6 +6,7 @@ using CrossCutting.Core.Contract.EventBrokerage;
 using Logic.Business.Level5ScriptManagement.Contract;
 using Logic.Business.Level5ScriptManagement.Conversion;
 using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
+using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
 using Logic.Business.Level5ScriptManagement.Creation;
 using Logic.Business.Level5ScriptManagement.Decompression;
 using Logic.Business.Level5ScriptManagement.Extraction;
