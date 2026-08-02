@@ -59,6 +59,7 @@ Every assignment statement and condition can hold complex expressions.
 
 Combining multiple operations in the same expression follows this operator precedence (highest to lowest):
 | Operators |
+| - |
 | x++ |
 | not x, !x, ~x |
 | x*y, x/y, x%y |
