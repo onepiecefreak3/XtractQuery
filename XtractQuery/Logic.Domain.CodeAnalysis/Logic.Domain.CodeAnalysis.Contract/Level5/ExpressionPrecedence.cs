@@ -96,6 +96,9 @@ public static class ExpressionPrecedence
             case LogicalExpressionSyntax logical:
                 return GetOperatorPrecedence((SyntaxTokenKind)logical.Operation.RawKind) ?? Primary;
 
+            case AssignmentExpressionSyntax:
+                return LogicalOr + 1;
+
             case ValueExpressionSyntax value:
                 return GetExpressionPrecedence(value.Value);
 

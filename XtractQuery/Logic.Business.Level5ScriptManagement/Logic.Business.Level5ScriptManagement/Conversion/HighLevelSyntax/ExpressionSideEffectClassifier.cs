@@ -62,6 +62,7 @@ internal static class ExpressionSideEffectClassifier
         {
             case MethodInvocationExpressionSyntax:
             case PostfixUnaryExpressionSyntax:
+            case AssignmentExpressionSyntax:
                 return true;
 
             case ValueExpressionSyntax value:
@@ -119,6 +120,7 @@ internal static class ExpressionSideEffectClassifier
         {
             case AssignmentStatementSyntax assignment:
                 CollectAssignedTarget(assignment.Left, result);
+                CollectAssignedTargets(assignment.Right, result);
                 break;
 
             case PostfixUnaryStatementSyntax postfix:
@@ -205,7 +207,34 @@ internal static class ExpressionSideEffectClassifier
                 foreach (SwitchCaseExpressionSyntax @case in switchExpression.CaseBlock.Cases)
                     CollectReadVariablesInCase(@case, result);
                 break;
+
+            case AssignmentExpressionSyntax assignment:
+                CollectAssignmentExpressionReads(assignment, result);
+                break;
         }
+    }
+
+    private static void CollectAssignmentExpressionReads(AssignmentExpressionSyntax assignment, HashSet<string> result)
+    {
+        // Bare destination variables are writes; array bases/indices are still reads.
+        switch (assignment.Left)
+        {
+            case ValueExpressionSyntax { Value: VariableExpressionSyntax }:
+            case VariableExpressionSyntax:
+                break;
+
+            case ArrayIndexExpressionSyntax arrayIndex:
+                CollectReadVariables(arrayIndex.Value, result);
+                foreach (ArrayIndexerExpressionSyntax indexer in arrayIndex.Indexer)
+                    CollectReadVariables(indexer.Index, result);
+                break;
+
+            default:
+                CollectReadVariables(assignment.Left, result);
+                break;
+        }
+
+        CollectReadVariables(assignment.Right, result);
     }
 
     private static void CollectReadVariablesInCase(SwitchCaseExpressionSyntax @case, HashSet<string> result)
@@ -242,6 +271,15 @@ internal static class ExpressionSideEffectClassifier
             case PostfixUnaryExpressionSyntax postfix:
                 CollectAssignedTarget(postfix.Value, result);
                 break;
+        }
+    }
+
+    private static void CollectAssignedTargets(ExpressionSyntax expression, HashSet<string> result)
+    {
+        while (expression is AssignmentExpressionSyntax assignment)
+        {
+            CollectAssignedTarget(assignment.Left, result);
+            expression = assignment.Right;
         }
     }
 }

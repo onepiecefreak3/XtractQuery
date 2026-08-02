@@ -460,6 +460,12 @@ internal class TempPropagationPass(
                     TempExpressionRewriter.FoldContext.ForOperator(binaryPrec, true), false);
                 break;
 
+            case AssignmentExpressionSyntax assignment:
+                CollectAssignmentLeftReads(assignment.Left, statementIndex, tempName, uses);
+                CollectUses(assignment.Right, statementIndex, tempName, uses,
+                    TempExpressionRewriter.FoldContext.None(), false);
+                break;
+
             case LogicalExpressionSyntax logical:
                 int logicalPrec = ExpressionPrecedence.GetOperatorPrecedence((SyntaxTokenKind)logical.Operation.RawKind)
                                   ?? ExpressionPrecedence.Primary;

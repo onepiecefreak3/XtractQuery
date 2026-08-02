@@ -5,6 +5,7 @@ namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
 internal class HighLevelCodeUnitConverter(
     ITempPropagationPass tempPropagationPass,
+    IChainAssignmentFoldPass chainAssignmentFoldPass,
     IStructuredLoopPass structuredLoopPass,
     IStructuredIfPass structuredIfPass) : IHighLevelCodeUnitConverter
 {
@@ -20,6 +21,7 @@ internal class HighLevelCodeUnitConverter(
     private MethodDeclarationSyntax ConvertMethod(MethodDeclarationSyntax method)
     {
         IReadOnlyList<StatementSyntax> statements = tempPropagationPass.Apply(method.Body.Expressions);
+        statements = chainAssignmentFoldPass.Apply(statements);
         statements = structuredLoopPass.Apply(statements);
         statements = structuredIfPass.Apply(statements);
 
