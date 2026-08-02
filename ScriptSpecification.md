@@ -53,6 +53,15 @@ while (true) {  // while (false) is not valid syntax
 while (not sub5610($param0)); // Self-looping while for engine functions that might return a different value over time
 ```
 
+## Chain Assignments
+
+A high-level syntax that allows setting multiple variables to the same value in one statement.
+
+Reference:
+```
+$local1 = $local2 = 5 * (2 + 3);
+```
+
 ## Expressions
 
 Every assignment statement and condition can hold complex expressions.
