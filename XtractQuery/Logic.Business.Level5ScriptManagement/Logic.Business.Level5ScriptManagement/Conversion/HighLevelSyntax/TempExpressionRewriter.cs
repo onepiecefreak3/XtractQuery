@@ -14,7 +14,9 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
         switch (statement)
         {
             case AssignmentStatementSyntax assignment:
-                ExpressionSyntax? left = ReplaceTempInExpression(assignment.Left, tempName, replacement, context);
+                // Bare `$tempN = ...` is a def — never fold into the destination.
+                // Array stores still read base/indices on the left and those may fold.
+                ExpressionSyntax? left = ReplaceAssignmentLeftReads(assignment.Left, tempName, replacement);
                 ExpressionSyntax? right = ReplaceTempInExpression(assignment.Right, tempName, replacement, context);
                 if (left is null && right is null)
                     return null;
@@ -172,6 +174,60 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
 
             default:
                 return null;
+        }
+    }
+
+    private ExpressionSyntax? ReplaceAssignmentLeftReads(
+        ExpressionSyntax left,
+        string tempName,
+        ExpressionSyntax replacement)
+    {
+        switch (left)
+        {
+            case ValueExpressionSyntax { Value: VariableExpressionSyntax }:
+                return null;
+
+            case ValueExpressionSyntax value:
+            {
+                ExpressionSyntax? inner = ReplaceAssignmentLeftReads(value.Value, tempName, replacement);
+                if (inner is null)
+                    return null;
+                return new ValueExpressionSyntax(inner, value.MetadataParameters);
+            }
+
+            case ArrayIndexExpressionSyntax arrayIndex:
+            {
+                ExpressionSyntax? arrayValue = ReplaceTempInExpression(
+                    arrayIndex.Value, tempName, replacement, FoldContext.None());
+                var indexers = new List<ArrayIndexerExpressionSyntax>();
+                var replacedIndexer = false;
+                foreach (ArrayIndexerExpressionSyntax indexer in arrayIndex.Indexer)
+                {
+                    ExpressionSyntax? rewrittenIndex = ReplaceTempInExpression(
+                        indexer.Index, tempName, replacement, FoldContext.None());
+                    if (rewrittenIndex is null)
+                    {
+                        indexers.Add(indexer);
+                        continue;
+                    }
+
+                    replacedIndexer = true;
+                    indexers.Add(new ArrayIndexerExpressionSyntax(
+                        indexer.BracketOpen,
+                        rewrittenIndex as ValueExpressionSyntax ?? WrapAsValue(rewrittenIndex),
+                        indexer.BracketClose));
+                }
+
+                if (arrayValue is null && !replacedIndexer)
+                    return null;
+
+                return new ArrayIndexExpressionSyntax(
+                    arrayValue as ValueExpressionSyntax ?? arrayIndex.Value,
+                    replacedIndexer ? indexers : arrayIndex.Indexer);
+            }
+
+            default:
+                return ReplaceTempInExpression(left, tempName, replacement, FoldContext.None());
         }
     }
 

@@ -18,8 +18,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
     private MethodDeclarationSyntax ConvertMethod(MethodDeclarationSyntax method)
     {
-        var usedTemps = new HashSet<int>();
-        CollectUsedTempSlots(method.Body.Expressions, usedTemps);
+        var reservedTemps = new HashSet<int>();
+        CollectUsedTempSlots(method.Body.Expressions, reservedTemps);
+        var temps = new TempAllocator(reservedTemps);
 
         var usedLabels = new HashSet<string>(StringComparer.Ordinal);
         CollectUsedLabels(method.Body.Expressions, usedLabels);
@@ -28,7 +29,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         var loopStack = new Stack<LoopContext>();
         var statements = new List<StatementSyntax>();
         foreach (StatementSyntax statement in method.Body.Expressions)
-            FlattenStatement(statement, statements, usedTemps, usedLabels, ref nextLabel, loopStack);
+            FlattenStatement(statement, statements, temps, usedLabels, ref nextLabel, loopStack);
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);
@@ -37,7 +38,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private void FlattenStatement(
         StatementSyntax statement,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack)
@@ -45,46 +46,55 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         switch (statement)
         {
             case MethodInvocationStatementSyntax invocation:
-                ValueExpressionSyntax temp = AllocateTemp(usedTemps);
-                MethodInvocationExpressionSyntax call = FlattenInvocationExpression(invocation, output, usedTemps);
-                output.Add(new AssignmentStatementSyntax(
-                    temp,
-                    syntaxFactory.Token(SyntaxTokenKind.EqualsSign),
-                    call,
-                    invocation.Semicolon));
+            {
+                // Discarded call result: spill then free immediately so the slot can be reused.
+                MethodInvocationExpressionSyntax call = FlattenInvocationExpression(invocation, output, temps);
+                ValueExpressionSyntax temp = Spill(call, output, temps);
+                temps.ReleaseExpression(temp);
                 break;
+            }
 
             case AssignmentStatementSyntax assignment:
-                ExpressionSyntax left = FlattenExpression(assignment.Left, output, usedTemps, forceValue: false);
-                ExpressionSyntax right = FlattenExpression(assignment.Right, output, usedTemps, forceValue: false);
+            {
+                ExpressionSyntax left = FlattenExpression(assignment.Left, output, temps, forceValue: false);
+                ExpressionSyntax right = FlattenExpression(assignment.Right, output, temps, forceValue: false);
                 output.Add(new AssignmentStatementSyntax(
                     left,
                     assignment.EqualsOperator,
                     right,
                     assignment.Semicolon));
+                temps.ReleaseExpression(right);
+                temps.ReleaseExpression(left);
                 break;
+            }
 
             case IfGotoStatementSyntax ifGoto:
+            {
                 ValueExpressionSyntax ifValue = EnsureValueExpression(
-                    FlattenExpression(ifGoto.Value, output, usedTemps, forceValue: true), output, usedTemps);
+                    FlattenExpression(ifGoto.Value, output, temps, forceValue: true), output, temps);
                 output.Add(new IfGotoStatementSyntax(ifGoto.If, ifValue, ifGoto.Goto, ifGoto.Semicolon));
+                temps.ReleaseExpression(ifValue);
                 break;
+            }
 
             case IfNotGotoStatementSyntax ifNotGoto:
-                UnaryExpressionSyntax comparison = FlattenUnary(ifNotGoto.Comparison, output, usedTemps);
+            {
+                UnaryExpressionSyntax comparison = FlattenUnary(ifNotGoto.Comparison, output, temps);
                 output.Add(new IfNotGotoStatementSyntax(ifNotGoto.If, comparison, ifNotGoto.Goto, ifNotGoto.Semicolon));
+                temps.ReleaseExpression(comparison);
                 break;
+            }
 
             case IfStatementSyntax ifStatement:
-                LowerIfStatement(ifStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                LowerIfStatement(ifStatement, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
 
             case WhileStatementSyntax whileStatement:
-                LowerWhileStatement(whileStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                LowerWhileStatement(whileStatement, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
 
             case DoWhileStatementSyntax doWhileStatement:
-                LowerDoWhileStatement(doWhileStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                LowerDoWhileStatement(doWhileStatement, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
 
             case BreakStatementSyntax breakStatement:
@@ -97,26 +107,33 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             case BlockSyntax block:
                 foreach (StatementSyntax nested in block.Statements)
-                    FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                    FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
 
             case ReturnStatementSyntax returnStatement:
+            {
                 ValueExpressionSyntax? returnValue = null;
                 if (returnStatement.ValueExpression != null)
                 {
                     returnValue = EnsureValueExpression(
-                        FlattenExpression(returnStatement.ValueExpression, output, usedTemps, forceValue: true),
+                        FlattenExpression(returnStatement.ValueExpression, output, temps, forceValue: true),
                         output,
-                        usedTemps);
+                        temps);
                 }
 
                 output.Add(new ReturnStatementSyntax(returnStatement.Return, returnValue, returnStatement.Semicolon));
+                if (returnValue != null)
+                    temps.ReleaseExpression(returnValue);
                 break;
+            }
 
             case PostfixUnaryStatementSyntax postfix:
-                PostfixUnaryExpressionSyntax postfixExpr = FlattenPostfix(postfix.Expression, output, usedTemps);
+            {
+                PostfixUnaryExpressionSyntax postfixExpr = FlattenPostfix(postfix.Expression, output, temps);
                 output.Add(new PostfixUnaryStatementSyntax(postfixExpr, postfix.Semicolon));
+                temps.ReleaseExpression(postfixExpr);
                 break;
+            }
 
             default:
                 output.Add(statement);
@@ -127,7 +144,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private void LowerWhileStatement(
         WhileStatementSyntax whileStatement,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack)
@@ -135,7 +152,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         // Empty / one-liner while → spin: L: if cond goto L;
         if (whileStatement.Body is null || whileStatement.Body.Statements.Count == 0)
         {
-            LowerWhileSpin(whileStatement.Condition, output, usedTemps, usedLabels, ref nextLabel);
+            LowerWhileSpin(whileStatement.Condition, output, temps, usedLabels, ref nextLabel);
             return;
         }
 
@@ -145,10 +162,10 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         loopStack.Push(context);
 
         output.Add(CreateLabel(headLabel));
-        EmitIfNotGoto(NormalizeCondition(whileStatement.Condition), exitLabel, output, usedTemps);
+        EmitIfNotGoto(NormalizeCondition(whileStatement.Condition), exitLabel, output, temps);
 
         foreach (StatementSyntax nested in whileStatement.Body.Statements)
-            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
 
         output.Add(CreateGoto(headLabel));
         output.Add(CreateLabel(exitLabel));
@@ -158,48 +175,50 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private void LowerWhileSpin(
         ExpressionSyntax condition,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         HashSet<string> usedLabels,
         ref int nextLabel)
     {
         // One-liner / empty while has no body for break/continue; emit classic spin only.
         string headLabel = AllocateLabel(usedLabels, ref nextLabel);
         output.Add(CreateLabel(headLabel));
-        EmitSpinIfGoto(NormalizeCondition(condition), headLabel, output, usedTemps);
+        EmitSpinIfGoto(NormalizeCondition(condition), headLabel, output, temps);
     }
 
     private void EmitSpinIfGoto(
         ExpressionSyntax condition,
         string headLabel,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
         SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
         GotoExpressionSyntax gotoHead = CreateGotoExpression(headLabel);
 
         ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
-            FlattenExpression(condition, output, usedTemps, forceValue: false));
+            FlattenExpression(condition, output, temps, forceValue: false));
 
         // while (not x); → L: if not x goto L;
         if (flatCondition is UnaryExpressionSyntax unary &&
             unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
         {
-            ValueExpressionSyntax value = EnsureValueExpression(unary.Value, output, usedTemps);
+            ValueExpressionSyntax value = EnsureValueExpression(unary.Value, output, temps);
             var comparison = new UnaryExpressionSyntax(unary.Operation, value);
             output.Add(new IfNotGotoStatementSyntax(ifToken, comparison, gotoHead, semicolon));
+            temps.ReleaseExpression(comparison);
             return;
         }
 
         // while (x); → L: if x goto L;
-        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
+        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, temps);
         output.Add(new IfGotoStatementSyntax(ifToken, condValue, gotoHead, semicolon));
+        temps.ReleaseExpression(condValue);
     }
 
     private void LowerDoWhileStatement(
         DoWhileStatementSyntax doWhileStatement,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack)
@@ -212,10 +231,10 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
         output.Add(CreateLabel(headLabel));
         foreach (StatementSyntax nested in doWhileStatement.Body.Statements)
-            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
 
         output.Add(CreateLabel(continueLabel));
-        EmitIfGoto(NormalizeCondition(doWhileStatement.Condition), headLabel, output, usedTemps);
+        EmitIfGoto(NormalizeCondition(doWhileStatement.Condition), headLabel, output, temps);
         output.Add(CreateLabel(exitLabel));
         loopStack.Pop();
     }
@@ -245,7 +264,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private void LowerIfStatement(
         IfStatementSyntax ifStatement,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack)
@@ -253,9 +272,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         if (ifStatement.Else is null)
         {
             string endLabel = AllocateLabel(usedLabels, ref nextLabel);
-            EmitIfNotGoto(ifStatement.Condition, endLabel, output, usedTemps);
+            EmitIfNotGoto(ifStatement.Condition, endLabel, output, temps);
             foreach (StatementSyntax nested in ifStatement.Body.Statements)
-                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
             output.Add(CreateLabel(endLabel));
             return;
         }
@@ -263,21 +282,21 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         string elseLabel = AllocateLabel(usedLabels, ref nextLabel);
         string joinLabel = AllocateLabel(usedLabels, ref nextLabel);
 
-        EmitIfNotGoto(ifStatement.Condition, elseLabel, output, usedTemps);
+        EmitIfNotGoto(ifStatement.Condition, elseLabel, output, temps);
         foreach (StatementSyntax nested in ifStatement.Body.Statements)
-            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
         output.Add(CreateGoto(joinLabel));
         output.Add(CreateLabel(elseLabel));
 
         if (ifStatement.Else.Statement is IfStatementSyntax elseIf)
-            LowerIfStatement(elseIf, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+            LowerIfStatement(elseIf, output, temps, usedLabels, ref nextLabel, loopStack);
         else if (ifStatement.Else.Statement is BlockSyntax elseBlock)
         {
             foreach (StatementSyntax nested in elseBlock.Statements)
-                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
         }
         else
-            FlattenStatement(ifStatement.Else.Statement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+            FlattenStatement(ifStatement.Else.Statement, output, temps, usedLabels, ref nextLabel, loopStack);
 
         output.Add(CreateLabel(joinLabel));
     }
@@ -286,43 +305,46 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         ExpressionSyntax condition,
         string targetLabel,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
         SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
         GotoExpressionSyntax gotoExpr = CreateGotoExpression(targetLabel);
 
         ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
-            FlattenExpression(NormalizeCondition(condition), output, usedTemps, forceValue: false));
+            FlattenExpression(NormalizeCondition(condition), output, temps, forceValue: false));
 
-        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
+        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, temps);
         output.Add(new IfGotoStatementSyntax(ifToken, condValue, gotoExpr, semicolon));
+        temps.ReleaseExpression(condValue);
     }
 
     private void EmitIfNotGoto(
         ExpressionSyntax condition,
         string targetLabel,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
         SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
         GotoExpressionSyntax gotoExpr = CreateGotoExpression(targetLabel);
 
         ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
-            FlattenExpression(NormalizeCondition(condition), output, usedTemps, forceValue: false));
+            FlattenExpression(NormalizeCondition(condition), output, temps, forceValue: false));
 
         if (flatCondition is UnaryExpressionSyntax unary &&
             unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
         {
-            ValueExpressionSyntax value = EnsureValueExpression(unary.Value, output, usedTemps);
+            ValueExpressionSyntax value = EnsureValueExpression(unary.Value, output, temps);
             output.Add(new IfGotoStatementSyntax(ifToken, value, gotoExpr, semicolon));
+            temps.ReleaseExpression(value);
             return;
         }
 
-        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
+        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, temps);
         var notComparison = new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), condValue);
         output.Add(new IfNotGotoStatementSyntax(ifToken, notComparison, gotoExpr, semicolon));
+        temps.ReleaseExpression(notComparison);
     }
 
     private ExpressionSyntax NormalizeCondition(ExpressionSyntax condition)
@@ -443,16 +465,16 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private MethodInvocationExpressionSyntax FlattenInvocationExpression(
         MethodInvocationStatementSyntax invocation,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
-        MethodInvocationParametersSyntax parameters = FlattenParameters(invocation.Parameters, output, usedTemps);
+        MethodInvocationParametersSyntax parameters = FlattenParameters(invocation.Parameters, output, temps);
         return new MethodInvocationExpressionSyntax(invocation.Name, invocation.Metadata, parameters);
     }
 
     private ExpressionSyntax FlattenExpression(
         ExpressionSyntax expression,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps,
+        TempAllocator temps,
         bool forceValue)
     {
         expression = ExpressionParenthesizer.UnwrapParentheses(expression);
@@ -460,14 +482,14 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         switch (expression)
         {
             case ValueExpressionSyntax value:
-                ExpressionSyntax flattenedInner = FlattenExpression(value.Value, output, usedTemps, forceValue: false);
+                ExpressionSyntax flattenedInner = FlattenExpression(value.Value, output, temps, forceValue: false);
                 if (IsTrueLiteral(flattenedInner))
                     return CreateIntOneValue();
 
                 if (flattenedInner is VariableExpressionSyntax or LiteralExpressionSyntax or UnaryExpressionSyntax)
                     return new ValueExpressionSyntax(flattenedInner, value.MetadataParameters);
 
-                ValueExpressionSyntax spilled = Spill(flattenedInner, output, usedTemps);
+                ValueExpressionSyntax spilled = Spill(flattenedInner, output, temps);
                 return value.MetadataParameters is null
                     ? spilled
                     : new ValueExpressionSyntax(spilled.Value, value.MetadataParameters);
@@ -484,76 +506,76 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 return forceValue ? new ValueExpressionSyntax(expression) : expression;
 
             case UnaryExpressionSyntax unary:
-                return FlattenUnary(unary, output, usedTemps);
+                return FlattenUnary(unary, output, temps);
 
             case BinaryExpressionSyntax binary:
-                ExpressionSyntax left = EnsureArgument(FlattenExpression(binary.Left, output, usedTemps, false), output, usedTemps);
-                ExpressionSyntax right = EnsureArgument(FlattenExpression(binary.Right, output, usedTemps, false), output, usedTemps);
+                ExpressionSyntax left = EnsureArgument(FlattenExpression(binary.Left, output, temps, false), output, temps);
+                ExpressionSyntax right = EnsureArgument(FlattenExpression(binary.Right, output, temps, false), output, temps);
                 var flatBinary = new BinaryExpressionSyntax(left, binary.Operation, right);
-                return forceValue ? Spill(flatBinary, output, usedTemps) : flatBinary;
+                return forceValue ? Spill(flatBinary, output, temps) : flatBinary;
 
             case LogicalExpressionSyntax logical:
-                ExpressionSyntax logicalLeft = EnsureArgument(FlattenExpression(logical.Left, output, usedTemps, false), output, usedTemps);
-                ExpressionSyntax logicalRight = EnsureArgument(FlattenExpression(logical.Right, output, usedTemps, false), output, usedTemps);
+                ExpressionSyntax logicalLeft = EnsureArgument(FlattenExpression(logical.Left, output, temps, false), output, temps);
+                ExpressionSyntax logicalRight = EnsureArgument(FlattenExpression(logical.Right, output, temps, false), output, temps);
                 var flatLogical = new LogicalExpressionSyntax(logicalLeft, logical.Operation, logicalRight);
-                return forceValue ? Spill(flatLogical, output, usedTemps) : flatLogical;
+                return forceValue ? Spill(flatLogical, output, temps) : flatLogical;
 
             case MethodInvocationExpressionSyntax invocation:
-                MethodInvocationParametersSyntax parameters = FlattenParameters(invocation.Parameters, output, usedTemps);
+                MethodInvocationParametersSyntax parameters = FlattenParameters(invocation.Parameters, output, temps);
                 var flatInvocation = new MethodInvocationExpressionSyntax(invocation.Name, invocation.Metadata, parameters);
-                return forceValue ? Spill(flatInvocation, output, usedTemps) : flatInvocation;
+                return forceValue ? Spill(flatInvocation, output, temps) : flatInvocation;
 
             case PostfixUnaryExpressionSyntax postfix:
-                return FlattenPostfix(postfix, output, usedTemps);
+                return FlattenPostfix(postfix, output, temps);
 
             case ArrayIndexExpressionSyntax arrayIndex:
                 ValueExpressionSyntax arrayValue = EnsureValueExpression(
-                    FlattenExpression(arrayIndex.Value, output, usedTemps, true), output, usedTemps);
+                    FlattenExpression(arrayIndex.Value, output, temps, true), output, temps);
                 return new ArrayIndexExpressionSyntax(arrayValue, arrayIndex.Indexer);
 
             case TypeCastValueExpressionSyntax typeCast:
                 ValueExpressionSyntax castValue = EnsureValueExpression(
-                    FlattenExpression(typeCast.Value, output, usedTemps, true), output, usedTemps);
+                    FlattenExpression(typeCast.Value, output, temps, true), output, temps);
                 var flatCast = new TypeCastValueExpressionSyntax(typeCast.TypeCast, castValue);
-                return forceValue ? Spill(flatCast, output, usedTemps) : flatCast;
+                return forceValue ? Spill(flatCast, output, temps) : flatCast;
 
             case SwitchExpressionSyntax switchExpression:
                 ExpressionSyntax switchValue = EnsureArgument(
-                    FlattenExpression(switchExpression.Value, output, usedTemps, false), output, usedTemps);
+                    FlattenExpression(switchExpression.Value, output, temps, false), output, temps);
                 var flatSwitch = new SwitchExpressionSyntax(switchValue, switchExpression.Switch, switchExpression.CaseBlock);
-                return forceValue ? Spill(flatSwitch, output, usedTemps) : flatSwitch;
+                return forceValue ? Spill(flatSwitch, output, temps) : flatSwitch;
 
             case ParenthesizedExpressionSyntax parenthesized:
-                return FlattenExpression(parenthesized.Expression, output, usedTemps, forceValue);
+                return FlattenExpression(parenthesized.Expression, output, temps, forceValue);
 
             default:
-                return forceValue ? Spill(expression, output, usedTemps) : expression;
+                return forceValue ? Spill(expression, output, temps) : expression;
         }
     }
 
     private UnaryExpressionSyntax FlattenUnary(
         UnaryExpressionSyntax unary,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         ValueExpressionSyntax value = EnsureValueExpression(
-            FlattenExpression(unary.Value, output, usedTemps, true), output, usedTemps);
+            FlattenExpression(unary.Value, output, temps, true), output, temps);
         return new UnaryExpressionSyntax(unary.Operation, value);
     }
 
     private PostfixUnaryExpressionSyntax FlattenPostfix(
         PostfixUnaryExpressionSyntax postfix,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
-        ExpressionSyntax value = FlattenExpression(postfix.Value, output, usedTemps, false);
+        ExpressionSyntax value = FlattenExpression(postfix.Value, output, temps, false);
         return new PostfixUnaryExpressionSyntax(value, postfix.Operation);
     }
 
     private MethodInvocationParametersSyntax FlattenParameters(
         MethodInvocationParametersSyntax parameters,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         if (parameters.ParameterList?.Elements is null)
             return parameters;
@@ -561,8 +583,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         var elements = new List<ExpressionSyntax>();
         foreach (ExpressionSyntax parameter in parameters.ParameterList.Elements)
         {
-            ExpressionSyntax flattened = FlattenExpression(parameter, output, usedTemps, forceValue: true);
-            elements.Add(EnsureValueExpression(flattened, output, usedTemps));
+            ExpressionSyntax flattened = FlattenExpression(parameter, output, temps, forceValue: true);
+            elements.Add(EnsureValueExpression(flattened, output, temps));
         }
 
         return new MethodInvocationParametersSyntax(
@@ -571,7 +593,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             parameters.ParenClose);
     }
 
-    private ExpressionSyntax EnsureArgument(ExpressionSyntax expression, List<StatementSyntax> output, HashSet<int> usedTemps)
+    private ExpressionSyntax EnsureArgument(ExpressionSyntax expression, List<StatementSyntax> output, TempAllocator temps)
     {
         expression = ExpressionParenthesizer.UnwrapParentheses(expression);
 
@@ -581,13 +603,13 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         if (expression is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus, Value: ValueExpressionSyntax })
             return new ValueExpressionSyntax(expression);
 
-        return Spill(expression, output, usedTemps);
+        return Spill(expression, output, temps);
     }
 
     private ValueExpressionSyntax EnsureValueExpression(
         ExpressionSyntax expression,
         List<StatementSyntax> output,
-        HashSet<int> usedTemps)
+        TempAllocator temps)
     {
         expression = ExpressionParenthesizer.UnwrapParentheses(expression);
 
@@ -602,7 +624,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             if (value.Value is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus })
                 return value;
 
-            return Spill(value.Value, output, usedTemps);
+            return Spill(value.Value, output, temps);
         }
 
         if (IsTrueLiteral(expression))
@@ -614,12 +636,15 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         if (expression is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus, Value: ValueExpressionSyntax })
             return new ValueExpressionSyntax(expression);
 
-        return Spill(expression, output, usedTemps);
+        return Spill(expression, output, temps);
     }
 
-    private ValueExpressionSyntax Spill(ExpressionSyntax expression, List<StatementSyntax> output, HashSet<int> usedTemps)
+    private ValueExpressionSyntax Spill(ExpressionSyntax expression, List<StatementSyntax> output, TempAllocator temps)
     {
-        ValueExpressionSyntax temp = AllocateTemp(usedTemps);
+        // Operands are read before the destination is written, so their slots can
+        // be reused as the spill target (e.g. $temp1 = sub5622(..., $temp1)).
+        temps.ReleaseExpression(expression);
+        ValueExpressionSyntax temp = AllocateTemp(temps);
         output.Add(new AssignmentStatementSyntax(
             temp,
             syntaxFactory.Token(SyntaxTokenKind.EqualsSign),
@@ -628,13 +653,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         return temp;
     }
 
-    private ValueExpressionSyntax AllocateTemp(HashSet<int> usedTemps)
+    private ValueExpressionSyntax AllocateTemp(TempAllocator temps)
     {
-        int slot = 1;
-        while (usedTemps.Contains(slot))
-            slot++;
-
-        usedTemps.Add(slot);
+        int slot = temps.Allocate();
         return new ValueExpressionSyntax(new VariableExpressionSyntax(syntaxFactory.Variable("temp", (uint)slot)));
     }
 
@@ -775,4 +796,88 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     }
 
     private sealed record LoopContext(string HeadLabel, string ContinueLabel, string ExitLabel);
+
+    /// <summary>
+    /// Allocates <c>$temp</c> slots with reuse after last use.
+    /// Slots present in the source method stay reserved and are never reused for spills.
+    /// </summary>
+    private sealed class TempAllocator(HashSet<int> reserved)
+    {
+        private readonly HashSet<int> _live = [];
+
+        public int Allocate()
+        {
+            int slot = 1;
+            while (reserved.Contains(slot) || _live.Contains(slot))
+                slot++;
+
+            _live.Add(slot);
+            return slot;
+        }
+
+        public void ReleaseExpression(ExpressionSyntax expression)
+        {
+            switch (expression)
+            {
+                case VariableExpressionSyntax variable:
+                    if (TryGetTempSlot(variable, out int slot))
+                        Release(slot);
+                    break;
+
+                case ValueExpressionSyntax value:
+                    ReleaseExpression(value.Value);
+                    break;
+
+                case ParenthesizedExpressionSyntax parenthesized:
+                    ReleaseExpression(parenthesized.Expression);
+                    break;
+
+                case UnaryExpressionSyntax unary:
+                    ReleaseExpression(unary.Value);
+                    break;
+
+                case BinaryExpressionSyntax binary:
+                    ReleaseExpression(binary.Left);
+                    ReleaseExpression(binary.Right);
+                    break;
+
+                case LogicalExpressionSyntax logical:
+                    ReleaseExpression(logical.Left);
+                    ReleaseExpression(logical.Right);
+                    break;
+
+                case MethodInvocationExpressionSyntax invocation:
+                    if (invocation.Parameters.ParameterList?.Elements is not null)
+                    {
+                        foreach (ExpressionSyntax parameter in invocation.Parameters.ParameterList.Elements)
+                            ReleaseExpression(parameter);
+                    }
+                    break;
+
+                case PostfixUnaryExpressionSyntax postfix:
+                    ReleaseExpression(postfix.Value);
+                    break;
+
+                case ArrayIndexExpressionSyntax arrayIndex:
+                    ReleaseExpression(arrayIndex.Value);
+                    foreach (ArrayIndexerExpressionSyntax indexer in arrayIndex.Indexer)
+                        ReleaseExpression(indexer.Index);
+                    break;
+
+                case TypeCastValueExpressionSyntax typeCast:
+                    ReleaseExpression(typeCast.Value);
+                    break;
+
+                case SwitchExpressionSyntax switchExpression:
+                    ReleaseExpression(switchExpression.Value);
+                    break;
+            }
+        }
+
+        private void Release(int slot)
+        {
+            if (!reserved.Contains(slot))
+                _live.Remove(slot);
+        }
+    }
 }
