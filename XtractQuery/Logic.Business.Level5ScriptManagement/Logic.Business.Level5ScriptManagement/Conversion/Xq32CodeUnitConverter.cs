@@ -651,6 +651,11 @@ internal class Xq32CodeUnitConverter : IXq32CodeUnitConverter
                 value = 0;
                 break;
 
+            case (int)SyntaxTokenKind.TrueKeyword:
+                type = ScriptArgumentType.Int;
+                value = 1;
+                break;
+
             case (int)SyntaxTokenKind.NumericLiteral:
                 type = ScriptArgumentType.Int;
                 value = GetNumericLiteral(literal);

@@ -8,6 +8,12 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
 {
     public IReadOnlyList<StatementSyntax> Apply(IReadOnlyList<StatementSyntax> statements)
     {
+        var result = ApplyFlat(statements);
+        return RecurseIntoNested(result);
+    }
+
+    private IReadOnlyList<StatementSyntax> ApplyFlat(IReadOnlyList<StatementSyntax> statements)
+    {
         var result = statements.ToList();
         var changed = true;
 
@@ -17,17 +23,40 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
 
             for (var i = 0; i < result.Count; i++)
             {
-                if (TryMatchIfElse(result, i, out IfStatementSyntax? ifElse, out int ifElseLength) && ifElse is not null)
+                if (TryMatchIfElse(
+                        result,
+                        i,
+                        out IfStatementSyntax? ifElse,
+                        out int ifElseContentLength,
+                        out int ifElseJoinIndex,
+                        out bool removeIfElseJoin) &&
+                    ifElse is not null)
                 {
-                    result.RemoveRange(i, ifElseLength);
+                    // Join and any co-located fallthrough labels sit after the if/else content.
+                    // Remove the join first (higher index), then replace the content span so
+                    // intervening labels such as an outer join stay in the stream.
+                    if (removeIfElseJoin)
+                        result.RemoveAt(ifElseJoinIndex);
+
+                    result.RemoveRange(i, ifElseContentLength);
                     result.Insert(i, ifElse);
                     changed = true;
                     break;
                 }
 
-                if (TryMatchIfThen(result, i, out IfStatementSyntax? ifThen, out int ifThenLength) && ifThen is not null)
+                if (TryMatchIfThen(
+                        result,
+                        i,
+                        out IfStatementSyntax? ifThen,
+                        out int ifThenContentLength,
+                        out int ifThenEndIndex,
+                        out bool removeIfThenEnd) &&
+                    ifThen is not null)
                 {
-                    result.RemoveRange(i, ifThenLength);
+                    if (removeIfThenEnd)
+                        result.RemoveAt(ifThenEndIndex);
+
+                    result.RemoveRange(i, ifThenContentLength);
                     result.Insert(i, ifThen);
                     changed = true;
                     break;
@@ -38,16 +67,71 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         return result;
     }
 
+    private IReadOnlyList<StatementSyntax> RecurseIntoNested(IReadOnlyList<StatementSyntax> statements)
+    {
+        var result = new List<StatementSyntax>(statements.Count);
+        foreach (StatementSyntax statement in statements)
+            result.Add(RecurseStatement(statement));
+        return result;
+    }
+
+    private StatementSyntax RecurseStatement(StatementSyntax statement)
+    {
+        switch (statement)
+        {
+            case WhileStatementSyntax { Body: not null } whileStatement:
+            {
+                IReadOnlyList<StatementSyntax> body = Apply(whileStatement.Body.Statements);
+                whileStatement.SetBody(CreateBlock(body), false);
+                return whileStatement;
+            }
+
+            case DoWhileStatementSyntax doWhile:
+            {
+                IReadOnlyList<StatementSyntax> body = Apply(doWhile.Body.Statements);
+                doWhile.SetBody(CreateBlock(body), false);
+                return doWhile;
+            }
+
+            case IfStatementSyntax ifStatement:
+            {
+                IReadOnlyList<StatementSyntax> thenBody = Apply(ifStatement.Body.Statements);
+                ifStatement.SetBody(CreateBlock(thenBody), false);
+                if (ifStatement.Else != null)
+                {
+                    StatementSyntax elseStmt = RecurseStatement(ifStatement.Else.Statement);
+                    ifStatement.Else.SetStatement(elseStmt, false);
+                }
+
+                return ifStatement;
+            }
+
+            case BlockSyntax block:
+            {
+                IReadOnlyList<StatementSyntax> nested = Apply(block.Statements);
+                block.SetStatements(nested, false);
+                return block;
+            }
+
+            default:
+                return statement;
+        }
+    }
+
     private bool TryMatchIfElse(
         IReadOnlyList<StatementSyntax> statements,
         int index,
         out IfStatementSyntax? replacement,
-        out int length)
+        out int contentLength,
+        out int joinLabelIndex,
+        out bool removeJoinLabel)
     {
         replacement = null;
-        length = 0;
+        contentLength = 0;
+        joinLabelIndex = -1;
+        removeJoinLabel = false;
 
-        if (!TryGetIfNotGoto(statements[index], out ExpressionSyntax? condition, out string? elseLabel) ||
+        if (!TryGetBranchSkip(statements[index], out ExpressionSyntax? condition, out string? elseLabel) ||
             condition is null || elseLabel is null)
             return false;
 
@@ -72,12 +156,18 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         if (!IsNumericJumpLabel(joinLabel))
             return false;
 
-        int joinLabelIndex = FindLabelIndex(statements, joinLabel, elseLabelIndex + 1);
+        joinLabelIndex = FindLabelIndex(statements, joinLabel, elseLabelIndex + 1);
         if (joinLabelIndex < 0)
             return false;
 
+        // Nested if/else often shares a merge instruction with an outer join, so other
+        // fallthrough labels may sit between the else body and this join (e.g. "@015@":
+        // before "@021@":). Those labels are not part of the else body and must stay put.
+        int elseContentStart = elseLabelIndex + 1;
+        int elseContentEnd = FindContentEndBeforeJoin(statements, elseContentStart, joinLabelIndex);
+
         var thenBody = statements.Skip(index + 1).Take(elseLabelIndex - index - 2).ToList();
-        var elseBody = statements.Skip(elseLabelIndex + 1).Take(joinLabelIndex - elseLabelIndex - 1).ToList();
+        var elseBody = statements.Skip(elseContentStart).Take(elseContentEnd - elseContentStart).ToList();
 
         if (!IsStructuredBody(thenBody) || !IsStructuredBody(elseBody))
             return false;
@@ -88,46 +178,74 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         if (ContainsLabelReference(thenBody, joinLabel) || ContainsLabelReference(elseBody, joinLabel))
             return false;
 
-        bool removeJoinLabel = CountLabelReferences(statements, joinLabel) == 1;
+        removeJoinLabel = CountLabelReferences(statements, joinLabel) == 1;
 
         replacement = CreateIfStatement(condition, thenBody, CreateElseClause(elseBody));
-        length = joinLabelIndex - index + (removeJoinLabel ? 1 : 0);
+        contentLength = elseContentEnd - index;
         return true;
+    }
+
+    // Exclusive end of else-body statements, skipping trailing numeric labels that share the join instruction.
+    private static int FindContentEndBeforeJoin(
+        IReadOnlyList<StatementSyntax> statements,
+        int contentStart,
+        int joinLabelIndex)
+    {
+        int end = joinLabelIndex;
+        while (end > contentStart && IsNumericJumpLabelDefinition(statements[end - 1]))
+            end--;
+
+        return end;
+    }
+
+    private static bool IsNumericJumpLabelDefinition(StatementSyntax statement)
+    {
+        return statement is GotoLabelStatementSyntax label &&
+               TryGetLabelName(label.Label, out string? name) &&
+               name is not null &&
+               IsNumericJumpLabel(name);
     }
 
     private bool TryMatchIfThen(
         IReadOnlyList<StatementSyntax> statements,
         int index,
         out IfStatementSyntax? replacement,
-        out int length)
+        out int contentLength,
+        out int endLabelIndex,
+        out bool removeEndLabel)
     {
         replacement = null;
-        length = 0;
+        contentLength = 0;
+        endLabelIndex = -1;
+        removeEndLabel = false;
 
-        if (!TryGetIfNotGoto(statements[index], out ExpressionSyntax? condition, out string? endLabel) ||
+        if (!TryGetBranchSkip(statements[index], out ExpressionSyntax? condition, out string? endLabel) ||
             condition is null || endLabel is null)
             return false;
 
         if (!IsNumericJumpLabel(endLabel))
             return false;
 
-        int endLabelIndex = FindLabelIndex(statements, endLabel, index + 1);
+        endLabelIndex = FindLabelIndex(statements, endLabel, index + 1);
         if (endLabelIndex < 0)
             return false;
 
         if (CountLabelReferences(statements, endLabel) != 1)
             return false;
 
-        var thenBody = statements.Skip(index + 1).Take(endLabelIndex - index - 1).ToList();
+        // Same coalesced-join case as if/else: an outer join label may sit between the then
+        // body and this end label (e.g. "@014@": before "@023@":).
+        int thenContentEnd = FindContentEndBeforeJoin(statements, index + 1, endLabelIndex);
+        var thenBody = statements.Skip(index + 1).Take(thenContentEnd - index - 1).ToList();
         if (!IsStructuredBody(thenBody))
             return false;
 
         if (ContainsLabelReference(thenBody, endLabel))
             return false;
 
-        bool removeEndLabel = true;
+        removeEndLabel = true;
         replacement = CreateIfStatement(condition, thenBody, elseClause: null);
-        length = endLabelIndex - index + (removeEndLabel ? 1 : 0);
+        contentLength = thenContentEnd - index;
         return true;
     }
 
@@ -160,22 +278,54 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
             syntaxFactory.Token(SyntaxTokenKind.CurlyClose));
     }
 
-    private static bool TryGetIfNotGoto(
+    private bool TryGetBranchSkip(
         StatementSyntax statement,
-        out ExpressionSyntax? positiveCondition,
+        out ExpressionSyntax? thenCondition,
         out string? targetLabel)
     {
-        positiveCondition = null;
+        thenCondition = null;
         targetLabel = null;
 
-        if (statement is not IfNotGotoStatementSyntax ifNotGoto)
-            return false;
+        // if not X goto L; body; L:  ≡  if X { body }
+        if (statement is IfNotGotoStatementSyntax ifNotGoto)
+        {
+            if (!TryGetLabelName(ifNotGoto.Goto.Target, out targetLabel) || targetLabel is null)
+                return false;
 
-        if (!TryGetLabelName(ifNotGoto.Goto.Target, out targetLabel) || targetLabel is null)
-            return false;
+            thenCondition = UnwrapCondition(ifNotGoto.Comparison.Value);
+            return true;
+        }
 
-        positiveCondition = UnwrapCondition(ifNotGoto.Comparison.Value);
-        return true;
+        // if X goto L; body; L:  ≡  if not X { body }
+        // (EmitIfNotGoto peels a leading not into this form.)
+        if (statement is IfGotoStatementSyntax ifGoto)
+        {
+            if (!TryGetLabelName(ifGoto.Goto.Target, out targetLabel) || targetLabel is null)
+                return false;
+
+            thenCondition = CreateNotCondition(UnwrapCondition(ifGoto.Value));
+            return true;
+        }
+
+        return false;
+    }
+
+    private ExpressionSyntax CreateNotCondition(ExpressionSyntax expression)
+    {
+        ExpressionSyntax operand = ExpressionParenthesizer.MaybeParenthesize(
+            expression,
+            ExpressionPrecedence.Unary,
+            isRightOperand: true,
+            syntaxFactory);
+
+        if (operand is ParenthesizedExpressionSyntax)
+            return new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), operand);
+
+        ValueExpressionSyntax value = operand is ValueExpressionSyntax valueExpression
+            ? valueExpression
+            : new ValueExpressionSyntax(operand);
+
+        return new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), value);
     }
 
     private static ExpressionSyntax UnwrapCondition(ExpressionSyntax expression)
@@ -261,6 +411,12 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
                     count += CountLabelReferences(ifStatement.Else.Statement, labelName);
                 return count;
 
+            case WhileStatementSyntax { Body: not null } whileStatement:
+                return CountLabelReferencesInBlock(whileStatement.Body, labelName);
+
+            case DoWhileStatementSyntax doWhile:
+                return CountLabelReferencesInBlock(doWhile.Body, labelName);
+
             case BlockSyntax block:
                 return CountLabelReferencesInBlock(block, labelName);
 
@@ -319,6 +475,10 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
             case ExitStatementSyntax:
             case PostfixUnaryStatementSyntax:
             case IfStatementSyntax:
+            case WhileStatementSyntax:
+            case DoWhileStatementSyntax:
+            case BreakStatementSyntax:
+            case ContinueStatementSyntax:
                 return true;
 
             case BlockSyntax:

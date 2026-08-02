@@ -243,6 +243,22 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeIfStatement(ifStatement, sb);
                 break;
 
+            case WhileStatementSyntax whileStatement:
+                ComposeWhileStatement(whileStatement, sb);
+                break;
+
+            case DoWhileStatementSyntax doWhileStatement:
+                ComposeDoWhileStatement(doWhileStatement, sb);
+                break;
+
+            case BreakStatementSyntax breakStatement:
+                ComposeBreakStatement(breakStatement, sb);
+                break;
+
+            case ContinueStatementSyntax continueStatement:
+                ComposeContinueStatement(continueStatement, sb);
+                break;
+
             case BlockSyntax block:
                 ComposeBlock(block, sb);
                 break;
@@ -303,6 +319,41 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         ComposeBlock(ifStatement.Body, sb);
         if (ifStatement.Else != null)
             ComposeElseClause(ifStatement.Else, sb);
+    }
+
+    private void ComposeWhileStatement(WhileStatementSyntax whileStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(whileStatement.While, sb);
+        ComposeSyntaxToken(whileStatement.ParenOpen, sb);
+        ComposeExpression(whileStatement.Condition, sb);
+        ComposeSyntaxToken(whileStatement.ParenClose, sb);
+        if (whileStatement.Body != null)
+            ComposeBlock(whileStatement.Body, sb);
+        if (whileStatement.Semicolon != null)
+            ComposeSyntaxToken(whileStatement.Semicolon.Value, sb);
+    }
+
+    private void ComposeDoWhileStatement(DoWhileStatementSyntax doWhileStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(doWhileStatement.Do, sb);
+        ComposeBlock(doWhileStatement.Body, sb);
+        ComposeSyntaxToken(doWhileStatement.While, sb);
+        ComposeSyntaxToken(doWhileStatement.ParenOpen, sb);
+        ComposeExpression(doWhileStatement.Condition, sb);
+        ComposeSyntaxToken(doWhileStatement.ParenClose, sb);
+        ComposeSyntaxToken(doWhileStatement.Semicolon, sb);
+    }
+
+    private void ComposeBreakStatement(BreakStatementSyntax breakStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(breakStatement.Break, sb);
+        ComposeSyntaxToken(breakStatement.Semicolon, sb);
+    }
+
+    private void ComposeContinueStatement(ContinueStatementSyntax continueStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(continueStatement.Continue, sb);
+        ComposeSyntaxToken(continueStatement.Semicolon, sb);
     }
 
     private void ComposeElseClause(ElseClauseSyntax elseClause, StringBuilder sb)

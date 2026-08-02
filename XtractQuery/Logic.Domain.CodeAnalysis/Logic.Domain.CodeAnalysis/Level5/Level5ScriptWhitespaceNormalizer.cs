@@ -263,6 +263,22 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
                 NormalizeIfStatement(ifStatement, ctx);
                 break;
 
+            case WhileStatementSyntax whileStatement:
+                NormalizeWhileStatement(whileStatement, ctx);
+                break;
+
+            case DoWhileStatementSyntax doWhileStatement:
+                NormalizeDoWhileStatement(doWhileStatement, ctx);
+                break;
+
+            case BreakStatementSyntax breakStatement:
+                NormalizeBreakStatement(breakStatement, ctx);
+                break;
+
+            case ContinueStatementSyntax continueStatement:
+                NormalizeContinueStatement(continueStatement, ctx);
+                break;
+
             case BlockSyntax block:
                 NormalizeBlock(block, ctx);
                 break;
@@ -356,6 +372,96 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
             NormalizeElseClause(ifStatement.Else, ctx);
 
         ifStatement.SetIf(newIf, false);
+    }
+
+    private void NormalizeWhileStatement(WhileStatementSyntax whileStatement, WhitespaceNormalizeContext ctx)
+    {
+        bool shouldLineBreak = ctx.ShouldLineBreak;
+        SyntaxToken newWhile = whileStatement.While.WithNoTrivia();
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newWhile = newWhile.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        SyntaxToken parenOpen = whileStatement.ParenOpen.WithNoTrivia().WithLeadingTrivia(" ");
+        SyntaxToken parenClose = whileStatement.ParenClose.WithNoTrivia();
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        ctx.IsFirstElement = true;
+        NormalizeExpression(whileStatement.Condition, ctx);
+
+        if (whileStatement.Body != null)
+        {
+            NormalizeBlock(whileStatement.Body, ctx);
+            whileStatement.SetSemicolon(null, false);
+        }
+        else
+        {
+            SyntaxToken semicolon = whileStatement.Semicolon!.Value.WithNoTrivia();
+            if (shouldLineBreak)
+                semicolon = semicolon.WithTrailingTrivia("\r\n");
+            whileStatement.SetSemicolon(semicolon, false);
+            ctx.ShouldLineBreak = true;
+        }
+
+        whileStatement.SetWhile(newWhile, false);
+        whileStatement.SetParenOpen(parenOpen, false);
+        whileStatement.SetParenClose(parenClose, false);
+    }
+
+    private void NormalizeDoWhileStatement(DoWhileStatementSyntax doWhileStatement, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newDo = doWhileStatement.Do.WithNoTrivia();
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newDo = newDo.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        NormalizeBlock(doWhileStatement.Body, ctx, attachElseOnSameLine: true);
+
+        SyntaxToken newWhile = doWhileStatement.While.WithNoTrivia().WithLeadingTrivia(" ").WithTrailingTrivia(" ");
+        SyntaxToken parenOpen = doWhileStatement.ParenOpen.WithNoTrivia();
+        SyntaxToken parenClose = doWhileStatement.ParenClose.WithNoTrivia();
+        SyntaxToken semicolon = doWhileStatement.Semicolon.WithNoTrivia().WithTrailingTrivia("\r\n");
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        ctx.IsFirstElement = true;
+        NormalizeExpression(doWhileStatement.Condition, ctx);
+
+        doWhileStatement.SetDo(newDo, false);
+        doWhileStatement.SetWhile(newWhile, false);
+        doWhileStatement.SetParenOpen(parenOpen, false);
+        doWhileStatement.SetParenClose(parenClose, false);
+        doWhileStatement.SetSemicolon(semicolon, false);
+        ctx.ShouldLineBreak = true;
+    }
+
+    private void NormalizeBreakStatement(BreakStatementSyntax breakStatement, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newBreak = breakStatement.Break.WithNoTrivia();
+        SyntaxToken semicolon = breakStatement.Semicolon.WithNoTrivia();
+
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newBreak = newBreak.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        if (ctx.ShouldLineBreak)
+            semicolon = semicolon.WithTrailingTrivia("\r\n");
+
+        breakStatement.SetBreak(newBreak, false);
+        breakStatement.SetSemicolon(semicolon, false);
+    }
+
+    private void NormalizeContinueStatement(ContinueStatementSyntax continueStatement, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newContinue = continueStatement.Continue.WithNoTrivia();
+        SyntaxToken semicolon = continueStatement.Semicolon.WithNoTrivia();
+
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newContinue = newContinue.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        if (ctx.ShouldLineBreak)
+            semicolon = semicolon.WithTrailingTrivia("\r\n");
+
+        continueStatement.SetContinue(newContinue, false);
+        continueStatement.SetSemicolon(semicolon, false);
     }
 
     private void NormalizeElseClause(ElseClauseSyntax elseClause, WhitespaceNormalizeContext ctx)

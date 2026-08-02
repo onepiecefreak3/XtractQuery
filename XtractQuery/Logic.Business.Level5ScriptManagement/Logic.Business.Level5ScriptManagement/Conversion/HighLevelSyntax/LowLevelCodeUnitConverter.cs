@@ -25,9 +25,10 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         CollectUsedLabels(method.Body.Expressions, usedLabels);
         int nextLabel = 0;
 
+        var loopStack = new Stack<LoopContext>();
         var statements = new List<StatementSyntax>();
         foreach (StatementSyntax statement in method.Body.Expressions)
-            FlattenStatement(statement, statements, usedTemps, usedLabels, ref nextLabel);
+            FlattenStatement(statement, statements, usedTemps, usedLabels, ref nextLabel, loopStack);
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);
@@ -38,7 +39,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         List<StatementSyntax> output,
         HashSet<int> usedTemps,
         HashSet<string> usedLabels,
-        ref int nextLabel)
+        ref int nextLabel,
+        Stack<LoopContext> loopStack)
     {
         switch (statement)
         {
@@ -74,12 +76,28 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 break;
 
             case IfStatementSyntax ifStatement:
-                LowerIfStatement(ifStatement, output, usedTemps, usedLabels, ref nextLabel);
+                LowerIfStatement(ifStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                break;
+
+            case WhileStatementSyntax whileStatement:
+                LowerWhileStatement(whileStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                break;
+
+            case DoWhileStatementSyntax doWhileStatement:
+                LowerDoWhileStatement(doWhileStatement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+                break;
+
+            case BreakStatementSyntax breakStatement:
+                LowerBreakStatement(breakStatement, output, loopStack);
+                break;
+
+            case ContinueStatementSyntax continueStatement:
+                LowerContinueStatement(continueStatement, output, loopStack);
                 break;
 
             case BlockSyntax block:
                 foreach (StatementSyntax nested in block.Statements)
-                    FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel);
+                    FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
                 break;
 
             case ReturnStatementSyntax returnStatement:
@@ -106,43 +124,179 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         }
     }
 
-    private void LowerIfStatement(
-        IfStatementSyntax ifStatement,
+    private void LowerWhileStatement(
+        WhileStatementSyntax whileStatement,
+        List<StatementSyntax> output,
+        HashSet<int> usedTemps,
+        HashSet<string> usedLabels,
+        ref int nextLabel,
+        Stack<LoopContext> loopStack)
+    {
+        // Empty / one-liner while → spin: L: if cond goto L;
+        if (whileStatement.Body is null || whileStatement.Body.Statements.Count == 0)
+        {
+            LowerWhileSpin(whileStatement.Condition, output, usedTemps, usedLabels, ref nextLabel);
+            return;
+        }
+
+        string headLabel = AllocateLabel(usedLabels, ref nextLabel);
+        string exitLabel = AllocateLabel(usedLabels, ref nextLabel);
+        var context = new LoopContext(headLabel, headLabel, exitLabel);
+        loopStack.Push(context);
+
+        output.Add(CreateLabel(headLabel));
+        EmitIfNotGoto(NormalizeCondition(whileStatement.Condition), exitLabel, output, usedTemps);
+
+        foreach (StatementSyntax nested in whileStatement.Body.Statements)
+            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+
+        output.Add(CreateGoto(headLabel));
+        output.Add(CreateLabel(exitLabel));
+        loopStack.Pop();
+    }
+
+    private void LowerWhileSpin(
+        ExpressionSyntax condition,
         List<StatementSyntax> output,
         HashSet<int> usedTemps,
         HashSet<string> usedLabels,
         ref int nextLabel)
     {
+        // One-liner / empty while has no body for break/continue; emit classic spin only.
+        string headLabel = AllocateLabel(usedLabels, ref nextLabel);
+        output.Add(CreateLabel(headLabel));
+        EmitSpinIfGoto(NormalizeCondition(condition), headLabel, output, usedTemps);
+    }
+
+    private void EmitSpinIfGoto(
+        ExpressionSyntax condition,
+        string headLabel,
+        List<StatementSyntax> output,
+        HashSet<int> usedTemps)
+    {
+        SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        GotoExpressionSyntax gotoHead = CreateGotoExpression(headLabel);
+
+        ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
+            FlattenExpression(condition, output, usedTemps, forceValue: false));
+
+        // while (not x); → L: if not x goto L;
+        if (flatCondition is UnaryExpressionSyntax unary &&
+            unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
+        {
+            ValueExpressionSyntax value = EnsureValueExpression(unary.Value, output, usedTemps);
+            var comparison = new UnaryExpressionSyntax(unary.Operation, value);
+            output.Add(new IfNotGotoStatementSyntax(ifToken, comparison, gotoHead, semicolon));
+            return;
+        }
+
+        // while (x); → L: if x goto L;
+        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
+        output.Add(new IfGotoStatementSyntax(ifToken, condValue, gotoHead, semicolon));
+    }
+
+    private void LowerDoWhileStatement(
+        DoWhileStatementSyntax doWhileStatement,
+        List<StatementSyntax> output,
+        HashSet<int> usedTemps,
+        HashSet<string> usedLabels,
+        ref int nextLabel,
+        Stack<LoopContext> loopStack)
+    {
+        string headLabel = AllocateLabel(usedLabels, ref nextLabel);
+        string continueLabel = AllocateLabel(usedLabels, ref nextLabel);
+        string exitLabel = AllocateLabel(usedLabels, ref nextLabel);
+        var context = new LoopContext(headLabel, continueLabel, exitLabel);
+        loopStack.Push(context);
+
+        output.Add(CreateLabel(headLabel));
+        foreach (StatementSyntax nested in doWhileStatement.Body.Statements)
+            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
+
+        output.Add(CreateLabel(continueLabel));
+        EmitIfGoto(NormalizeCondition(doWhileStatement.Condition), headLabel, output, usedTemps);
+        output.Add(CreateLabel(exitLabel));
+        loopStack.Pop();
+    }
+
+    private void LowerBreakStatement(
+        BreakStatementSyntax breakStatement,
+        List<StatementSyntax> output,
+        Stack<LoopContext> loopStack)
+    {
+        if (loopStack.Count == 0)
+            throw CreateException("break is only valid inside a loop.", breakStatement.Location);
+
+        output.Add(CreateGoto(loopStack.Peek().ExitLabel));
+    }
+
+    private void LowerContinueStatement(
+        ContinueStatementSyntax continueStatement,
+        List<StatementSyntax> output,
+        Stack<LoopContext> loopStack)
+    {
+        if (loopStack.Count == 0)
+            throw CreateException("continue is only valid inside a loop.", continueStatement.Location);
+
+        output.Add(CreateGoto(loopStack.Peek().ContinueLabel));
+    }
+
+    private void LowerIfStatement(
+        IfStatementSyntax ifStatement,
+        List<StatementSyntax> output,
+        HashSet<int> usedTemps,
+        HashSet<string> usedLabels,
+        ref int nextLabel,
+        Stack<LoopContext> loopStack)
+    {
         if (ifStatement.Else is null)
         {
-            string endLabel = AllocateLabel(usedLabels, ref nextLabel, "end");
+            string endLabel = AllocateLabel(usedLabels, ref nextLabel);
             EmitIfNotGoto(ifStatement.Condition, endLabel, output, usedTemps);
             foreach (StatementSyntax nested in ifStatement.Body.Statements)
-                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel);
+                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
             output.Add(CreateLabel(endLabel));
             return;
         }
 
-        string elseLabel = AllocateLabel(usedLabels, ref nextLabel, "else");
-        string joinLabel = AllocateLabel(usedLabels, ref nextLabel, "join");
+        string elseLabel = AllocateLabel(usedLabels, ref nextLabel);
+        string joinLabel = AllocateLabel(usedLabels, ref nextLabel);
 
         EmitIfNotGoto(ifStatement.Condition, elseLabel, output, usedTemps);
         foreach (StatementSyntax nested in ifStatement.Body.Statements)
-            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel);
+            FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
         output.Add(CreateGoto(joinLabel));
         output.Add(CreateLabel(elseLabel));
 
         if (ifStatement.Else.Statement is IfStatementSyntax elseIf)
-            LowerIfStatement(elseIf, output, usedTemps, usedLabels, ref nextLabel);
+            LowerIfStatement(elseIf, output, usedTemps, usedLabels, ref nextLabel, loopStack);
         else if (ifStatement.Else.Statement is BlockSyntax elseBlock)
         {
             foreach (StatementSyntax nested in elseBlock.Statements)
-                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel);
+                FlattenStatement(nested, output, usedTemps, usedLabels, ref nextLabel, loopStack);
         }
         else
-            FlattenStatement(ifStatement.Else.Statement, output, usedTemps, usedLabels, ref nextLabel);
+            FlattenStatement(ifStatement.Else.Statement, output, usedTemps, usedLabels, ref nextLabel, loopStack);
 
         output.Add(CreateLabel(joinLabel));
+    }
+
+    private void EmitIfGoto(
+        ExpressionSyntax condition,
+        string targetLabel,
+        List<StatementSyntax> output,
+        HashSet<int> usedTemps)
+    {
+        SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        GotoExpressionSyntax gotoExpr = CreateGotoExpression(targetLabel);
+
+        ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
+            FlattenExpression(NormalizeCondition(condition), output, usedTemps, forceValue: false));
+
+        ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
+        output.Add(new IfGotoStatementSyntax(ifToken, condValue, gotoExpr, semicolon));
     }
 
     private void EmitIfNotGoto(
@@ -156,7 +310,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         GotoExpressionSyntax gotoExpr = CreateGotoExpression(targetLabel);
 
         ExpressionSyntax flatCondition = ExpressionParenthesizer.UnwrapParentheses(
-            FlattenExpression(condition, output, usedTemps, forceValue: false));
+            FlattenExpression(NormalizeCondition(condition), output, usedTemps, forceValue: false));
 
         if (flatCondition is UnaryExpressionSyntax unary &&
             unary.Operation.RawKind is (int)SyntaxTokenKind.NotKeyword or (int)SyntaxTokenKind.Not)
@@ -169,6 +323,33 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         ValueExpressionSyntax condValue = EnsureValueExpression(flatCondition, output, usedTemps);
         var notComparison = new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NotKeyword), condValue);
         output.Add(new IfNotGotoStatementSyntax(ifToken, notComparison, gotoExpr, semicolon));
+    }
+
+    private ExpressionSyntax NormalizeCondition(ExpressionSyntax condition)
+    {
+        condition = ExpressionParenthesizer.UnwrapParentheses(condition);
+
+        // Parser wraps literals in ValueExpressionSyntax (`while (true)` → Value(true)).
+        if (condition is ValueExpressionSyntax { MetadataParameters: null } value)
+            condition = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        if (IsTrueLiteral(condition))
+            return CreateIntOneValue();
+
+        return condition;
+    }
+
+    private static bool IsTrueLiteral(ExpressionSyntax expression)
+    {
+        return expression is LiteralExpressionSyntax
+        {
+            Literal.RawKind: (int)SyntaxTokenKind.TrueKeyword
+        };
+    }
+
+    private ValueExpressionSyntax CreateIntOneValue()
+    {
+        return new ValueExpressionSyntax(new LiteralExpressionSyntax(syntaxFactory.NumericLiteral(1)));
     }
 
     private GotoExpressionSyntax CreateGotoExpression(string labelName)
@@ -198,14 +379,20 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         return new ValueExpressionSyntax(new LiteralExpressionSyntax(syntaxFactory.StringLiteral(labelName)));
     }
 
-    private static string AllocateLabel(HashSet<string> usedLabels, ref int nextLabel, string prefix)
+    private static string AllocateLabel(HashSet<string> usedLabels, ref int nextLabel)
     {
         while (true)
         {
-            string name = $"@__{prefix}_{nextLabel++}@";
+            string name = FormatNumericJumpLabel(nextLabel++);
             if (usedLabels.Add(name))
                 return name;
         }
+    }
+
+    private static string FormatNumericJumpLabel(int index)
+    {
+        // "@000@", "@001@", ... — at least 3 digits; more when needed.
+        return index < 1000 ? $"@{index:D3}@" : $"@{index}@";
     }
 
     private static void CollectUsedLabels(IReadOnlyList<StatementSyntax> statements, HashSet<string> usedLabels)
@@ -227,6 +414,14 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 CollectUsedLabels(ifStatement.Body.Statements, usedLabels);
                 if (ifStatement.Else != null)
                     CollectUsedLabels(ifStatement.Else.Statement, usedLabels);
+                break;
+
+            case WhileStatementSyntax { Body: not null } whileStatement:
+                CollectUsedLabels(whileStatement.Body.Statements, usedLabels);
+                break;
+
+            case DoWhileStatementSyntax doWhile:
+                CollectUsedLabels(doWhile.Body.Statements, usedLabels);
                 break;
 
             case BlockSyntax block:
@@ -266,6 +461,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         {
             case ValueExpressionSyntax value:
                 ExpressionSyntax flattenedInner = FlattenExpression(value.Value, output, usedTemps, forceValue: false);
+                if (IsTrueLiteral(flattenedInner))
+                    return CreateIntOneValue();
+
                 if (flattenedInner is VariableExpressionSyntax or LiteralExpressionSyntax or UnaryExpressionSyntax)
                     return new ValueExpressionSyntax(flattenedInner, value.MetadataParameters);
 
@@ -275,7 +473,14 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                     : new ValueExpressionSyntax(spilled.Value, value.MetadataParameters);
 
             case VariableExpressionSyntax:
-            case LiteralExpressionSyntax:
+                return forceValue ? new ValueExpressionSyntax(expression) : expression;
+
+            case LiteralExpressionSyntax literal:
+                if (IsTrueLiteral(literal))
+                {
+                    ExpressionSyntax one = new LiteralExpressionSyntax(syntaxFactory.NumericLiteral(1));
+                    return forceValue ? new ValueExpressionSyntax(one) : one;
+                }
                 return forceValue ? new ValueExpressionSyntax(expression) : expression;
 
             case UnaryExpressionSyntax unary:
@@ -388,6 +593,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
         if (expression is ValueExpressionSyntax value)
         {
+            if (IsTrueLiteral(value.Value))
+                return CreateIntOneValue();
+
             if (value.Value is VariableExpressionSyntax or LiteralExpressionSyntax)
                 return value;
 
@@ -396,6 +604,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             return Spill(value.Value, output, usedTemps);
         }
+
+        if (IsTrueLiteral(expression))
+            return CreateIntOneValue();
 
         if (expression is VariableExpressionSyntax or LiteralExpressionSyntax)
             return new ValueExpressionSyntax(expression);
@@ -467,6 +678,17 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 CollectUsedTempSlots(ifStatement.Body.Statements, usedTemps);
                 if (ifStatement.Else != null)
                     CollectUsedTempSlots(ifStatement.Else.Statement, usedTemps);
+                break;
+
+            case WhileStatementSyntax whileStatement:
+                CollectUsedTempSlots(whileStatement.Condition, usedTemps);
+                if (whileStatement.Body != null)
+                    CollectUsedTempSlots(whileStatement.Body.Statements, usedTemps);
+                break;
+
+            case DoWhileStatementSyntax doWhile:
+                CollectUsedTempSlots(doWhile.Condition, usedTemps);
+                CollectUsedTempSlots(doWhile.Body.Statements, usedTemps);
                 break;
 
             case BlockSyntax block:
@@ -546,4 +768,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
         return int.TryParse(text["$temp".Length..], out slot);
     }
+
+    private static Exception CreateException(string message, SyntaxLocation location)
+    {
+        return new InvalidOperationException($"{message} (Line {location.Line}, Column {location.Column})");
+    }
+
+    private sealed record LoopContext(string HeadLabel, string ContinueLabel, string ExitLabel);
 }

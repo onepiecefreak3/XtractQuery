@@ -12,6 +12,8 @@ internal static class ExpressionSideEffectClassifier
             case ExitStatementSyntax:
             case MethodInvocationStatementSyntax:
             case PostfixUnaryStatementSyntax:
+            case BreakStatementSyntax:
+            case ContinueStatementSyntax:
                 return true;
 
             case AssignmentStatementSyntax assignment:
@@ -37,6 +39,14 @@ internal static class ExpressionSideEffectClassifier
                 if (ifStatement.Body.Statements.Any(IsEffectful))
                     return true;
                 return ifStatement.Else != null && IsEffectful(ifStatement.Else.Statement);
+
+            case WhileStatementSyntax whileStatement:
+                if (IsEffectful(whileStatement.Condition))
+                    return true;
+                return whileStatement.Body != null && whileStatement.Body.Statements.Any(IsEffectful);
+
+            case DoWhileStatementSyntax doWhile:
+                return IsEffectful(doWhile.Condition) || doWhile.Body.Statements.Any(IsEffectful);
 
             case BlockSyntax block:
                 return block.Statements.Any(IsEffectful);
