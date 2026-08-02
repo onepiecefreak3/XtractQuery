@@ -248,15 +248,28 @@ internal class ControlFlowGraphBuilder : IControlFlowGraphBuilder
         if (target.Value is not LiteralExpressionSyntax literal)
             return false;
 
-        if (literal.Literal.RawKind != (int)SyntaxTokenKind.StringLiteral)
-            return false;
+        switch (literal.Literal.RawKind)
+        {
+            case (int)SyntaxTokenKind.StringLiteral:
+                labelName = GetStringLiteral(literal);
+                return true;
 
-        labelName = GetStringLiteral(literal);
-        return true;
+            case (int)SyntaxTokenKind.HashStringLiteral:
+                labelName = GetHashStringLiteral(literal);
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private static string GetStringLiteral(LiteralExpressionSyntax literal)
     {
         return literal.Literal.Text[1..^1].Replace("\\\"", "\"");
+    }
+
+    private static string GetHashStringLiteral(LiteralExpressionSyntax literal)
+    {
+        return literal.Literal.Text[1..^2].Replace("\\\"", "\"");
     }
 }

@@ -185,25 +185,23 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
         return true;
     }
 
-    // Exclusive end of else-body statements, skipping trailing numeric labels that share the join instruction.
+    // Exclusive end of body statements, skipping trailing labels that share the join
+    // instruction (compiler @NNN@ joins and co-located developer labels such as "TEST":).
     private static int FindContentEndBeforeJoin(
         IReadOnlyList<StatementSyntax> statements,
         int contentStart,
         int joinLabelIndex)
     {
         int end = joinLabelIndex;
-        while (end > contentStart && IsNumericJumpLabelDefinition(statements[end - 1]))
+        while (end > contentStart && IsLabelDefinition(statements[end - 1]))
             end--;
 
         return end;
     }
 
-    private static bool IsNumericJumpLabelDefinition(StatementSyntax statement)
+    private static bool IsLabelDefinition(StatementSyntax statement)
     {
-        return statement is GotoLabelStatementSyntax label &&
-               TryGetLabelName(label.Label, out string? name) &&
-               name is not null &&
-               IsNumericJumpLabel(name);
+        return statement is GotoLabelStatementSyntax;
     }
 
     private bool TryMatchIfThen(
@@ -362,11 +360,21 @@ internal class StructuredIfPass(ILevel5SyntaxFactory syntaxFactory) : IStructure
     {
         label = null;
 
-        if (literal.Literal.RawKind != (int)SyntaxTokenKind.StringLiteral)
-            return false;
+        switch (literal.Literal.RawKind)
+        {
+            case (int)SyntaxTokenKind.StringLiteral:
+                // "name"
+                label = literal.Literal.Text[1..^1].Replace("\\\"", "\"");
+                return true;
 
-        label = literal.Literal.Text[1..^1].Replace("\\\"", "\"");
-        return true;
+            case (int)SyntaxTokenKind.HashStringLiteral:
+                // "name"h — developer jump targets often use hashed string literals.
+                label = literal.Literal.Text[1..^2].Replace("\\\"", "\"");
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private static int FindLabelIndex(IReadOnlyList<StatementSyntax> statements, string labelName, int startIndex)

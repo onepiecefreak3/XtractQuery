@@ -250,24 +250,23 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
         return true;
     }
 
-    // Exclusive end of loop-body statements, skipping trailing numeric labels that share the exit instruction.
+    // Exclusive end of loop-body statements, skipping trailing labels that share the exit
+    // instruction (compiler @NNN@ joins and co-located developer labels).
     private static int FindContentEndBeforeJoin(
         IReadOnlyList<StatementSyntax> statements,
         int contentStart,
         int joinLabelIndex)
     {
         int end = joinLabelIndex;
-        while (end > contentStart && IsNumericJumpLabelDefinition(statements[end - 1]))
+        while (end > contentStart && IsLabelDefinition(statements[end - 1]))
             end--;
 
         return end;
     }
 
-    private static bool IsNumericJumpLabelDefinition(StatementSyntax statement)
+    private static bool IsLabelDefinition(StatementSyntax statement)
     {
-        return TryGetLabel(statement, out string? name) &&
-               name is not null &&
-               IsNumericJumpLabel(name);
+        return statement is GotoLabelStatementSyntax;
     }
 
     private bool TryMatchDoWhile(
@@ -377,13 +376,7 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
             case IfNotGotoStatementSyntax ifNotGoto:
                 return IsAllowedTarget(ifNotGoto.Goto.Target, headLabel, exitLabel, internalLabels);
 
-            case GotoLabelStatementSyntax label:
-                // Leftover compiler labels inside the body mean unresolved structure.
-                // Developer labels are retained verbatim.
-                return TryGetLabelName(label.Label, out string? name) &&
-                       name is not null &&
-                       !IsNumericJumpLabel(name);
-
+            case GotoLabelStatementSyntax:
             case AssignmentStatementSyntax:
             case MethodInvocationStatementSyntax:
             case YieldStatementSyntax:
@@ -591,11 +584,22 @@ internal class StructuredLoopPass(ILevel5SyntaxFactory syntaxFactory) : IStructu
     private static bool TryGetLabelName(LiteralExpressionSyntax literal, out string? label)
     {
         label = null;
-        if (literal.Literal.RawKind != (int)SyntaxTokenKind.StringLiteral)
-            return false;
 
-        label = literal.Literal.Text[1..^1].Replace("\\\"", "\"");
-        return true;
+        switch (literal.Literal.RawKind)
+        {
+            case (int)SyntaxTokenKind.StringLiteral:
+                // "name"
+                label = literal.Literal.Text[1..^1].Replace("\\\"", "\"");
+                return true;
+
+            case (int)SyntaxTokenKind.HashStringLiteral:
+                // "name"h — developer jump targets often use hashed string literals.
+                label = literal.Literal.Text[1..^2].Replace("\\\"", "\"");
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private static int FindLabelIndex(IReadOnlyList<StatementSyntax> statements, string labelName, int startIndex)
