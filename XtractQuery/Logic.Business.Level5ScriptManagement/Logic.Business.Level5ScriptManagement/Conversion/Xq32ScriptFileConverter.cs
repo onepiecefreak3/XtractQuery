@@ -300,25 +300,18 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         ValueExpressionSyntax leftValue = CreateValueExpression((uint)instruction.ReturnParameter);
         ExpressionSyntax left = leftValue;
 
-        switch (instruction.Type)
+        // LHS array indexes are trailing arguments after the RHS operands. Only peel when
+        // the instruction has a fixed RHS arity so leftovers are unambiguously indexes.
+        // Type 530/531/523 and method calls have variable arity — LowLevel spills those
+        // array stores to type 100 so they round-trip through the case below.
+        if (TryGetFixedRightHandArgumentCount(instruction.Type, out int rhsArgCount) &&
+            instruction.ArgumentCount > rhsArgCount)
         {
-            case 100:
-            case 250:
-            case 251:
-            case 252:
-            case 253:
-            case 254:
-            case 260:
-            case 261:
-            case 262:
-            case 270:
-            case 271:
-                if (instruction.ArgumentCount > 1)
-                {
-                    var indexes3 = script.Arguments.Skip(instruction.ArgumentIndex + 1).Take(instruction.ArgumentCount - 1).ToArray();
-                    left = CreateArrayIndexExpression(leftValue, indexes3);
-                }
-                break;
+            var indexes = script.Arguments
+                .Skip(instruction.ArgumentIndex + rhsArgCount)
+                .Take(instruction.ArgumentCount - rhsArgCount)
+                .ToArray();
+            left = CreateArrayIndexExpression(leftValue, indexes);
         }
 
         SyntaxToken equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.EqualsSign);
@@ -454,6 +447,63 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         }
 
         return new AssignmentStatementSyntax(left, equalsOperator, right, semicolon);
+    }
+
+    /// <summary>
+    /// Fixed RHS operand count for instructions that may carry trailing LHS array indexes.
+    /// Returns false for variable-arity ops (methods, <c>new</c>, array reads, switch).
+    /// </summary>
+    private static bool TryGetFixedRightHandArgumentCount(short instructionType, out int count)
+    {
+        switch (instructionType)
+        {
+            case 100:
+            case 110:
+            case 112:
+            case 120:
+            case 140:
+            case 141:
+            case 250:
+            case 251:
+            case 252:
+            case 253:
+            case 254:
+            case 260:
+            case 261:
+            case 262:
+            case 270:
+            case 271:
+            case 511:
+            case 512:
+            case 513:
+                count = 1;
+                return true;
+
+            case 121:
+            case 122:
+            case 130:
+            case 131:
+            case 132:
+            case 133:
+            case 134:
+            case 135:
+            case 150:
+            case 151:
+            case 152:
+            case 153:
+            case 154:
+            case 160:
+            case 161:
+            case 162:
+            case 170:
+            case 171:
+                count = 2;
+                return true;
+
+            default:
+                count = 0;
+                return false;
+        }
     }
 
     private TypeCastValueExpressionSyntax CreateTypeCastValueExpression(ValueExpressionSyntax value, SyntaxToken type)

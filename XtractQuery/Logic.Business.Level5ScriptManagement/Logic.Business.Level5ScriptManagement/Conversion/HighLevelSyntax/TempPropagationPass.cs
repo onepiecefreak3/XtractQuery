@@ -493,7 +493,7 @@ internal class TempPropagationPass(
 
             case TypeCastValueExpressionSyntax typeCast:
                 CollectUses(typeCast.Value, statementIndex, tempName, uses,
-                    TempExpressionRewriter.FoldContext.None(), false);
+                    TempExpressionRewriter.FoldContext.ForOperator(ExpressionPrecedence.Unary, true), false);
                 break;
 
             case SwitchExpressionSyntax switchExpression:

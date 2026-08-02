@@ -267,7 +267,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         ref int nextLabel,
         Stack<LoopContext> loopStack)
     {
-        if (ifStatement.Else is null)
+        // Empty `else { }` is indistinguishable from if-then after jump-table hash sort
+        // co-locates ELSE/JOIN at the same instruction index. Emit the if-then shape.
+        if (ifStatement.Else is null || IsEmptyElse(ifStatement.Else))
         {
             string endLabel = AllocateLabel(usedLabels, ref nextLabel);
             EmitIfNotGoto(ifStatement.Condition, endLabel, output, temps);
@@ -297,6 +299,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             FlattenStatement(ifStatement.Else.Statement, output, temps, usedLabels, ref nextLabel, loopStack);
 
         output.Add(CreateLabel(joinLabel));
+    }
+
+    private static bool IsEmptyElse(ElseClauseSyntax elseClause)
+    {
+        return elseClause.Statement is BlockSyntax { Statements.Count: 0 };
     }
 
     private void EmitIfGoto(
@@ -496,7 +503,19 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         }
 
         ExpressionSyntax flatTarget = FlattenExpression(left, output, temps, forceValue: false);
-        ExpressionSyntax flatValue = FlattenExpression(right, output, temps, forceValue: false);
+
+        // Plain `=` may keep instruction-shaped RHS (calls, binaries, casts) when the
+        // destination is a plain slot. Array stores append LHS indexes as trailing
+        // arguments; only type 100 / compound-assigns peel those on decompile, so a
+        // complex RHS would steal the indexes (`$a[i] = $b[j]` → `$a = $b[j][i]`).
+        // Spill to a value first: `$temp = rhs; $a[i] = $temp`.
+        bool forceValueRhs = operation.RawKind != (int)SyntaxTokenKind.EqualsSign
+                             || flatTarget is ArrayIndexExpressionSyntax;
+        ExpressionSyntax flatValue = forceValueRhs
+            ? EnsureValueExpression(
+                FlattenExpression(right, output, temps, forceValue: true), output, temps)
+            : FlattenExpression(right, output, temps, forceValue: false);
+
         output.Add(new AssignmentStatementSyntax(flatTarget, operation, flatValue, semicolon));
         temps.ReleaseExpression(flatValue);
         temps.ReleaseExpression(flatTarget);
@@ -561,6 +580,12 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             case UnaryExpressionSyntax unary:
                 return FlattenUnary(unary, output, temps);
 
+            case TypeCastValueExpressionSyntax typeCast:
+                // Same shape as other unaries: flatten the operand to a value, keep the cast.
+                // Callers that need a bare value (args, conditions) spill via EnsureArgument /
+                // EnsureValueExpression — casts are their own instruction and cannot be inlined.
+                return FlattenTypeCast(typeCast, output, temps);
+
             case BinaryExpressionSyntax binary:
                 ExpressionSyntax left = EnsureArgument(FlattenExpression(binary.Left, output, temps, false), output, temps);
                 ExpressionSyntax right = EnsureArgument(FlattenExpression(binary.Right, output, temps, false), output, temps);
@@ -584,13 +609,17 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             case ArrayIndexExpressionSyntax arrayIndex:
                 ValueExpressionSyntax arrayValue = EnsureValueExpression(
                     FlattenExpression(arrayIndex.Value, output, temps, true), output, temps);
-                return new ArrayIndexExpressionSyntax(arrayValue, arrayIndex.Indexer);
+                IReadOnlyList<ArrayIndexerExpressionSyntax> indexers =
+                    FlattenIndexers(arrayIndex.Indexer, output, temps);
+                return new ArrayIndexExpressionSyntax(arrayValue, indexers);
 
-            case TypeCastValueExpressionSyntax typeCast:
-                ValueExpressionSyntax castValue = EnsureValueExpression(
-                    FlattenExpression(typeCast.Value, output, temps, true), output, temps);
-                var flatCast = new TypeCastValueExpressionSyntax(typeCast.TypeCast, castValue);
-                return forceValue ? Spill(flatCast, output, temps) : flatCast;
+            case ArrayInstantiationExpressionSyntax arrayInstantiation:
+                IReadOnlyList<ArrayIndexerExpressionSyntax> instantiationIndexers =
+                    FlattenIndexers(arrayInstantiation.Indexer, output, temps);
+                var flatInstantiation = new ArrayInstantiationExpressionSyntax(
+                    arrayInstantiation.New,
+                    instantiationIndexers);
+                return forceValue ? Spill(flatInstantiation, output, temps) : flatInstantiation;
 
             case SwitchExpressionSyntax switchExpression:
                 ExpressionSyntax switchValue = EnsureArgument(
@@ -619,6 +648,35 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         ValueExpressionSyntax value = EnsureValueExpression(
             FlattenExpression(unary.Value, output, temps, true), output, temps);
         return new UnaryExpressionSyntax(unary.Operation, value);
+    }
+
+    private TypeCastValueExpressionSyntax FlattenTypeCast(
+        TypeCastValueExpressionSyntax typeCast,
+        List<StatementSyntax> output,
+        TempAllocator temps)
+    {
+        // Operand may be a method invocation or other primary wrapped in ValueExpression
+        // (e.g. `(int)random(10)`). Spill that first so the cast instruction only sees a slot.
+        ValueExpressionSyntax castValue = EnsureValueExpression(
+            FlattenExpression(typeCast.Value, output, temps, true), output, temps);
+        return new TypeCastValueExpressionSyntax(typeCast.TypeCast, castValue);
+    }
+
+    private IReadOnlyList<ArrayIndexerExpressionSyntax> FlattenIndexers(
+        IReadOnlyList<ArrayIndexerExpressionSyntax> indexers,
+        List<StatementSyntax> output,
+        TempAllocator temps)
+    {
+        // VM array ops take value arguments only — spill `$arr[$i + 1]` to `$temp = $i + 1; ...[$temp]`.
+        var result = new List<ArrayIndexerExpressionSyntax>(indexers.Count);
+        foreach (ArrayIndexerExpressionSyntax indexer in indexers)
+        {
+            ValueExpressionSyntax index = EnsureValueExpression(
+                FlattenExpression(indexer.Index, output, temps, true), output, temps);
+            result.Add(new ArrayIndexerExpressionSyntax(indexer.BracketOpen, index, indexer.BracketClose));
+        }
+
+        return result;
     }
 
     private PostfixUnaryExpressionSyntax FlattenPostfix(
@@ -658,7 +716,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         if (expression is ValueExpressionSyntax or VariableExpressionSyntax or LiteralExpressionSyntax)
             return expression is ValueExpressionSyntax ? expression : new ValueExpressionSyntax(expression);
 
-        if (expression is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus, Value: ValueExpressionSyntax })
+        // Only `-inf`/`-nan` encode as float arguments. `-$var` / `-(...)` are negate
+        // instructions and must be spilled before use as a call/binary operand.
+        if (IsEncodableNegativeFloat(expression))
             return new ValueExpressionSyntax(expression);
 
         return Spill(expression, output, temps);
@@ -679,7 +739,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             if (value.Value is VariableExpressionSyntax or LiteralExpressionSyntax)
                 return value;
 
-            if (value.Value is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus })
+            if (IsEncodableNegativeFloat(value.Value))
                 return value;
 
             return Spill(value.Value, output, temps);
@@ -691,10 +751,33 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         if (expression is VariableExpressionSyntax or LiteralExpressionSyntax)
             return new ValueExpressionSyntax(expression);
 
-        if (expression is UnaryExpressionSyntax { Operation.RawKind: (int)SyntaxTokenKind.Minus, Value: ValueExpressionSyntax })
+        if (IsEncodableNegativeFloat(expression))
             return new ValueExpressionSyntax(expression);
 
+        // TypeCastValueExpressionSyntax, `-$var`, `not x`, and other unaries spill here.
         return Spill(expression, output, temps);
+    }
+
+    /// <summary>
+    /// True for unary-minus over float keywords (<c>-inf</c>, <c>-nan</c>).
+    /// Signed numeric floats like <c>-12f</c> are a single literal token, not unary.
+    /// </summary>
+    private static bool IsEncodableNegativeFloat(ExpressionSyntax expression)
+    {
+        return expression is UnaryExpressionSyntax
+        {
+            Operation.RawKind: (int)SyntaxTokenKind.Minus,
+            Value: ValueExpressionSyntax
+            {
+                Value: LiteralExpressionSyntax
+                {
+                    Literal.RawKind: (int)SyntaxTokenKind.Infinite
+                        or (int)SyntaxTokenKind.InfinityKeyword
+                        or (int)SyntaxTokenKind.InfKeyword
+                        or (int)SyntaxTokenKind.NanKeyword
+                }
+            }
+        };
     }
 
     private ValueExpressionSyntax Spill(ExpressionSyntax expression, List<StatementSyntax> output, TempAllocator temps)
@@ -826,6 +909,13 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             case ArrayIndexExpressionSyntax arrayIndex:
                 CollectUsedTempSlots(arrayIndex.Value, usedTemps);
+                foreach (ArrayIndexerExpressionSyntax indexer in arrayIndex.Indexer)
+                    CollectUsedTempSlots(indexer.Index, usedTemps);
+                break;
+
+            case ArrayInstantiationExpressionSyntax arrayInstantiation:
+                foreach (ArrayIndexerExpressionSyntax indexer in arrayInstantiation.Indexer)
+                    CollectUsedTempSlots(indexer.Index, usedTemps);
                 break;
 
             case TypeCastValueExpressionSyntax typeCast:
@@ -924,6 +1014,11 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 case ArrayIndexExpressionSyntax arrayIndex:
                     ReleaseExpression(arrayIndex.Value);
                     foreach (ArrayIndexerExpressionSyntax indexer in arrayIndex.Indexer)
+                        ReleaseExpression(indexer.Index);
+                    break;
+
+                case ArrayInstantiationExpressionSyntax arrayInstantiation:
+                    foreach (ArrayIndexerExpressionSyntax indexer in arrayInstantiation.Indexer)
                         ReleaseExpression(indexer.Index);
                     break;
 

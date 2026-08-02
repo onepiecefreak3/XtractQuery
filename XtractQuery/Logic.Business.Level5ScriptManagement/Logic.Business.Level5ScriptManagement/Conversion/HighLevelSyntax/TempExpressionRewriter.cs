@@ -164,12 +164,18 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
                 ExpressionSyntax? arrayValue = ReplaceTempInExpression(arrayIndex.Value, tempName, replacement, FoldContext.None());
                 if (arrayValue is null)
                     return null;
-                return new ArrayIndexExpressionSyntax(
+                return MergeArrayIndex(
                     arrayValue as ValueExpressionSyntax ?? WrapAsValue(arrayValue),
                     arrayIndex.Indexer);
 
             case TypeCastValueExpressionSyntax typeCast:
-                ExpressionSyntax? castValue = ReplaceTempInExpression(typeCast.Value, tempName, replacement, FoldContext.None());
+                // Casts share unary precedence — parenthesize folded operands when needed
+                // (e.g. `(int)($a + $b)`).
+                ExpressionSyntax? castValue = ReplaceTempInExpression(
+                    typeCast.Value,
+                    tempName,
+                    replacement,
+                    FoldContext.ForOperator(ExpressionPrecedence.Unary, isRightOperand: true));
                 if (castValue is null)
                     return null;
                 return new TypeCastValueExpressionSyntax(
@@ -232,14 +238,48 @@ internal class TempExpressionRewriter(ILevel5SyntaxFactory syntaxFactory)
                 if (arrayValue is null && !replacedIndexer)
                     return null;
 
-                return new ArrayIndexExpressionSyntax(
-                    arrayValue as ValueExpressionSyntax ?? arrayIndex.Value,
+                // Fold `$temp[j]` when `$temp = $arr[i]` into a flat `$arr[i][j]`,
+                // never a nested ArrayIndex base (LHS stores require a variable base).
+                return MergeArrayIndex(
+                    arrayValue as ValueExpressionSyntax ?? WrapAsValue(arrayValue ?? arrayIndex.Value),
                     replacedIndexer ? indexers : arrayIndex.Indexer);
             }
 
             default:
                 return ReplaceTempInExpression(left, tempName, replacement, FoldContext.None());
         }
+    }
+
+    private static ArrayIndexExpressionSyntax MergeArrayIndex(
+        ValueExpressionSyntax arrayValue,
+        IReadOnlyList<ArrayIndexerExpressionSyntax> trailingIndexers)
+    {
+        if (TryUnwrapArrayIndex(arrayValue, out ValueExpressionSyntax innerBase, out IReadOnlyList<ArrayIndexerExpressionSyntax> innerIndexers))
+        {
+            var merged = new List<ArrayIndexerExpressionSyntax>(innerIndexers.Count + trailingIndexers.Count);
+            merged.AddRange(innerIndexers);
+            merged.AddRange(trailingIndexers);
+            return new ArrayIndexExpressionSyntax(innerBase, merged);
+        }
+
+        return new ArrayIndexExpressionSyntax(arrayValue, trailingIndexers);
+    }
+
+    private static bool TryUnwrapArrayIndex(
+        ValueExpressionSyntax value,
+        out ValueExpressionSyntax arrayBase,
+        out IReadOnlyList<ArrayIndexerExpressionSyntax> indexers)
+    {
+        if (value.MetadataParameters is null && value.Value is ArrayIndexExpressionSyntax nested)
+        {
+            arrayBase = nested.Value;
+            indexers = nested.Indexer;
+            return true;
+        }
+
+        arrayBase = value;
+        indexers = Array.Empty<ArrayIndexerExpressionSyntax>();
+        return false;
     }
 
     private StatementSyntax? ReplaceTempInGotoTargets(

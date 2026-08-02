@@ -736,7 +736,10 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private TypeCastValueExpressionSyntax ParseTypeCastValueExpression(IBuffer<Level5SyntaxToken> buffer)
     {
         var typeCast = ParseTypeCastExpression(buffer);
-        var value = ParseValueExpression(buffer);
+        // Casts are unary: operand is another unary/primary (`(int)random(10)`, `(float)-$x`),
+        // not a full binary expression (`(int)$a / $b` is a cast of `$a`, then `/`).
+        ExpressionSyntax operand = ParseUnaryOrPrimaryExpression(buffer);
+        ValueExpressionSyntax value = operand as ValueExpressionSyntax ?? new ValueExpressionSyntax(operand);
 
         return new TypeCastValueExpressionSyntax(typeCast, value);
     }
@@ -869,7 +872,10 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private ArrayIndexerExpressionSyntax ParseArrayIndexerExpression(IBuffer<Level5SyntaxToken> buffer)
     {
         SyntaxToken bracketOpen = ParseBracketOpenToken(buffer);
-        var index = ParseValueExpression(buffer);
+        // Indices may be full expressions (`$arr[$i + 1]`); brackets provide grouping.
+        ExpressionSyntax indexExpression = ParseExpression(buffer);
+        ValueExpressionSyntax index = indexExpression as ValueExpressionSyntax
+            ?? new ValueExpressionSyntax(indexExpression);
         SyntaxToken bracketClose = ParseBracketCloseToken(buffer);
 
         return new ArrayIndexerExpressionSyntax(bracketOpen, index, bracketClose);

@@ -22,10 +22,39 @@ internal class HighLevelCodeUnitConverter(
     {
         IReadOnlyList<StatementSyntax> statements = tempPropagationPass.Apply(method.Body.Expressions);
         statements = chainAssignmentFoldPass.Apply(statements);
-        statements = structuredLoopPass.Apply(statements);
-        statements = structuredIfPass.Apply(statements);
+
+        // Loop and if raising interdepend when jump-table hash sort co-locates labels
+        // (e.g. empty-else join with a spin head). Alternate to a fixpoint.
+        for (var i = 0; i < 8; i++)
+        {
+            IReadOnlyList<StatementSyntax> afterLoops = structuredLoopPass.Apply(statements);
+            IReadOnlyList<StatementSyntax> afterIfs = structuredIfPass.Apply(afterLoops);
+            if (ReferenceEquals(afterIfs, statements) || StatementListsEqual(afterIfs, statements))
+            {
+                statements = afterIfs;
+                break;
+            }
+
+            statements = afterIfs;
+        }
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);
+    }
+
+    private static bool StatementListsEqual(
+        IReadOnlyList<StatementSyntax> left,
+        IReadOnlyList<StatementSyntax> right)
+    {
+        if (left.Count != right.Count)
+            return false;
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (!ReferenceEquals(left[i], right[i]))
+                return false;
+        }
+
+        return true;
     }
 }

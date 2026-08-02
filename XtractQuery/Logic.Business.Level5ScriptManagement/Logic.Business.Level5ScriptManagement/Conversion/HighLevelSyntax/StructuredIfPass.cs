@@ -39,15 +39,24 @@ internal class StructuredIfPass(
                         headerIndex,
                         out IfStatementSyntax? ifElse,
                         out int ifElseContentLength,
+                        out IReadOnlyList<int>? extraRemovals,
                         out int ifElseJoinIndex,
                         out bool removeIfElseJoin) &&
                     ifElse is not null)
                 {
-                    // Join and any co-located fallthrough labels sit after the if/else content.
-                    // Remove the join first (higher index), then replace the content span so
-                    // intervening labels such as an outer join stay in the stream.
+                    // Highest indices first so earlier indices stay valid.
                     if (removeIfElseJoin)
                         result.RemoveAt(ifElseJoinIndex);
+
+                    if (extraRemovals is not null)
+                    {
+                        foreach (int index in extraRemovals.OrderByDescending(i => i))
+                        {
+                            if (removeIfElseJoin && index == ifElseJoinIndex)
+                                continue;
+                            result.RemoveAt(index);
+                        }
+                    }
 
                     result.RemoveRange(headerIndex, ifElseContentLength);
                     result.Insert(headerIndex, ifElse);
@@ -106,11 +115,13 @@ internal class StructuredIfPass(
         int headerIndex,
         out IfStatementSyntax? replacement,
         out int contentLength,
+        out IReadOnlyList<int>? extraRemovals,
         out int joinLabelIndex,
         out bool removeJoinLabel)
     {
         replacement = null;
         contentLength = 0;
+        extraRemovals = null;
         joinLabelIndex = -1;
         removeJoinLabel = false;
         if (!cfg.BlockByStatementIndex.TryGetValue(headerIndex, out StatementBlock? headerBlock))
@@ -137,6 +148,25 @@ internal class StructuredIfPass(
             return false;
         if (ControlFlowLabels.CountLabelReferences(cfg.Statements, elseLabel) != 1)
             return false;
+
+        // Empty else after jump-table hash sort: `goto JOIN; JOIN: ELSE:` or `ELSE: JOIN:`
+        // with no else body — join goto sits just before a contiguous label run that
+        // contains both ELSE and JOIN in either order.
+        if (TryMatchEmptyElse(
+                cfg,
+                headerIndex,
+                elseLabel,
+                elseLabelIndex,
+                condition,
+                out replacement,
+                out contentLength,
+                out extraRemovals,
+                out joinLabelIndex,
+                out removeJoinLabel))
+            return true;
+
+        // Standard if/else: join goto immediately before ELSE (no co-located siblings).
+        // Patterns with sibling labels in between are handled after loop raising (fixpoint).
         if (elseLabelIndex - 1 <= headerIndex)
             return false;
         if (cfg.Statements[elseLabelIndex - 1] is not GotoStatementSyntax joinGoto ||
@@ -173,10 +203,102 @@ internal class StructuredIfPass(
             ControlFlowLabels.ContainsLabelReference(elseBody, joinLabel))
             return false;
         removeJoinLabel = ControlFlowLabels.CountLabelReferences(cfg.Statements, joinLabel) == 1;
-        replacement = CreateIfStatement(condition, thenBody, CreateElseClause(elseBody));
+        ElseClauseSyntax? elseClause = elseBody.Count == 0 ? null : CreateElseClause(elseBody);
+        replacement = CreateIfStatement(condition, thenBody, elseClause);
         contentLength = elseContentEnd - headerIndex;
         return true;
     }
+
+    /// <summary>
+    /// Matches lowered empty-else: <c>if not C goto ELSE; then; goto JOIN; [JOIN:/ELSE: in any order]</c>.
+    /// Jump tables sort labels by name hash, so co-located ELSE/JOIN often swap on round-trip.
+    /// Raises to plain <c>if</c> (no empty else clause). Sibling labels in the same run stay.
+    /// </summary>
+    private bool TryMatchEmptyElse(
+        ControlFlowGraph cfg,
+        int headerIndex,
+        string elseLabel,
+        int elseLabelIndex,
+        ExpressionSyntax condition,
+        out IfStatementSyntax? replacement,
+        out int contentLength,
+        out IReadOnlyList<int>? extraRemovals,
+        out int joinLabelIndex,
+        out bool removeJoinLabel)
+    {
+        replacement = null;
+        contentLength = 0;
+        extraRemovals = null;
+        joinLabelIndex = -1;
+        removeJoinLabel = false;
+
+        // Walk back over co-located labels to the join goto that closes the then arm.
+        int cursor = elseLabelIndex;
+        while (cursor > headerIndex + 1 && cfg.Statements[cursor - 1] is GotoLabelStatementSyntax)
+            cursor--;
+
+        int joinGotoIndex = cursor - 1;
+        if (joinGotoIndex <= headerIndex)
+            return false;
+        if (cfg.Statements[joinGotoIndex] is not GotoStatementSyntax joinGoto ||
+            !ControlFlowLabels.TryGetSingleGotoTarget(joinGoto, out string? joinLabel) ||
+            joinLabel is null ||
+            !ControlFlowLabels.IsNumericJumpLabel(joinLabel))
+            return false;
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, joinLabel, out joinLabelIndex))
+            return false;
+
+        // Contiguous label run immediately after the join goto must contain BOTH labels.
+        int runStart = joinGotoIndex + 1;
+        int runEnd = ControlFlowLabelRuns.FindRunEnd(cfg.Statements, runStart);
+
+        if (runEnd - runStart < 2)
+            return false;
+        if (joinLabelIndex < runStart || joinLabelIndex >= runEnd)
+            return false;
+        if (elseLabelIndex < runStart || elseLabelIndex >= runEnd)
+            return false;
+
+        // No real else body between ELSE and JOIN when JOIN follows ELSE in the stream.
+        int elseContentStart = elseLabelIndex + 1;
+        int elseContentEnd = ControlFlowGraphQueries.FindContentEndBeforeJoin(
+            cfg.Statements, elseContentStart, joinLabelIndex);
+        if (joinLabelIndex > elseLabelIndex && elseContentEnd > elseContentStart)
+            return false;
+
+        // Nothing after the run before JOIN either (JOIN is inside the run for empty else).
+        if (runEnd < cfg.Statements.Count &&
+            cfg.Statements[runEnd] is not GotoLabelStatementSyntax &&
+            joinLabelIndex >= runEnd)
+            return false;
+
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, joinLabel, out StatementBlock? joinBlock) ||
+            joinBlock is null)
+            return false;
+        if (!cfg.BlockByStatementIndex.TryGetValue(joinGotoIndex, out StatementBlock? thenTailBlock) ||
+            !ControlFlowGraphQueries.HasBranchTo(cfg, thenTailBlock, joinBlock))
+            return false;
+
+        var thenBody = ControlFlowGraphQueries.Slice(cfg.Statements, headerIndex + 1, joinGotoIndex);
+        if (!ControlFlowGraphQueries.IsStructuredBody(thenBody))
+            return false;
+        if (ControlFlowLabels.ContainsLabelReference(thenBody, elseLabel) ||
+            ControlFlowLabels.ContainsLabelReference(thenBody, joinLabel))
+            return false;
+
+        // Replace through the join goto only; remove ELSE/JOIN labels individually so
+        // unrelated co-located labels (outer joins) remain.
+        contentLength = joinGotoIndex + 1 - headerIndex;
+        extraRemovals = ControlFlowLabelRuns.IndicesOfLabels(
+            cfg.Statements,
+            runStart,
+            runEnd,
+            name => name == elseLabel || name == joinLabel);
+        removeJoinLabel = false;
+        replacement = CreateIfStatement(condition, thenBody, elseClause: null);
+        return true;
+    }
+
     private bool TryMatchIfThen(
         ControlFlowGraph cfg,
         int headerIndex,

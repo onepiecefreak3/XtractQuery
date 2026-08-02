@@ -39,33 +39,16 @@ internal class StructuredLoopPass(
                     !ControlFlowLabels.IsNumericJumpLabel(headLabel))
                     continue;
 
-                if (TryMatchSpinLoop(cfg, headIndex, headLabel, out WhileStatementSyntax? spin, out int spinLength) &&
-                    spin is not null)
+                if (TryMatchSpinLoop(cfg, headIndex, headLabel, out LoopRaise? spin) && spin is not null)
                 {
-                    result.RemoveRange(headIndex, spinLength);
-                    result.Insert(headIndex, spin);
+                    ApplyLoopRaise(result, spin);
                     changed = true;
                     break;
                 }
 
-                if (TryMatchTopTestedWhile(
-                        cfg,
-                        headIndex,
-                        headLabel,
-                        out WhileStatementSyntax? topWhile,
-                        out int topLength,
-                        out int exitLabelIndex,
-                        out bool removeExitLabel) &&
-                    topWhile is not null)
+                if (TryMatchTopTestedWhile(cfg, headIndex, headLabel, out LoopRaise? topWhile) && topWhile is not null)
                 {
-                    // Exit and any co-located fallthrough labels sit after the loop content.
-                    // Remove the exit first (higher index), then replace the content span so
-                    // intervening labels such as an outer if-join stay in the stream.
-                    if (removeExitLabel)
-                        result.RemoveAt(exitLabelIndex);
-
-                    result.RemoveRange(headIndex, topLength);
-                    result.Insert(headIndex, topWhile);
+                    ApplyLoopRaise(result, topWhile);
                     changed = true;
                     break;
                 }
@@ -82,6 +65,28 @@ internal class StructuredLoopPass(
         }
 
         return result;
+    }
+
+    private static void ApplyLoopRaise(List<StatementSyntax> result, LoopRaise raise)
+    {
+        if (raise.ExitLabelIndex >= 0)
+            result.RemoveAt(raise.ExitLabelIndex);
+
+        result.RemoveRange(raise.ReplaceStart, raise.ReplaceLength);
+
+        var insert = new List<StatementSyntax>(raise.KeptPrefix.Count + 1);
+        insert.AddRange(raise.KeptPrefix);
+        insert.Add(raise.Replacement);
+        result.InsertRange(raise.ReplaceStart, insert);
+    }
+
+    private sealed class LoopRaise
+    {
+        public required int ReplaceStart { get; init; }
+        public required int ReplaceLength { get; init; }
+        public required IReadOnlyList<StatementSyntax> KeptPrefix { get; init; }
+        public required StatementSyntax Replacement { get; init; }
+        public int ExitLabelIndex { get; init; } = -1;
     }
 
     private static IEnumerable<int> CollectLoopHeadCandidates(ControlFlowGraph cfg, ControlFlowRegions regions)
@@ -112,69 +117,90 @@ internal class StructuredLoopPass(
         ControlFlowGraph cfg,
         int headIndex,
         string headLabel,
-        out WhileStatementSyntax? replacement,
-        out int length)
+        out LoopRaise? raise)
     {
-        replacement = null;
-        length = 0;
-        if (headIndex + 1 >= cfg.Statements.Count)
-            return false;
-        if (!cfg.BlockByStatementIndex.TryGetValue(headIndex, out StatementBlock? headBlock) ||
-            !ControlFlowGraphQueries.TryGetBlockByLabel(cfg, headLabel, out StatementBlock? labelBlock) ||
-            labelBlock is null ||
-            !ReferenceEquals(headBlock, labelBlock))
+        raise = null;
+
+        // Co-located labels share one instruction after jump-table hash sort.
+        int runStart = ControlFlowLabelRuns.FindRunStart(cfg.Statements, headIndex);
+        if (runStart != headIndex)
             return false;
 
-        // Classic spin shape: one basic block containing only the label and the back-edge branch.
-        if (headBlock.StatementCount != 2)
+        int runEnd = ControlFlowLabelRuns.FindRunEnd(cfg.Statements, headIndex);
+        if (runEnd >= cfg.Statements.Count)
             return false;
 
+        HashSet<string> headerLabels = ControlFlowLabelRuns.CollectLabels(cfg.Statements, runStart, runEnd);
+        if (!headerLabels.Contains(headLabel))
+            return false;
+
+        StatementSyntax candidate = cfg.Statements[runEnd];
         ExpressionSyntax? condition = null;
-        StatementSyntax candidate = cfg.Statements[headIndex + 1];
+        string? backTarget = null;
         if (candidate is IfGotoStatementSyntax ifGoto &&
-            ControlFlowLabels.TryGetLabelName(ifGoto.Goto.Target, out string? target) &&
-            target == headLabel)
+            ControlFlowLabels.TryGetLabelName(ifGoto.Goto.Target, out backTarget) &&
+            backTarget is not null &&
+            headerLabels.Contains(backTarget))
         {
             condition = ControlFlowLabels.UnwrapCondition(ifGoto.Value);
         }
         else if (candidate is IfNotGotoStatementSyntax ifNotGoto &&
-                 ControlFlowLabels.TryGetLabelName(ifNotGoto.Goto.Target, out string? notTarget) &&
-                 notTarget == headLabel)
+                 ControlFlowLabels.TryGetLabelName(ifNotGoto.Goto.Target, out backTarget) &&
+                 backTarget is not null &&
+                 headerLabels.Contains(backTarget))
         {
             condition = ifNotGoto.Comparison;
         }
         else
             return false;
-        // Spin header block must branch/jump back to itself; no fallthrough body.
-        if (!ControlFlowGraphQueries.HasBranchTo(cfg, headBlock, headBlock))
+
+        if (!cfg.BlockByStatementIndex.TryGetValue(runEnd, out StatementBlock? branchBlock))
             return false;
-        if (ControlFlowLabels.CountLabelReferences(cfg.Statements, headLabel) != 1)
+        if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, backTarget, out StatementBlock? targetBlock) ||
+            targetBlock is null)
             return false;
-        replacement = CreateWhileOneLiner(condition);
-        length = 2;
+        // Spin branches back into the co-located header region (same instruction cluster).
+        if (!ControlFlowGraphQueries.HasBranchTo(cfg, branchBlock, targetBlock) &&
+            !ControlFlowGraphQueries.HasBranchTo(cfg, branchBlock, branchBlock))
+            return false;
+
+        // Back-edge target may only be referenced by this spin branch.
+        if (ControlFlowLabels.CountLabelReferences(cfg.Statements, backTarget) != 1)
+            return false;
+
+        int termIndex = runEnd;
+        IReadOnlyList<StatementSyntax> keptPrefix = CollectKeptHeaderLabels(
+            cfg.Statements, runStart, runEnd, backTarget, loopStart: runStart, loopEnd: termIndex);
+
+        raise = new LoopRaise
+        {
+            ReplaceStart = runStart,
+            ReplaceLength = termIndex - runStart + 1,
+            KeptPrefix = keptPrefix,
+            Replacement = CreateWhileOneLiner(condition)
+        };
         return true;
     }
+
     private bool TryMatchTopTestedWhile(
         ControlFlowGraph cfg,
         int headIndex,
         string headLabel,
-        out WhileStatementSyntax? replacement,
-        out int length,
-        out int exitLabelIndex,
-        out bool removeExitLabel)
+        out LoopRaise? raise)
     {
-        replacement = null;
-        length = 0;
-        exitLabelIndex = -1;
-        removeExitLabel = false;
-        if (!cfg.BlockByStatementIndex.TryGetValue(headIndex, out StatementBlock? headBlock))
+        raise = null;
+
+        int runStart = ControlFlowLabelRuns.FindRunStart(cfg.Statements, headIndex);
+        if (runStart != headIndex)
             return false;
 
-        // Classic while header: one block with exactly the label and the exit branch.
-        if (headBlock.StatementCount != 2 || headIndex + 1 >= cfg.Statements.Count)
+        int runEnd = ControlFlowLabelRuns.FindRunEnd(cfg.Statements, headIndex);
+        if (runEnd >= cfg.Statements.Count)
             return false;
 
-        StatementSyntax terminator = cfg.Statements[headIndex + 1];
+        HashSet<string> headerLabels = ControlFlowLabelRuns.CollectLabels(cfg.Statements, runStart, runEnd);
+
+        StatementSyntax terminator = cfg.Statements[runEnd];
         ExpressionSyntax? condition;
         string? exitLabel;
         if (TryGetIfNotGoto(terminator, out ExpressionSyntax? positiveCondition, out exitLabel) &&
@@ -196,21 +222,21 @@ internal class StructuredLoopPass(
             return false;
         if (!ControlFlowLabels.IsNumericJumpLabel(exitLabel))
             return false;
-        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, exitLabel, out exitLabelIndex) ||
-            exitLabelIndex <= headIndex)
+        if (!ControlFlowGraphQueries.TryGetLabelIndex(cfg, exitLabel, out int exitLabelIndex) ||
+            exitLabelIndex <= runEnd)
             return false;
         if (!ControlFlowGraphQueries.TryGetBlockByLabel(cfg, exitLabel, out StatementBlock? exitBlock) ||
             exitBlock is null)
             return false;
-        if (!ControlFlowGraphQueries.HasBranchTo(cfg, headBlock, exitBlock) ||
-            !ControlFlowGraphQueries.HasFallThrough(cfg, headBlock))
+        if (!cfg.BlockByStatementIndex.TryGetValue(runEnd, out StatementBlock? branchBlock))
+            return false;
+        if (!ControlFlowGraphQueries.HasBranchTo(cfg, branchBlock, exitBlock) ||
+            !ControlFlowGraphQueries.HasFallThrough(cfg, branchBlock))
             return false;
         if (ControlFlowLabels.CountLabelReferences(cfg.Statements, exitLabel) < 1)
             return false;
-        // Nested while often shares a merge instruction with an outer if-join, so other
-        // fallthrough labels may sit between the back-edge and this exit (e.g. "@003@":
-        // before "@005@":). Those labels are not part of the loop body and must stay put.
-        int bodyStart = headBlock.EndStatementIndex;
+
+        int bodyStart = runEnd + 1;
         int bodyEnd = ControlFlowGraphQueries.FindContentEndBeforeJoin(
             cfg.Statements, bodyStart, exitLabelIndex);
         var rawBody = ControlFlowGraphQueries.Slice(cfg.Statements, bodyStart, bodyEnd);
@@ -218,33 +244,77 @@ internal class StructuredLoopPass(
             return false;
         if (rawBody[^1] is not GotoStatementSyntax backEdge ||
             !ControlFlowLabels.TryGetSingleGotoTarget(backEdge, out string? backTarget) ||
-            backTarget != headLabel)
+            backTarget is null ||
+            !headerLabels.Contains(backTarget))
             return false;
+
+        // Canonical head is whatever the back-edge targets (may differ from headIndex label).
+        string canonicalHead = backTarget;
+
         int backEdgeIndex = bodyEnd - 1;
         if (!cfg.BlockByStatementIndex.TryGetValue(backEdgeIndex, out StatementBlock? backBlock) ||
-            !ControlFlowGraphQueries.HasBranchTo(cfg, backBlock, headBlock))
+            !ControlFlowGraphQueries.TryGetBlockByLabel(cfg, canonicalHead, out StatementBlock? headTargetBlock) ||
+            headTargetBlock is null ||
+            !ControlFlowGraphQueries.HasBranchTo(cfg, backBlock, headTargetBlock))
             return false;
+
         var bodyWithoutBackEdge = rawBody.Take(rawBody.Count - 1).ToList();
-        if (!IsValidLoopBody(bodyWithoutBackEdge, headLabel, exitLabel, cfg.Statements, headIndex, bodyEnd - 1))
+        if (!IsValidLoopBody(bodyWithoutBackEdge, canonicalHead, exitLabel, cfg.Statements, runStart, bodyEnd - 1))
             return false;
-        // Head may only be targeted by the trailing back-edge and continues inside the body.
+
         int headRefsOutsideBody = ControlFlowLabels.CountLabelReferencesOutsideRange(
-            cfg.Statements, headLabel, bodyStart, bodyEnd);
+            cfg.Statements, canonicalHead, bodyStart, bodyEnd);
         if (headRefsOutsideBody != 0)
             return false;
-        IReadOnlyList<StatementSyntax> rewrittenBody = RewriteLoopBody(bodyWithoutBackEdge, headLabel, exitLabel);
+
+        IReadOnlyList<StatementSyntax> rewrittenBody = RewriteLoopBody(bodyWithoutBackEdge, canonicalHead, exitLabel);
         ExpressionSyntax whileCondition = ControlFlowGraphQueries.IsLiteralOne(condition)
             ? CreateTrueLiteral()
             : condition;
         int exitRefsInBody = ControlFlowLabels.CountLabelReferences(bodyWithoutBackEdge, exitLabel);
         int exitRefsTotal = ControlFlowLabels.CountLabelReferences(cfg.Statements, exitLabel);
-        // Header if-not contributes 1; body contributes breaks. After rewrite those become break.
-        removeExitLabel = exitRefsTotal == exitRefsInBody + 1;
-        replacement = CreateWhile(whileCondition, rewrittenBody);
-        // Replace head..back-edge only; coalesced join labels between bodyEnd and exit stay.
-        length = bodyEnd - headIndex;
+        bool removeExitLabel = exitRefsTotal == exitRefsInBody + 1;
+
+        IReadOnlyList<StatementSyntax> keptPrefix = CollectKeptHeaderLabels(
+            cfg.Statements, runStart, runEnd, canonicalHead, loopStart: runStart, loopEnd: bodyEnd - 1);
+
+        raise = new LoopRaise
+        {
+            ReplaceStart = runStart,
+            ReplaceLength = bodyEnd - runStart,
+            KeptPrefix = keptPrefix,
+            Replacement = CreateWhile(whileCondition, rewrittenBody),
+            ExitLabelIndex = removeExitLabel ? exitLabelIndex : -1
+        };
         return true;
     }
+
+    /// <summary>
+    /// Labels co-located with a loop head that are still referenced from outside the loop
+    /// (e.g. an if-else target sharing the spin instruction) must stay in the stream.
+    /// </summary>
+    private static IReadOnlyList<StatementSyntax> CollectKeptHeaderLabels(
+        IReadOnlyList<StatementSyntax> statements,
+        int runStart,
+        int runEnd,
+        string loopHeadLabel,
+        int loopStart,
+        int loopEnd)
+    {
+        var kept = new List<StatementSyntax>();
+        for (int i = runStart; i < runEnd; i++)
+        {
+            if (!ControlFlowLabels.TryGetLabelDefinition(statements[i], out string? name) || name is null)
+                continue;
+            if (name == loopHeadLabel)
+                continue;
+            if (ControlFlowLabels.CountLabelReferencesOutsideRange(statements, name, loopStart, loopEnd + 1) > 0)
+                kept.Add(statements[i]);
+        }
+
+        return kept;
+    }
+
     private bool TryMatchDoWhile(
         ControlFlowGraph cfg,
         int headIndex,
