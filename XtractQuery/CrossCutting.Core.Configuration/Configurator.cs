@@ -1,19 +1,12 @@
 ﻿using CrossCutting.Core.Contract.Configuration;
 using CrossCutting.Core.Contract.Configuration.DataClasses;
-using CrossCutting.Core.Contract.Configuration.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 
 namespace CrossCutting.Core.Configuration;
 
 public sealed class Configurator : IConfigurator
 {
-    #region Fields
-
     private readonly IList<ConfigCategory> _categories;
-
-    #endregion
 
     public Configurator(IEnumerable<IConfigurationRepository> repositories)
     {
@@ -28,20 +21,10 @@ public sealed class Configurator : IConfigurator
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentNullException(nameof(key));
 
-        bool exists = _categories.Any(c => c.Name == category && c.Entries.Any(e => e.Key == key));
-        return exists;
+        return _categories.Any(c => c.Name == category && c.Entries.Any(e => e.Key == key));
     }
 
-    public T Get<T>(string category, string key)
-    {
-        if (!Contains(category, key))
-            throw new KeyOrCategoryNotFoundException(category, key);
-
-        T value = Get<T>(category, key, default(T));
-        return value;
-    }
-
-    public T Get<T>(string category, string key, T defaultValue)
+    public T Get<T>(string category, string key, T defaultValue = default!)
     {
         if (string.IsNullOrWhiteSpace(category))
             throw new ArgumentNullException(nameof(category));
@@ -49,16 +32,25 @@ public sealed class Configurator : IConfigurator
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentNullException(nameof(key));
 
-        ConfigCategory configCategory = _categories.SingleOrDefault(c => c.Name == category);
-        if (configCategory == null)
+        ConfigCategory? configCategory = _categories.SingleOrDefault(c => c.Name == category);
+        if (configCategory is null)
             return defaultValue;
 
-        ConfigEntry entry = configCategory.Entries.SingleOrDefault(e => e.Key == key);
-        if (entry == null)
-        {
+        ConfigEntry? entry = configCategory.Entries.SingleOrDefault(e => e.Key == key);
+        if (entry is null)
             return defaultValue;
-        }
 
-        return (T)entry.Value;
+        if (entry.Value is null)
+            return defaultValue;
+
+        if (entry.Value is T typed)
+            return typed;
+
+        Type targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        if (entry.Value is IConvertible)
+            return (T)Convert.ChangeType(entry.Value, targetType, CultureInfo.InvariantCulture);
+
+        throw new InvalidCastException(
+            $"Cannot convert configuration value of type '{entry.Value.GetType().FullName}' to '{typeof(T).FullName}'.");
     }
 }

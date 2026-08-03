@@ -1,0 +1,28 @@
+<!-- Import this props file from projects that define [ConfigurationCategory] types. -->
+<Project>
+  <PropertyGroup>
+    <_CoCoConfigurationGeneratorsDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</_CoCoConfigurationGeneratorsDir>
+    <_CoCoConfigurationGeneratorsDll>$(_CoCoConfigurationGeneratorsDir)bin\$(Configuration)\netstandard2.0\CrossCutting.Core.Configuration.Generators.dll</_CoCoConfigurationGeneratorsDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(_CoCoConfigurationGeneratorsDir)CrossCutting.Core.Configuration.Generators.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <Analyzer Include="$(_CoCoConfigurationGeneratorsDll)"
+              Condition="Exists('$(_CoCoConfigurationGeneratorsDll)')" />
+  </ItemGroup>
+
+  <!-- Ensure the generator assembly exists before CoreCompile when building from a clean tree. -->
+  <Target Name="BuildCoCoConfigurationGenerators"
+          BeforeTargets="ResolvePackageDependenciesForBuild;BeforeCompile;CoreCompile"
+          Condition="!Exists('$(_CoCoConfigurationGeneratorsDll)')">
+    <MSBuild Projects="$(_CoCoConfigurationGeneratorsDir)CrossCutting.Core.Configuration.Generators.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)" />
+    <ItemGroup Condition="Exists('$(_CoCoConfigurationGeneratorsDll)')">
+      <Analyzer Include="$(_CoCoConfigurationGeneratorsDll)"
+                Condition="'%(Identity)' != '$(_CoCoConfigurationGeneratorsDll)'" />
+    </ItemGroup>
+  </Target>
+</Project>

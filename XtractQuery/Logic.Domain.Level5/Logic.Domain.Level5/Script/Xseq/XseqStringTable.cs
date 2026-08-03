@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Komponent.IO;
+﻿using Komponent.IO;
 using Kryptography.Checksum;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.InternalContract.Checksum;

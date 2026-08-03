@@ -1,16 +1,17 @@
-﻿using CrossCutting.Core.Contract.Serialization;
+﻿using System.Text.Json;
 using Logic.Business.Level5ScriptManagement.InternalContract;
+using System.Text.Json.Serialization;
 
 namespace Logic.Business.Level5ScriptManagement;
 
-internal class MethodNameMapper : IMethodNameMapper
+internal partial class MethodNameMapper : IMethodNameMapper
 {
-    private readonly IDictionary<int, string> _methodNameMapping;
-    private readonly IDictionary<string, int> _instructionTypeMapping;
+    private readonly Dictionary<int, string> _methodNameMapping;
+    private readonly Dictionary<string, int> _instructionTypeMapping;
 
-    public MethodNameMapper(ScriptManagementConfiguration config, ISerializer serializer)
+    public MethodNameMapper(ScriptManagementConfiguration config)
     {
-        _methodNameMapping = InitializeMapping(config.MethodMappingPath, serializer);
+        _methodNameMapping = InitializeMapping(config.MethodMappingPath);
         _instructionTypeMapping = _methodNameMapping.ToDictionary(x => x.Value, y => y.Key);
     }
 
@@ -38,26 +39,19 @@ internal class MethodNameMapper : IMethodNameMapper
             throw new InvalidOperationException($"Method name {methodName} is not mapped.");
 
         return instructionType;
-
-        //return GetNumberFromStringEnd(methodName, out _);
     }
 
-    private IDictionary<int, string> InitializeMapping(string mappingPath, ISerializer serializer)
+    private Dictionary<int, string> InitializeMapping(string mappingPath)
     {
         mappingPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath), mappingPath);
         if (!File.Exists(mappingPath))
             return new Dictionary<int, string>();
 
         string mappingJson = File.ReadAllText(mappingPath);
-        return serializer.Deserialize<IDictionary<int, string>>(mappingJson);
+        return JsonSerializer.Deserialize(mappingJson, MethodMappingJsonContext.Default.DictionaryInt32String);
     }
 
-    //private int GetNumberFromStringEnd(string text, out int startIndex)
-    //{
-    //    startIndex = text.Length;
-    //    while (text[startIndex - 1] >= '0' && text[startIndex - 1] <= '9')
-    //        startIndex--;
-
-    //    return int.Parse(text[startIndex..]);
-    //}
+    [JsonSerializable(typeof(Dictionary<int, string>))]
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    internal partial class MethodMappingJsonContext : JsonSerializerContext;
 }

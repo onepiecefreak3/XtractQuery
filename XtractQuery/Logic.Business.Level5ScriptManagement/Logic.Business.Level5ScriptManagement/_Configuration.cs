@@ -2,35 +2,34 @@
 
 namespace Logic.Business.Level5ScriptManagement;
 
+[ConfigurationCategory("Logic.Business.Level5ScriptManagement")]
 public class ScriptManagementConfiguration
 {
-    [ConfigMap("CommandLine", ["h", "help"])]
-    public virtual bool ShowHelp { get; set; }
+    [ConfigurationKey("CommandLine", ["h", "help"])]
+    public bool ShowHelp { get; set; }
 
-    [ConfigMap("CommandLine", ["o", "operation"])]
-    public virtual string Operation { get; set; }
+    [ConfigurationKey("CommandLine", ["o", "operation"])]
+    public string? Operation { get; set; }
 
-    [ConfigMap("CommandLine", ["t", "type"])]
-    public virtual string QueryType { get; set; }
+    [ConfigurationKey("CommandLine", ["t", "type"])]
+    public string? QueryType { get; set; }
 
-    [ConfigMap("CommandLine", ["ns", "no-syntax"])]
-    public virtual bool WithoutHighLevelSyntax { get; set; } = false;
+    [ConfigurationKey("CommandLine", ["ns", "no-syntax"])]
+    public bool WithoutHighLevelSyntax { get; set; }
 
-    [ConfigMap("CommandLine", ["l", "length"])]
-    public virtual string Length { get; set; } = "int";
+    [ConfigurationKey("CommandLine", ["l", "length"])]
+    public string Length { get; set; } = "int";
 
-    [ConfigMap("CommandLine", ["nc", "no-compression"])]
-    public virtual bool WithoutCompression { get; set; } = false;
+    [ConfigurationKey("CommandLine", ["nc", "no-compression"])]
+    public bool WithoutCompression { get; set; }
 
-    [ConfigMap("CommandLine", ["e", "encoding"])]
-    public virtual string Encoding { get; set; } = "sjis";
+    [ConfigurationKey("CommandLine", ["e", "encoding"])]
+    public string Encoding { get; set; } = "sjis";
 
-    [ConfigMap("CommandLine", ["f", "file"])]
-    public virtual string InputPath { get; set; }
+    [ConfigurationKey("CommandLine", ["f", "file"])]
+    public string? InputPath { get; set; }
 
-    [ConfigMap("Logic.Business.Level5ScriptManagement", "MethodMappingPath")]
-    public virtual string MethodMappingPath { get; set; } = "methodMapping.json";
+    public string MethodMappingPath { get; set; } = "methodMapping.json";
 
-    [ConfigMap("Logic.Business.Level5ScriptManagement", "ReferenceScriptPath")]
-    public virtual string ReferenceScriptPath { get; set; } = "reference";
+    public string ReferenceScriptPath { get; set; } = "reference";
 }
