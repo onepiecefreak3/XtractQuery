@@ -18,5 +18,5 @@ internal sealed class ConfigEntryDocument
 [JsonSerializable(typeof(List<ConfigCategoryDocument>))]
 [JsonSerializable(typeof(ConfigCategoryDocument))]
 [JsonSerializable(typeof(ConfigEntryDocument))]
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, ReadCommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true)]
 internal partial class ConfigFileJsonContext : JsonSerializerContext;

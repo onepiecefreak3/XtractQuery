@@ -12,7 +12,7 @@
     <ProjectReference Include="..\CrossCutting.Core.Configuration.File\CrossCutting.Core.Configuration.File.csproj" />
     <ProjectReference Include="..\CrossCutting.Core.Configuration\CrossCutting.Core.Configuration.csproj" />
     <ProjectReference Include="..\CrossCutting.Core.Contract\CrossCutting.Core.Contract.csproj" />
-    <ProjectReference Include="..\CrossCutting.Core.DI.AutofacAdapter\CrossCutting.Core.DI.AutofacAdapter.csproj" />
+    <ProjectReference Include="..\CrossCutting.Core.DI.MsDependencyInjectionAdapter\CrossCutting.Core.DI.MsDependencyInjectionAdapter.csproj" />
     <ProjectReference Include="..\CrossCutting.Core.EventBrokerage\CrossCutting.Core.EventBrokerage.csproj" />
     <ProjectReference Include="..\CrossCutting.Core.Logging.SerilogAdapter\CrossCutting.Core.Logging.SerilogAdapter.csproj" />
     <ProjectReference Include="..\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement\Logic.Business.Level5ScriptManagement.csproj" />

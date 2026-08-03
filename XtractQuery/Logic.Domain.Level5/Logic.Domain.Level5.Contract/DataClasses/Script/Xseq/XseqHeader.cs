@@ -1,10 +1,7 @@
-﻿using Komponent.Contract.Aspects;
-
-namespace Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
+﻿namespace Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
 
 public class XseqHeader
 {
-    [FixedLength(4)]
     public string magic = "XSEQ";
 
     public short functionEntryCount;

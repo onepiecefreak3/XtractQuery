@@ -52,6 +52,6 @@ internal partial class MethodNameMapper : IMethodNameMapper
     }
 
     [JsonSerializable(typeof(Dictionary<int, string>))]
-    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    [JsonSourceGenerationOptions(ReadCommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true)]
     internal partial class MethodMappingJsonContext : JsonSerializerContext;
 }

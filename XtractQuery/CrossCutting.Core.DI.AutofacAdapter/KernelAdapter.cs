@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Autofac;
@@ -54,44 +55,52 @@ public sealed class KernelAdapter : ICoCoKernel
     }
 
     public void Register<TContract, TImplementation>()
-        where TImplementation : TContract
+        where TContract : class
+        where TImplementation : class, TContract
     {
         Register<TContract, TImplementation>(ActivationScope.Dependency);
     }
 
     public void Register<TContract, TImplementation>(ActivationScope scope)
-        where TImplementation : TContract
+        where TContract : class
+        where TImplementation : class, TContract
     {
-        Register<TContract, TImplementation>(null, scope);
+        Register<TContract, TImplementation>(null!, scope);
     }
 
     public void Register<TContract, TImplementation>(string key)
-        where TImplementation : TContract
+        where TContract : class
+        where TImplementation : class, TContract
     {
         Register<TContract, TImplementation>(key, ActivationScope.Dependency);
     }
 
     public void Register<TContract, TImplementation>(string key, ActivationScope scope)
-        where TImplementation : TContract
+        where TContract : class
+        where TImplementation : class, TContract
     {
         Register(key, typeof(TContract), typeof(TImplementation), scope);
     }
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     public void Register(Type contract, Type implementation)
     {
         Register(contract, implementation, ActivationScope.Dependency);
     }
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     public void Register(Type contract, Type implementation, ActivationScope scope)
     {
-        Register(null, contract, implementation, scope);
+        Register(null!, contract, implementation, scope);
     }
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     public void Register(string key, Type contract, Type implementation)
     {
         Register(key, contract, implementation, ActivationScope.Dependency);
     }
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     public void Register(string key, Type contract, Type implementation, ActivationScope scope)
     {
         IRegistrationBuilder<object, ConcreteReflectionActivatorData, SingleRegistrationStyle> builder;
@@ -111,11 +120,13 @@ public sealed class KernelAdapter : ICoCoKernel
     }
 
     public void RegisterToSelf<TImplementation>()
+        where TImplementation : class
     {
         RegisterToSelf<TImplementation>(ActivationScope.Dependency);
     }
 
     public void RegisterToSelf<TImplementation>(ActivationScope scope)
+        where TImplementation : class
     {
         IRegistrationBuilder<TImplementation, ConcreteReflectionActivatorData, SingleRegistrationStyle> builder;
 
@@ -128,7 +139,7 @@ public sealed class KernelAdapter : ICoCoKernel
     }
 
     public void RegisterComponent<TComponent>()
-        where TComponent : IComponentActivator
+        where TComponent : class, IComponentActivator
     {
         _containerBuilder
             .RegisterType<TComponent>()
@@ -157,6 +168,7 @@ public sealed class KernelAdapter : ICoCoKernel
         return Get(typeof(TContract)) as TContract;
     }
 
+    [RequiresUnreferencedCode("ConstructorParameter resolution uses ActivatorUtilities which inspects constructors.")]
     public TContract Get<TContract>(params ConstructorParameter[] parameters)
         where TContract : class
     {
@@ -170,6 +182,7 @@ public sealed class KernelAdapter : ICoCoKernel
             .Resolve(contractType);
     }
 
+    [RequiresUnreferencedCode("ConstructorParameter resolution uses ActivatorUtilities which inspects constructors.")]
     public object Get(Type contractType, params ConstructorParameter[] parameters)
     {
         return Scopes

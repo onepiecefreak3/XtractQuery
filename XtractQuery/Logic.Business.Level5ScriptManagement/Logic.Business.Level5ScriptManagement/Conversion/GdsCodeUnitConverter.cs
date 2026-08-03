@@ -1,4 +1,4 @@
-﻿using Logic.Business.Level5ScriptManagement.InternalContract;
+using Logic.Business.Level5ScriptManagement.InternalContract;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion;
@@ -8,9 +8,8 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
+internal partial class GdsCodeUnitConverter : IGdsCodeUnitConverter
 {
-    private readonly Regex _subPattern = new("^sub[0-9]+$", RegexOptions.Compiled);
     private readonly IMethodNameMapper _methodNameMapper;
 
     public GdsCodeUnitConverter(IMethodNameMapper methodNameMapper)
@@ -143,7 +142,7 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
     {
         string composedName = GetName(name);
 
-        if (_subPattern.IsMatch(composedName))
+        if (SubPattern().IsMatch(composedName))
             return GetNumberFromStringEnd(composedName);
 
         if (_methodNameMapper.MapsMethodName(composedName))
@@ -299,4 +298,7 @@ internal class GdsCodeUnitConverter : IGdsCodeUnitConverter
 
         return new InvalidOperationException(message);
     }
+
+    [GeneratedRegex("^sub[0-9]+$")]
+    private static partial Regex SubPattern();
 }

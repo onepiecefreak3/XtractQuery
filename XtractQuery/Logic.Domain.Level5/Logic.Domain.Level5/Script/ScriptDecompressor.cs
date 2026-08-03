@@ -1,5 +1,4 @@
-﻿using Komponent.IO;
-using Komponent.Streams;
+﻿using Komponent.Streams;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.DataClasses.Script;
@@ -209,16 +208,5 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
         return _decompressor.Decompress(input, offset);
     }
 
-    private THeader ReadHeader(Stream input)
-    {
-        long bkPos = input.Position;
-        input.Position = 0;
-
-        using var br = new BinaryReaderX(input, true);
-
-        var header = BinaryTypeReader.Read<THeader>(br)!;
-        input.Position = bkPos;
-
-        return header;
-    }
+    protected abstract THeader ReadHeader(Stream input);
 }

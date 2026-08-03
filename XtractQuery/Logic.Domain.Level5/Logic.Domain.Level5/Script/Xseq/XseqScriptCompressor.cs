@@ -1,6 +1,5 @@
 ﻿using Komponent.IO;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
-using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
 using Logic.Domain.Level5.Contract.Enums.Compression;
 using Logic.Domain.Level5.Contract.Script.Xseq;
 using Logic.Domain.Level5.InternalContract.Compression;
@@ -82,28 +81,17 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
         using var writer = new BinaryWriterX(output);
         writer.WriteAlignment(4);
 
-        var header = new XseqHeader
-        {
-            magic = "XSEQ",
-
-            functionEntryCount = (short)container.FunctionTable.EntryCount,
-            functionOffset = (ushort)(functionOffset >> 2),
-
-            jumpEntryCount = (short)container.JumpTable.EntryCount,
-            jumpOffset = (ushort)(jumpOffset >> 2),
-
-            instructionEntryCount = (short)container.InstructionTable.EntryCount,
-            instructionOffset = (ushort)(instructionOffset >> 2),
-
-            argumentEntryCount = (short)container.ArgumentTable.EntryCount,
-            argumentOffset = (ushort)(argumentOffset >> 2),
-
-            stringOffset = (ushort)(stringOffset >> 2),
-
-            globalVariableCount = (short)container.GlobalVariableCount
-        };
-
         output.Position = 0;
-        BinaryTypeWriter.Write(header, writer);
+        writer.WriteString("XSEQ", writeNullTerminator: false);
+        writer.Write((short)container.FunctionTable.EntryCount);
+        writer.Write((ushort)(functionOffset >> 2));
+        writer.Write((ushort)(jumpOffset >> 2));
+        writer.Write((short)container.JumpTable.EntryCount);
+        writer.Write((ushort)(instructionOffset >> 2));
+        writer.Write((short)container.InstructionTable.EntryCount);
+        writer.Write((ushort)(argumentOffset >> 2));
+        writer.Write((short)container.ArgumentTable.EntryCount);
+        writer.Write((short)container.GlobalVariableCount);
+        writer.Write((ushort)(stringOffset >> 2));
     }
 }

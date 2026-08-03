@@ -9,7 +9,7 @@ using CrossCutting.Core.Contract.DependencyInjection;
 using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
 using CrossCutting.Core.Contract.EventBrokerage;
 using CrossCutting.Core.Contract.Logging;
-using CrossCutting.Core.DI.AutofacAdapter;
+using CrossCutting.Core.DI.MsDependencyInjectionAdapter;
 using CrossCutting.Core.EventBrokerage;
 using CrossCutting.Core.Logging.SerilogAdapter;
 using Logic.Business.Level5ScriptManagement;

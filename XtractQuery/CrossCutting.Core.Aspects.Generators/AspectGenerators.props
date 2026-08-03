@@ -1,0 +1,27 @@
+<!-- Import this props file from projects that define [MapException] interfaces. -->
+<Project>
+  <PropertyGroup>
+    <_CoCoAspectGeneratorsDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</_CoCoAspectGeneratorsDir>
+    <_CoCoAspectGeneratorsDll>$(_CoCoAspectGeneratorsDir)bin\$(Configuration)\netstandard2.0\CrossCutting.Core.Aspects.Generators.dll</_CoCoAspectGeneratorsDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(_CoCoAspectGeneratorsDir)CrossCutting.Core.Aspects.Generators.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <Analyzer Include="$(_CoCoAspectGeneratorsDll)"
+              Condition="Exists('$(_CoCoAspectGeneratorsDll)')" />
+  </ItemGroup>
+
+  <Target Name="BuildCoCoAspectGenerators"
+          BeforeTargets="ResolvePackageDependenciesForBuild;BeforeCompile;CoreCompile"
+          Condition="!Exists('$(_CoCoAspectGeneratorsDll)')">
+    <MSBuild Projects="$(_CoCoAspectGeneratorsDir)CrossCutting.Core.Aspects.Generators.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)" />
+    <ItemGroup Condition="Exists('$(_CoCoAspectGeneratorsDll)')">
+      <Analyzer Include="$(_CoCoAspectGeneratorsDll)"
+                Condition="'%(Identity)' != '$(_CoCoAspectGeneratorsDll)'" />
+    </ItemGroup>
+  </Target>
+</Project>

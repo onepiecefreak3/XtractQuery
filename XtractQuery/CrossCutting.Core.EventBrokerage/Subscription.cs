@@ -2,14 +2,10 @@
 
 namespace CrossCutting.Core.EventBrokerage;
 
-public class Subscription
+internal sealed class Subscription
 {
-    public Delegate Filter { get; set; }
-    public Delegate Handler { get; set; }
-    public Type HandlerType { get; set; }
-
-    public Subscription(Delegate handler)
-    {
-        Handler = handler;
-    }
+    public Func<object, bool>? Filter { get; set; }
+    public Action<object>? Handler { get; set; }
+    public Type? HandlerType { get; set; }
+    public Action<object, object>? HandlerWithActivation { get; set; }
 }
