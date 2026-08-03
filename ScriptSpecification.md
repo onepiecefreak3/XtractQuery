@@ -64,6 +64,11 @@ for ($local0 = 0; $local0 < 10; $local0++) {
 }
 ```
 ```
+for ($local0 = 0; $local10 < 5; $local0++) {
+  // ...
+}
+```
+```
 $local0 = 0;
 // ...
 for (; $local0 < 10; $local0++) {
