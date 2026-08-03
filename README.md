@@ -17,7 +17,7 @@ Various options have to be set to properly use the command line tool.
 | -t | The type of .xq, .cq, .lb, or .gds file to process. Is only necessary for operation `c`. Has to be followed by either:<br>`xq32`<br>`xseq`<br>`xscr`<br>`gss1`<br>`gsd1`<br>`gds` |
 | -f | The file or directory to execute the operation on. |
 | -l | The pointer length.<br>Valid lengths are `int`, `long`. Default is `int`.<br>The length is automatically detected when extracting.<br>This option will not have any effect on operation `e` and only on scripts of type `xq32`. |
-| -e | The encoding to use for reading/writing string values.<br>Valid lengths are `sjis`, `utf8`. Default value is `sjis`. |
+| -e | The encoding to use for reading/writing string values.<br>Valid encodings are `sjis`, `utf8`. Default value is `sjis`. |
 | -nc | If the file should use a compression layer.<br>This option is automatically detected when extracting.<br>This option will not have any effect on operation `e` and `d`. |
 | -ns | If the file should emit high-level syntax.<br>This option will not have any effect on operation `c`. |
 
