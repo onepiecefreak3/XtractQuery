@@ -9,8 +9,8 @@ namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 /// <summary>
 /// Raises classic counted <c>while</c> loops into <c>for</c> after structured
 /// loop/if raising. Matches <c>init; while (cond) { body; step; }</c> where
-/// <c>step</c> updates a variable referenced by <c>cond</c>. Break/continue stay
-/// as keywords inside the for body.
+/// <c>step</c> updates a variable (condition need not reference that variable).
+/// Break/continue stay as keywords inside the for body.
 /// </summary>
 internal class StructuredForPass(ILevel5SyntaxFactory syntaxFactory) : IStructuredForPass
 {
@@ -57,9 +57,6 @@ internal class StructuredForPass(ILevel5SyntaxFactory syntaxFactory) : IStructur
 
         StatementSyntax step = body[^1];
         if (!TryGetUpdatedVariable(step, out string? variable) || variable is null)
-            return false;
-
-        if (!ReferencesVariable(whileStatement.Condition, variable))
             return false;
 
         // For-lowering may leave a continue latch label immediately before the step.
