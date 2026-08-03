@@ -2,7 +2,7 @@
   "profiles": {
     "XtractQuery": {
       "commandName": "Project",
-      "commandLineArgs": " -o e -t xq32 -f \"E:\\samples\\scripts\\level5\\xq\\test\\uniform.xq.txt.xq\""
+      "commandLineArgs": " -o e -t xq32 -f \"E:\\samples\\scripts\\level5\\xq\\test\\test.txt.xq\""
     },
     "Profil \"1\"": {
       "commandName": "Project",

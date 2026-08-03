@@ -96,7 +96,7 @@ internal class ScriptManagementWorkflow(
         Console.WriteLine("    Default value is 'int'");
         Console.WriteLine("    The length is automatically detected when extracting; This option will not have any effect on operation 'e' and only on scripts of type 'xq32'");
         Console.WriteLine("  -e, --encoding\t[Optional] The encoding to use for reading/writing string values");
-        Console.WriteLine("    Valid lengths are: sjis, utf8");
+        Console.WriteLine("    Valid encodings are: sjis, utf8");
         Console.WriteLine("    Default value is 'sjis'");
         Console.WriteLine();
         Console.WriteLine("Examples:");

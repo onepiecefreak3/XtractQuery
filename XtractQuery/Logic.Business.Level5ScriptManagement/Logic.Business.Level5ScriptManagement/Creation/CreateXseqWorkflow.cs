@@ -12,6 +12,7 @@ class CreateXseqWorkflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
     ILowLevelCodeUnitConverter lowLevelConverter,
+    INamedLocalSlotPass namedLocalSlotPass,
     IXseqCodeUnitConverter treeConverter,
     IXseqScriptWriter scriptWriter)
     : ICreateXseqWorkflow
@@ -26,6 +27,7 @@ class CreateXseqWorkflow(
         // Convert to script data
         CodeUnitSyntax codeUnit = scriptParser.ParseCodeUnit(readableScript);
         codeUnit = lowLevelConverter.Convert(codeUnit);
+        codeUnit = namedLocalSlotPass.Convert(codeUnit);
 
         ScriptFile script = treeConverter.CreateScriptFile(codeUnit);
         script.Length = PointerLength.Int;
