@@ -197,6 +197,7 @@ internal static class ControlFlowGraphQueries
             case PostfixUnaryStatementSyntax:
             case IfStatementSyntax:
             case WhileStatementSyntax:
+            case ForStatementSyntax:
             case DoWhileStatementSyntax:
             case BreakStatementSyntax:
             case ContinueStatementSyntax:

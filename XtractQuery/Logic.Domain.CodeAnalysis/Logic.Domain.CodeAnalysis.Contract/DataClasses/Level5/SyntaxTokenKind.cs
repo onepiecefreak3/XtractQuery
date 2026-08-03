@@ -75,6 +75,7 @@ public enum SyntaxTokenKind
     IfKeyword,
     ElseKeyword,
     WhileKeyword,
+    ForKeyword,
     DoKeyword,
     BreakKeyword,
     ContinueKeyword,

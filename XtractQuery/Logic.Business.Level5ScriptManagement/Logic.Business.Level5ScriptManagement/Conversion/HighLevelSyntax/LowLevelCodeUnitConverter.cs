@@ -91,6 +91,10 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 LowerWhileStatement(whileStatement, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
 
+            case ForStatementSyntax forStatement:
+                LowerForStatement(forStatement, output, temps, usedLabels, ref nextLabel, loopStack);
+                break;
+
             case DoWhileStatementSyntax doWhileStatement:
                 LowerDoWhileStatement(doWhileStatement, output, temps, usedLabels, ref nextLabel, loopStack);
                 break;
@@ -168,6 +172,103 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         output.Add(CreateGoto(headLabel));
         output.Add(CreateLabel(exitLabel));
         loopStack.Pop();
+    }
+
+    private void LowerForStatement(
+        ForStatementSyntax forStatement,
+        List<StatementSyntax> output,
+        TempAllocator temps,
+        HashSet<string> usedLabels,
+        ref int nextLabel,
+        Stack<LoopContext> loopStack)
+    {
+        if (forStatement.Initializer != null)
+            FlattenStatement(EnsureStatementSemicolon(forStatement.Initializer), output, temps, usedLabels, ref nextLabel, loopStack);
+
+        string headLabel = AllocateLabel(usedLabels, ref nextLabel);
+        string exitLabel = AllocateLabel(usedLabels, ref nextLabel);
+        // Only allocate a distinct continue latch when the body uses continue; otherwise
+        // the latch would become an unreferenced dangling label after re-raise.
+        bool needsContinueLatch = ContainsContinue(forStatement.Body.Statements);
+        string continueLabel = needsContinueLatch
+            ? AllocateLabel(usedLabels, ref nextLabel)
+            : headLabel;
+        var context = new LoopContext(headLabel, continueLabel, exitLabel);
+        loopStack.Push(context);
+
+        output.Add(CreateLabel(headLabel));
+        EmitIfNotGoto(NormalizeCondition(forStatement.Condition), exitLabel, output, temps);
+
+        foreach (StatementSyntax nested in forStatement.Body.Statements)
+            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack);
+
+        if (needsContinueLatch)
+            output.Add(CreateLabel(continueLabel));
+
+        if (forStatement.Iterator != null)
+            FlattenStatement(EnsureStatementSemicolon(forStatement.Iterator), output, temps, usedLabels, ref nextLabel, loopStack);
+
+        output.Add(CreateGoto(headLabel));
+        output.Add(CreateLabel(exitLabel));
+        loopStack.Pop();
+    }
+
+    private static bool ContainsContinue(IReadOnlyList<StatementSyntax> statements)
+    {
+        foreach (StatementSyntax statement in statements)
+        {
+            switch (statement)
+            {
+                case ContinueStatementSyntax:
+                    return true;
+
+                case IfStatementSyntax ifStatement:
+                    if (ContainsContinue(ifStatement.Body.Statements))
+                        return true;
+                    if (ifStatement.Else != null && ContainsContinueStatement(ifStatement.Else.Statement))
+                        return true;
+                    break;
+
+                case BlockSyntax block:
+                    if (ContainsContinue(block.Statements))
+                        return true;
+                    break;
+
+                // Nested loops own their continues; do not scan into them.
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ContainsContinueStatement(StatementSyntax statement)
+    {
+        return statement switch
+        {
+            ContinueStatementSyntax => true,
+            IfStatementSyntax ifStatement => ContainsContinue(ifStatement.Body.Statements) ||
+                                             (ifStatement.Else != null && ContainsContinueStatement(ifStatement.Else.Statement)),
+            BlockSyntax block => ContainsContinue(block.Statements),
+            _ => false
+        };
+    }
+
+    private StatementSyntax EnsureStatementSemicolon(StatementSyntax statement)
+    {
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+
+        switch (statement)
+        {
+            case AssignmentStatementSyntax assignment when string.IsNullOrEmpty(assignment.Semicolon.Text):
+                return new AssignmentStatementSyntax(
+                    assignment.Left, assignment.EqualsOperator, assignment.Right, semicolon);
+
+            case PostfixUnaryStatementSyntax postfix when string.IsNullOrEmpty(postfix.Semicolon.Text):
+                return new PostfixUnaryStatementSyntax(postfix.Expression, semicolon);
+
+            default:
+                return statement;
+        }
     }
 
     private void LowerWhileSpin(
@@ -445,6 +546,10 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             case WhileStatementSyntax { Body: not null } whileStatement:
                 CollectUsedLabels(whileStatement.Body.Statements, usedLabels);
+                break;
+
+            case ForStatementSyntax forStatement:
+                CollectUsedLabels(forStatement.Body.Statements, usedLabels);
                 break;
 
             case DoWhileStatementSyntax doWhile:
@@ -846,6 +951,15 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 CollectUsedTempSlots(whileStatement.Condition, usedTemps);
                 if (whileStatement.Body != null)
                     CollectUsedTempSlots(whileStatement.Body.Statements, usedTemps);
+                break;
+
+            case ForStatementSyntax forStatement:
+                if (forStatement.Initializer != null)
+                    CollectUsedTempSlots(forStatement.Initializer, usedTemps);
+                CollectUsedTempSlots(forStatement.Condition, usedTemps);
+                if (forStatement.Iterator != null)
+                    CollectUsedTempSlots(forStatement.Iterator, usedTemps);
+                CollectUsedTempSlots(forStatement.Body.Statements, usedTemps);
                 break;
 
             case DoWhileStatementSyntax doWhile:

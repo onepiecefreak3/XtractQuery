@@ -416,6 +416,7 @@ internal class StructuredLoopPass(
             case BreakStatementSyntax:
             case ContinueStatementSyntax:
             case WhileStatementSyntax:
+            case ForStatementSyntax:
             case DoWhileStatementSyntax:
             case IfStatementSyntax:
                 return true;
