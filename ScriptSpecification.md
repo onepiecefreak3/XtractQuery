@@ -53,6 +53,29 @@ while (true) {  // while (false) is not valid syntax
 while (not sub5610($param0)); // Self-looping while for engine functions that might return a different value over time
 ```
 
+### For
+
+A high-level syntax that allows conditional looping logic with a counter.
+
+Reference:
+```
+for ($local0 = 0; $local0 < 10; $local0++) {
+  // ...
+}
+```
+```
+for ($local0 = 0; $local10 < 5; $local0++) {
+  // ...
+}
+```
+```
+$local0 = 0;
+// ...
+for (; $local0 < 10; $local0++) {
+  // ...
+}
+```
+
 ## Chain Assignments
 
 A high-level syntax that allows setting multiple variables to the same value in one statement.
@@ -79,8 +102,8 @@ Combining multiple operations in the same expression follows this operator prece
 | x&y |
 | x^y |
 | x\|y |
-| x and y, x && y |
-| x or y, x \|\| y |
+| x and y, x&&y |
+| x or y, x\|\|y |
 
 Reference:
 ```

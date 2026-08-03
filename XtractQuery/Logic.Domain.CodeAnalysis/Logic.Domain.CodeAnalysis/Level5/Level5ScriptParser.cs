@@ -234,6 +234,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
                HasTokenKind(buffer, SyntaxTokenKind.GotoKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.IfKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.WhileKeyword) ||
+               HasTokenKind(buffer, SyntaxTokenKind.ForKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.DoKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.BreakKeyword) ||
                HasTokenKind(buffer, SyntaxTokenKind.ContinueKeyword) ||
@@ -277,6 +278,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         if (HasTokenKind(buffer, SyntaxTokenKind.WhileKeyword))
             return ParseWhileStatement(buffer);
 
+        if (HasTokenKind(buffer, SyntaxTokenKind.ForKeyword))
+            return ParseForStatement(buffer);
+
         if (HasTokenKind(buffer, SyntaxTokenKind.DoKeyword))
             return ParseDoWhileStatement(buffer);
 
@@ -295,8 +299,8 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
         throw CreateException(buffer, "Unknown statement.", SyntaxTokenKind.ReturnKeyword, SyntaxTokenKind.StringLiteral,
             SyntaxTokenKind.Variable, SyntaxTokenKind.YieldKeyword, SyntaxTokenKind.ExitKeyword,
-            SyntaxTokenKind.WhileKeyword, SyntaxTokenKind.DoKeyword, SyntaxTokenKind.BreakKeyword,
-            SyntaxTokenKind.ContinueKeyword);
+            SyntaxTokenKind.WhileKeyword, SyntaxTokenKind.ForKeyword, SyntaxTokenKind.DoKeyword,
+            SyntaxTokenKind.BreakKeyword, SyntaxTokenKind.ContinueKeyword);
     }
 
     private bool IsPostfixUnaryStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -365,6 +369,62 @@ internal class Level5ScriptParser : ILevel5ScriptParser
             return new WhileStatementSyntax(whileToken, parenOpen, condition, parenClose, ParseBlock(buffer), null);
 
         throw CreateException(buffer, "Invalid while statement.", SyntaxTokenKind.Semicolon, SyntaxTokenKind.CurlyOpen);
+    }
+
+    private ForStatementSyntax ParseForStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken forToken = ParseForKeywordToken(buffer);
+        SyntaxToken parenOpen = ParseParenOpenToken(buffer);
+
+        StatementSyntax? initializer = null;
+        SyntaxToken? firstSemicolon = null;
+        if (HasTokenKind(buffer, SyntaxTokenKind.Semicolon))
+        {
+            firstSemicolon = ParseSemicolonToken(buffer);
+        }
+        else
+        {
+            initializer = ParseForClauseStatement(buffer, requireSemicolon: true);
+            if (initializer is not (AssignmentStatementSyntax or PostfixUnaryStatementSyntax))
+                throw CreateException(buffer, "Invalid for initializer.", SyntaxTokenKind.Variable);
+        }
+
+        ExpressionSyntax condition = ParseExpression(buffer);
+        SyntaxToken secondSemicolon = ParseSemicolonToken(buffer);
+
+        StatementSyntax? iterator = null;
+        if (!HasTokenKind(buffer, SyntaxTokenKind.ParenClose))
+            iterator = ParseForClauseStatement(buffer, requireSemicolon: false);
+
+        SyntaxToken parenClose = ParseParenCloseToken(buffer);
+        BlockSyntax body = ParseBlock(buffer);
+
+        return new ForStatementSyntax(
+            forToken, parenOpen, initializer, firstSemicolon, condition, secondSemicolon, iterator, parenClose, body);
+    }
+
+    private StatementSyntax ParseForClauseStatement(IBuffer<Level5SyntaxToken> buffer, bool requireSemicolon)
+    {
+        if (!HasTokenKind(buffer, SyntaxTokenKind.Variable))
+            throw CreateException(buffer, "Invalid for clause.", SyntaxTokenKind.Variable);
+
+        ExpressionSyntax value = ParseExpression(buffer);
+
+        if (IsPostfixUnaryStatement(buffer))
+        {
+            PostfixUnaryExpressionSyntax expression = ParsePostfixUnaryExpression(buffer, value);
+            SyntaxToken semicolon = requireSemicolon
+                ? ParseSemicolonToken(buffer)
+                : CreateEmptySemicolon();
+            return new PostfixUnaryStatementSyntax(expression, semicolon);
+        }
+
+        return ParseAssignmentStatement(buffer, value, requireSemicolon);
+    }
+
+    private static SyntaxToken CreateEmptySemicolon()
+    {
+        return new SyntaxToken(string.Empty, (int)SyntaxTokenKind.Semicolon);
     }
 
     private DoWhileStatementSyntax ParseDoWhileStatement(IBuffer<Level5SyntaxToken> buffer)
@@ -493,7 +553,10 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         return new GotoLabelStatementSyntax(identifier, colon);
     }
 
-    private AssignmentStatementSyntax ParseAssignmentStatement(IBuffer<Level5SyntaxToken> buffer, ExpressionSyntax value)
+    private AssignmentStatementSyntax ParseAssignmentStatement(
+        IBuffer<Level5SyntaxToken> buffer,
+        ExpressionSyntax value,
+        bool requireSemicolon = true)
     {
         SyntaxToken equalsOperator;
         switch (buffer.Peek().Kind)
@@ -549,7 +612,9 @@ internal class Level5ScriptParser : ILevel5ScriptParser
         ExpressionSyntax right = equalsOperator.RawKind == (int)SyntaxTokenKind.EqualsSign
             ? ParseAssignmentExpression(buffer)
             : ParseExpression(buffer);
-        SyntaxToken semicolon = ParseSemicolonToken(buffer);
+        SyntaxToken semicolon = requireSemicolon
+            ? ParseSemicolonToken(buffer)
+            : CreateEmptySemicolon();
 
         return new AssignmentStatementSyntax(value, equalsOperator, right, semicolon);
     }
@@ -1420,6 +1485,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseWhileKeywordToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.WhileKeyword);
+    }
+
+    private SyntaxToken ParseForKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.ForKeyword);
     }
 
     private SyntaxToken ParseDoKeywordToken(IBuffer<Level5SyntaxToken> buffer)

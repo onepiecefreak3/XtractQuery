@@ -7,7 +7,8 @@ internal class HighLevelCodeUnitConverter(
     ITempPropagationPass tempPropagationPass,
     IChainAssignmentFoldPass chainAssignmentFoldPass,
     IStructuredLoopPass structuredLoopPass,
-    IStructuredIfPass structuredIfPass) : IHighLevelCodeUnitConverter
+    IStructuredIfPass structuredIfPass,
+    IStructuredForPass structuredForPass) : IHighLevelCodeUnitConverter
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {
@@ -37,6 +38,9 @@ internal class HighLevelCodeUnitConverter(
 
             statements = afterIfs;
         }
+
+        // For-raise needs structured while + break/continue already in place.
+        statements = structuredForPass.Apply(statements);
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);

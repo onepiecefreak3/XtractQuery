@@ -105,6 +105,9 @@ internal static class ControlFlowLabels
             case WhileStatementSyntax { Body: not null } whileStatement:
                 return whileStatement.Body.Statements.Sum(s => CountLabelReferences(s, labelName));
 
+            case ForStatementSyntax forStatement:
+                return forStatement.Body.Statements.Sum(s => CountLabelReferences(s, labelName));
+
             case DoWhileStatementSyntax doWhile:
                 return doWhile.Body.Statements.Sum(s => CountLabelReferences(s, labelName));
 

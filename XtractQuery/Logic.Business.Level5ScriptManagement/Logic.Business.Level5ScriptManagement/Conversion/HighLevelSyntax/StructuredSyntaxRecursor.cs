@@ -47,6 +47,13 @@ internal static class StructuredSyntaxRecursor
                 return whileStatement;
             }
 
+            case ForStatementSyntax forStatement:
+            {
+                IReadOnlyList<StatementSyntax> body = applyAll(forStatement.Body.Statements);
+                forStatement.SetBody(CreateBlock(body, syntaxFactory), false);
+                return forStatement;
+            }
+
             case DoWhileStatementSyntax doWhile:
             {
                 IReadOnlyList<StatementSyntax> body = applyAll(doWhile.Body.Statements);

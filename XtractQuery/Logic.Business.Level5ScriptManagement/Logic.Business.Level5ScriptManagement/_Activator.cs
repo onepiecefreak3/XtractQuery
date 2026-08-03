@@ -71,6 +71,7 @@ public class Level5ScriptManagementActivator : IComponentActivator
         kernel.Register<IChainAssignmentFoldPass, ChainAssignmentFoldPass>(ActivationScope.Unique);
         kernel.Register<IStructuredLoopPass, StructuredLoopPass>(ActivationScope.Unique);
         kernel.Register<IStructuredIfPass, StructuredIfPass>(ActivationScope.Unique);
+        kernel.Register<IStructuredForPass, StructuredForPass>(ActivationScope.Unique);
         kernel.Register<IXseqScriptFileConverter, XseqScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IXscrScriptFileConverter, XscrScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IGss1ScriptFileConverter, Gss1ScriptFileConverter>(ActivationScope.Unique);
