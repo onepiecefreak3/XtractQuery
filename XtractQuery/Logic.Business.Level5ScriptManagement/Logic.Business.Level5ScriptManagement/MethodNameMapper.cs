@@ -43,12 +43,20 @@ internal partial class MethodNameMapper : IMethodNameMapper
 
     private Dictionary<int, string> InitializeMapping(string mappingPath)
     {
-        mappingPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath), mappingPath);
+        var processDir = Path.GetDirectoryName(Environment.ProcessPath);
+        if (string.IsNullOrEmpty(processDir))
+            return new Dictionary<int, string>();
+
+        mappingPath = Path.Combine(processDir, mappingPath);
         if (!File.Exists(mappingPath))
             return new Dictionary<int, string>();
 
         string mappingJson = File.ReadAllText(mappingPath);
-        return JsonSerializer.Deserialize(mappingJson, MethodMappingJsonContext.Default.DictionaryInt32String);
+        var methodMapping = JsonSerializer.Deserialize(mappingJson, MethodMappingJsonContext.Default.DictionaryInt32String);
+        if (methodMapping is null)
+            return new Dictionary<int, string>();
+
+        return methodMapping;
     }
 
     [JsonSerializable(typeof(Dictionary<int, string>))]

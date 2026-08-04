@@ -4,5 +4,5 @@ public class Gsd1ScriptArgument
 {
     public int RawArgumentType { get; set; }
     public ScriptArgumentType Type { get; set; }
-    public object Value { get; set; }
+    public required object Value { get; set; }
 }

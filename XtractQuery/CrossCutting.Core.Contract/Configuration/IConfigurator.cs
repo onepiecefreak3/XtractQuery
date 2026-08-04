@@ -1,5 +1,4 @@
 ﻿using System;
-using CrossCutting.Core.Contract.Aspects;
 using CrossCutting.Core.Contract.Configuration.Exceptions;
 
 namespace CrossCutting.Core.Contract.Configuration;
@@ -8,7 +7,6 @@ namespace CrossCutting.Core.Contract.Configuration;
 /// Contract to get or set config values from a store
 /// by a key/category pair
 /// </summary>
-[MapException(typeof(ConfigurationException))]
 public interface IConfigurator
 {
     /// <summary>
@@ -31,5 +29,5 @@ public interface IConfigurator
     /// <exception cref="KeyOrCategoryNotFoundException">If the key or the category was not found</exception>
     /// <exception cref="ArgumentException">If the passed category or key is null, empty or whitespace</exception>
     /// <exception cref="InvalidCastException">If the expected return type differs from the stored type</exception>
-    T Get<T>(string category, string key, T defaultValue = default(T));
+    T? Get<T>(string category, string key, T? defaultValue = default);
 }

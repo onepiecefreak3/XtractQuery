@@ -1,6 +1,6 @@
 ﻿namespace Logic.Domain.Level5.Contract.DataClasses.Script.Gss1;
 
-public class Gss1Header
+public struct Gss1Header
 {
     public string magic;
 

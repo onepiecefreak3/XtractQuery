@@ -5,16 +5,11 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
-internal class Xq32FunctionCache : IXq32FunctionCache
+internal class Xq32FunctionCache(IChecksumFactory checksums) : IXq32FunctionCache
 {
-    private readonly Checksum<uint> _hash;
+    private readonly Checksum<uint> _hash = checksums.CreateCrc32();
 
     private readonly Dictionary<uint, string> _lookup = [];
-
-    public Xq32FunctionCache(IChecksumFactory checksums)
-    {
-        _hash = checksums.CreateCrc32();
-    }
 
     public bool TryAdd(string scriptName, string name)
     {

@@ -36,6 +36,7 @@ internal class XseqStringTable : IXseqStringTable
         _reader = new BinaryReaderX(_baseStream, encodingProvider.GetEncoding());
         _writer = new BinaryWriterX(_baseStream);
         _checksum = checksumFactory.CreateCrc16();
+        _encodingProvider = encodingProvider;
 
         _streamPosition = 0;
     }

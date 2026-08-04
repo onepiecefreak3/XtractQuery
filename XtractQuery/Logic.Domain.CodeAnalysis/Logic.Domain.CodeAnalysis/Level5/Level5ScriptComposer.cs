@@ -5,15 +5,8 @@ using System.Text;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 
-internal class Level5ScriptComposer : ILevel5ScriptComposer
+internal class Level5ScriptComposer(ILevel5SyntaxFactory syntaxFactory) : ILevel5ScriptComposer
 {
-    private readonly ILevel5SyntaxFactory _syntaxFactory;
-
-    public Level5ScriptComposer(ILevel5SyntaxFactory syntaxFactory)
-    {
-        _syntaxFactory = syntaxFactory;
-    }
-
     public string ComposeCodeUnit(CodeUnitSyntax codeUnit)
     {
         var sb = new StringBuilder();
@@ -214,7 +207,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         for (var i = 0; i < valueList.Elements.Count - 1; i++)
         {
             ComposeVariableExpression(valueList.Elements[i], sb);
-            ComposeSyntaxToken(_syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
+            ComposeSyntaxToken(syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
         }
 
         ComposeVariableExpression(valueList.Elements[^1], sb);
@@ -691,7 +684,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         for (var i = 0; i < valueList.Elements.Count - 1; i++)
         {
             ComposeExpression(valueList.Elements[i], sb);
-            ComposeSyntaxToken(_syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
+            ComposeSyntaxToken(syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
         }
 
         ComposeExpression(valueList.Elements[^1], sb);
@@ -705,7 +698,7 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
         for (var i = 0; i < valueList.Elements.Count - 1; i++)
         {
             ComposeValueExpression(valueList.Elements[i], sb);
-            ComposeSyntaxToken(_syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
+            ComposeSyntaxToken(syntaxFactory.Token(SyntaxTokenKind.Comma), sb);
         }
 
         ComposeValueExpression(valueList.Elements[^1], sb);

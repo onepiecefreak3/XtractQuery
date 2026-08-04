@@ -6,15 +6,8 @@ using Logic.Domain.Level5.InternalContract.Compression;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqScriptCompressor : IXseqScriptCompressor
+internal class XseqScriptCompressor(ICompressor compressor) : IXseqScriptCompressor
 {
-    private readonly ICompressor _compressor;
-
-    public XseqScriptCompressor(ICompressor compressor)
-    {
-        _compressor = compressor;
-    }
-
     public void Compress(ScriptContainer container, Stream output, bool hasCompression)
     {
         Stream functionStream;
@@ -25,11 +18,11 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
 
         if (hasCompression)
         {
-            functionStream = _compressor.Compress(container.FunctionTable.Stream, CompressionType.Huffman8Bit);
-            jumpStream = _compressor.Compress(container.JumpTable.Stream, CompressionType.Huffman8Bit);
-            instructionStream = _compressor.Compress(container.InstructionTable.Stream, CompressionType.Lz10);
-            argumentStream = _compressor.Compress(container.ArgumentTable.Stream, CompressionType.Lz10);
-            stringStream = _compressor.Compress(container.StringTable.Stream, CompressionType.Lz10);
+            functionStream = compressor.Compress(container.FunctionTable.Stream, CompressionType.Huffman8Bit);
+            jumpStream = compressor.Compress(container.JumpTable.Stream, CompressionType.Huffman8Bit);
+            instructionStream = compressor.Compress(container.InstructionTable.Stream, CompressionType.Lz10);
+            argumentStream = compressor.Compress(container.ArgumentTable.Stream, CompressionType.Lz10);
+            stringStream = compressor.Compress(container.StringTable.Stream, CompressionType.Lz10);
         }
         else
         {
@@ -51,11 +44,11 @@ internal class XseqScriptCompressor : IXseqScriptCompressor
 
     public void Compress(ScriptContainer container, Stream output, CompressionType compressionType)
     {
-        Stream functionStream = _compressor.Compress(container.FunctionTable.Stream, compressionType);
-        Stream jumpStream = _compressor.Compress(container.JumpTable.Stream, compressionType);
-        Stream instructionStream = _compressor.Compress(container.InstructionTable.Stream, compressionType);
-        Stream argumentStream = _compressor.Compress(container.ArgumentTable.Stream, compressionType);
-        Stream stringStream = _compressor.Compress(container.StringTable.Stream, compressionType);
+        Stream functionStream = compressor.Compress(container.FunctionTable.Stream, compressionType);
+        Stream jumpStream = compressor.Compress(container.JumpTable.Stream, compressionType);
+        Stream instructionStream = compressor.Compress(container.InstructionTable.Stream, compressionType);
+        Stream argumentStream = compressor.Compress(container.ArgumentTable.Stream, compressionType);
+        Stream stringStream = compressor.Compress(container.StringTable.Stream, compressionType);
 
         Write(container, output, functionStream, jumpStream, instructionStream, argumentStream, stringStream);
     }

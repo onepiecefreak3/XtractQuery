@@ -1,13 +1,7 @@
 ﻿namespace CrossCutting.Core.Contract.DependencyInjection.DataClasses;
 
-public class ConstructorParameter
+public class ConstructorParameter(string name, object value)
 {
-    public string Name { get; }
-    public object Value { get; }
-
-    public ConstructorParameter(string name, object value)
-    {
-        Name = name;
-        Value = value;
-    }
+    public string Name { get; } = name;
+    public object Value { get; } = value;
 }

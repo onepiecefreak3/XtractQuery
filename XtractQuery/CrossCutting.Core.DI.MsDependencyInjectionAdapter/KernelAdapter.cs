@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using CrossCutting.Core.Contract.Aspects;
 using CrossCutting.Core.Contract.Bootstrapping;
 using CrossCutting.Core.Contract.Configuration;
@@ -101,8 +100,7 @@ public sealed class KernelAdapter : ICoCoKernel
             return;
         }
 
-        bool hasExceptionMapping = ExceptionMappingRegistry.HasMapping(contract)
-            || contract.GetCustomAttribute<MapExceptionAttribute>() is not null;
+        bool hasExceptionMapping = ExceptionMappingRegistry.HasMapping(contract);
 
         if (hasExceptionMapping && contract != implementation)
         {

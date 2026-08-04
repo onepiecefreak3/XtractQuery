@@ -2,6 +2,6 @@
 
 public class XscrScriptFile
 {
-    public IList<XscrScriptInstruction> Instructions { get; set; }
-    public IList<XscrScriptArgument> Arguments { get; set; }
+    public required IList<XscrScriptInstruction> Instructions { get; set; }
+    public required IList<XscrScriptArgument> Arguments { get; set; }
 }

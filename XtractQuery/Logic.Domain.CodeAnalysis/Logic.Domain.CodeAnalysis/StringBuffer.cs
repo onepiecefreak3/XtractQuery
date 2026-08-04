@@ -1,15 +1,10 @@
 ﻿namespace Logic.Domain.CodeAnalysis;
 
-internal class StringBuffer : Buffer<int>
+internal class StringBuffer(string text) : Buffer<int>
 {
-    private readonly TextReader _reader;
+    private readonly TextReader _reader = new StringReader(text);
 
     public override bool IsEndOfInput { get; protected set; }
-
-    public StringBuffer(string text)
-    {
-        _reader = new StringReader(text);
-    }
 
     protected override int ReadInternal()
     {

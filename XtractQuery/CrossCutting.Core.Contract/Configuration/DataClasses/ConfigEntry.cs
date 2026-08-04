@@ -2,16 +2,11 @@
 
 namespace CrossCutting.Core.Contract.Configuration.DataClasses;
 
-public class ConfigEntry
+public class ConfigEntry(ConfigCategory category)
 {
     [IgnoreDataMember]
-    public ConfigCategory Category { get; set; }
+    public ConfigCategory Category { get; set; } = category;
 
-    public string Key { get; set; }
-    public object Value { get; set; }
-
-    public ConfigEntry(ConfigCategory category)
-    {
-        Category = category;
-    }
+    public string? Key { get; set; }
+    public object? Value { get; set; }
 }

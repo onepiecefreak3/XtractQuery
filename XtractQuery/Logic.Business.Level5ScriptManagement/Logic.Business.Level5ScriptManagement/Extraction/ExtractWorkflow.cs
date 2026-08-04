@@ -22,9 +22,9 @@ class ExtractWorkflow(
     {
         bool isDirectory = Directory.Exists(config.InputPath);
         if (isDirectory)
-            ExtractDirectory(config.InputPath);
+            ExtractDirectory(config.InputPath!);
         else
-            ExtractFile(config.InputPath);
+            ExtractFile(config.InputPath!);
     }
 
     private void ExtractDirectory(string dirPath)

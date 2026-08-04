@@ -2,8 +2,8 @@
 
 public class Gss1ScriptFile
 {
-    public IList<ScriptFunction> Functions { get; set; }
-    public IList<ScriptJump> Jumps { get; set; }
-    public IList<ScriptInstruction> Instructions { get; set; }
-    public IList<ScriptArgument> Arguments { get; set; }
+    public required IList<ScriptFunction> Functions { get; set; }
+    public required IList<ScriptJump> Jumps { get; set; }
+    public required IList<ScriptInstruction> Instructions { get; set; }
+    public required IList<ScriptArgument> Arguments { get; set; }
 }

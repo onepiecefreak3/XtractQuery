@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace Logic.Domain.CodeAnalysis.Contract.Exceptions;
+﻿namespace Logic.Domain.CodeAnalysis.Contract.Exceptions;
 
 [Serializable]
 public class LexerException : Exception
@@ -24,11 +22,5 @@ public class LexerException : Exception
     {
         Line = line;
         Column = column;
-    }
-
-    protected LexerException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
-    {
     }
 }

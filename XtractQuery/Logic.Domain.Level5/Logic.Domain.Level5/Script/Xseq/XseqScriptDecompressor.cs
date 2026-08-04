@@ -1,21 +1,15 @@
 ﻿using Komponent.IO;
-using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 using Logic.Domain.Level5.Contract.DataClasses.Script.Xseq;
 using Logic.Domain.Level5.Contract.Script.Xseq;
 using Logic.Domain.Level5.DataClasses.Script;
 using Logic.Domain.Level5.InternalContract.Compression;
 using Logic.Domain.Level5.InternalContract.Script.Xseq;
-using System.Reflection.PortableExecutable;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqScriptDecompressor : ScriptDecompressor<XseqHeader>, IXseqScriptDecompressor
+internal class XseqScriptDecompressor(IDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider)
+    : ScriptDecompressor<XseqHeader>(decompressor, entrySizeProvider), IXseqScriptDecompressor
 {
-    public XseqScriptDecompressor(IDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider)
-        : base(decompressor, entrySizeProvider)
-    {
-    }
-
     protected override int GetGlobalVariableCount(XseqHeader header)
     {
         return header.globalVariableCount;

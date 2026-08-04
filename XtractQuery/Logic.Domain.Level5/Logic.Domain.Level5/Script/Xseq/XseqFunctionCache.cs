@@ -5,16 +5,11 @@ using Logic.Domain.Level5.Contract.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqFunctionCache : IXseqFunctionCache
+internal class XseqFunctionCache(IChecksumFactory checksums) : IXseqFunctionCache
 {
-    private readonly Checksum<ushort> _hash;
+    private readonly Checksum<ushort> _hash = checksums.CreateCrc16();
 
     private readonly Dictionary<ushort, string> _lookup = [];
-
-    public XseqFunctionCache(IChecksumFactory checksums)
-    {
-        _hash = checksums.CreateCrc16();
-    }
 
     public bool TryAdd(string scriptName, string name)
     {

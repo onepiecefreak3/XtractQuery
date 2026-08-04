@@ -1,15 +1,9 @@
 ﻿namespace Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-public struct SyntaxLocation
+public struct SyntaxLocation(int line, int column)
 {
-    public int Line { get; }
-    public int Column { get; }
-
-    public SyntaxLocation(int line, int column)
-    {
-        Line = line;
-        Column = column;
-    }
+    public int Line { get; } = line;
+    public int Column { get; } = column;
 
     public override string ToString()
     {

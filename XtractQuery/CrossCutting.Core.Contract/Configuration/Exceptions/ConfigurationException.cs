@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace CrossCutting.Core.Contract.Configuration.Exceptions;
 
@@ -15,12 +14,6 @@ public class ConfigurationException : Exception
     }
 
     public ConfigurationException(string message, Exception inner) : base(message, inner)
-    {
-    }
-
-    protected ConfigurationException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
     {
     }
 }

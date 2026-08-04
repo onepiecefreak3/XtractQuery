@@ -9,18 +9,13 @@ using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqScriptWriter : IXseqScriptWriter
+internal class XseqScriptWriter(
+    IXseqScriptCompressor compressor,
+    IChecksumFactory checksumFactory,
+    IScriptStringEncodingProvider encodingProvider)
+    : IXseqScriptWriter
 {
-    private readonly IXseqScriptCompressor _compressor;
-    private readonly Checksum<ushort> _checksum;
-    private readonly IScriptStringEncodingProvider _encodingProvider;
-
-    public XseqScriptWriter(IXseqScriptCompressor compressor, IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
-    {
-        _compressor = compressor;
-        _checksum = checksumFactory.CreateCrc16();
-        _encodingProvider = encodingProvider;
-    }
+    private readonly Checksum<ushort> _checksum = checksumFactory.CreateCrc16();
 
     public void Write(ScriptFile script, Stream output, bool hasCompression)
     {
@@ -38,12 +33,12 @@ internal class XseqScriptWriter : IXseqScriptWriter
 
     public void Write(ScriptContainer container, Stream output, bool hasCompression)
     {
-        _compressor.Compress(container, output, hasCompression);
+        compressor.Compress(container, output, hasCompression);
     }
 
     public void Write(ScriptContainer container, Stream output, CompressionType compressionType)
     {
-        _compressor.Compress(container, output, compressionType);
+        compressor.Compress(container, output, compressionType);
     }
 
     public void WriteFunctions(IReadOnlyList<XseqFunction> functions, Stream output, PointerLength length)
@@ -400,7 +395,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
         CacheStrings(value, stringWriter, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _encodingProvider.GetEncoding());
+        stringWriter.WriteString(value, encodingProvider.GetEncoding());
 
         return nameOffset;
     }
@@ -414,7 +409,7 @@ internal class XseqScriptWriter : IXseqScriptWriter
             if (!writtenNames.ContainsKey(value))
                 writtenNames[value] = nameOffset;
 
-            nameOffset += _encodingProvider.GetEncoding().GetByteCount(value[..1]);
+            nameOffset += encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

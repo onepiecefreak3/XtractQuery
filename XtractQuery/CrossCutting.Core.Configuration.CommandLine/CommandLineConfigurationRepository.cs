@@ -1,4 +1,5 @@
-﻿using CrossCutting.Core.Contract.Configuration;
+﻿using System.Diagnostics.CodeAnalysis;
+using CrossCutting.Core.Contract.Configuration;
 using CrossCutting.Core.Contract.Configuration.DataClasses;
 
 namespace CrossCutting.Core.Configuration.CommandLine;
@@ -59,7 +60,7 @@ public class CommandLineConfigurationRepository : IConfigurationRepository
         return category.Entries.Any(e => e.Key is "f" or "file");
     }
 
-    private static bool TryTakeSingleArgument(string[] args, int index, out string? argument)
+    private static bool TryTakeSingleArgument(string[] args, int index, [NotNullWhen(true)] out string? argument)
     {
         if (index >= args.Length || IsOption(args[index]))
         {

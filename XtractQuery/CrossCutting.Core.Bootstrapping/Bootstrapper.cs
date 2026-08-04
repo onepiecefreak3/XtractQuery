@@ -7,14 +7,9 @@ using System.Linq;
 
 namespace CrossCutting.Core.Bootstrapping;
 
-public sealed class Bootstrapper : IBootstrapper
+public sealed class Bootstrapper(IEnumerable<IComponentActivator> components) : IBootstrapper
 {
-    private readonly List<IComponentActivator> _components;
-
-    public Bootstrapper(IEnumerable<IComponentActivator> components)
-    {
-        _components = components.ToList();
-    }
+    private readonly List<IComponentActivator> _components = components.ToList();
 
     public void ActivatingAll() => _components.ForEach(ca => ca.Activating());
     public void ActivatedAll() => _components.ForEach(ca => ca.Activated());

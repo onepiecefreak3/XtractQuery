@@ -29,9 +29,9 @@ class CreateWorkflow(
 
         bool isDirectory = Directory.Exists(config.InputPath);
         if (isDirectory)
-            CreateDirectory(config.InputPath, type.Value);
+            CreateDirectory(config.InputPath!, type.Value);
         else
-            CreateFile(config.InputPath, type.Value);
+            CreateFile(config.InputPath!, type.Value);
     }
 
     private void CreateDirectory(string dirPath, ScriptType type)

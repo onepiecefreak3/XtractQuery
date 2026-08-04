@@ -7,17 +7,9 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal class GdsScriptFileConverter : IGdsScriptFileConverter
+internal class GdsScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
+    : IGdsScriptFileConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-    private readonly ILevel5SyntaxFactory _syntaxFactory;
-
-    public GdsScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
-    {
-        _methodNameMapper = methodNameMapper;
-        _syntaxFactory = syntaxFactory;
-    }
-
     public CodeUnitSyntax CreateCodeUnit(GdsScriptFile script)
     {
         IReadOnlyList<MethodDeclarationSyntax> methods = CreateMethodDeclarations(script);
@@ -32,7 +24,7 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private MethodDeclarationSyntax CreateMethodDeclaration(GdsScriptFile script)
     {
-        SyntaxToken identifier = _syntaxFactory.Identifier("Main");
+        SyntaxToken identifier = syntaxFactory.Identifier("Main");
         var parameters = CreateMethodDeclarationParameters();
         var body = CreateMethodDeclarationBody(script);
 
@@ -41,17 +33,17 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private MethodDeclarationParametersSyntax CreateMethodDeclarationParameters()
     {
-        SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
-        SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
+        SyntaxToken parenOpen = syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
+        SyntaxToken parenClose = syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodDeclarationParametersSyntax(parenOpen, null, parenClose);
     }
 
     private MethodDeclarationBodySyntax CreateMethodDeclarationBody(GdsScriptFile script)
     {
-        SyntaxToken curlyOpen = _syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
+        SyntaxToken curlyOpen = syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
         var expressions = CreateStatements(script);
-        SyntaxToken curlyClose = _syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
+        SyntaxToken curlyClose = syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
 
         return new MethodDeclarationBodySyntax(curlyOpen, expressions, curlyClose);
     }
@@ -74,7 +66,7 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
     private GotoLabelStatementSyntax CreateGotoLabelStatement(GdsScriptJump jump)
     {
         var labelLiteral = CreateStringLiteralExpression(jump.Label);
-        SyntaxToken colonToken = _syntaxFactory.Token(SyntaxTokenKind.Colon);
+        SyntaxToken colonToken = syntaxFactory.Token(SyntaxTokenKind.Colon);
 
         return new GotoLabelStatementSyntax(labelLiteral, colonToken);
     }
@@ -105,8 +97,8 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private ReturnStatementSyntax CreateReturnStatement()
     {
-        SyntaxToken returnToken = _syntaxFactory.Token(SyntaxTokenKind.ReturnKeyword);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken returnToken = syntaxFactory.Token(SyntaxTokenKind.ReturnKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new ReturnStatementSyntax(returnToken, null, semicolon);
     }
@@ -121,7 +113,7 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
     private MethodInvocationStatementSyntax CreateMethodInvocationExpression(NameSyntax methodName, GdsScriptInstruction instruction)
     {
         var parameters = CreateMethodInvocationExpressionParameters(instruction);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new MethodInvocationStatementSyntax(methodName, null, parameters, semicolon);
     }
@@ -136,9 +128,9 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
         var instructionType = (int)instruction.Arguments[0].Value!;
 
-        if (_methodNameMapper.MapsInstructionType(instructionType))
+        if (methodNameMapper.MapsInstructionType(instructionType))
         {
-            string mappedMethod = _methodNameMapper.GetMethodName(instructionType);
+            string mappedMethod = methodNameMapper.GetMethodName(instructionType);
             return CreateName(mappedMethod);
         }
 
@@ -147,9 +139,9 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(GdsScriptInstruction instruction)
     {
-        SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
+        SyntaxToken parenOpen = syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
         var parameterList = CreateMethodInvocationParameterList(instruction);
-        SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
+        SyntaxToken parenClose = syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
@@ -189,9 +181,9 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private ValueMetadataParametersSyntax CreateValueMetadataParameters(int rawArgumentType)
     {
-        SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+        SyntaxToken relSmaller = syntaxFactory.Token(SyntaxTokenKind.Smaller);
         var metadataParameter = CreateNumericLiteralExpression(rawArgumentType);
-        SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+        SyntaxToken relBigger = syntaxFactory.Token(SyntaxTokenKind.Greater);
 
         return new ValueMetadataParametersSyntax(relSmaller, metadataParameter, relBigger);
     }
@@ -224,37 +216,37 @@ internal class GdsScriptFileConverter : IGdsScriptFileConverter
 
     private LiteralExpressionSyntax CreateNumericLiteralExpression(int value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.NumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.NumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateFloatingNumericLiteralExpression(float value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.FloatingNumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.FloatingNumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateStringLiteralExpression(string value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.StringLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.StringLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateHashStringExpression(string value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.HashStringLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.HashStringLiteral(value));
     }
 
     private NameSyntax CreateName(string name)
     {
         if (name.Contains('.'))
-            return new SimpleNameSyntax(_syntaxFactory.Identifier(name));
+            return new SimpleNameSyntax(syntaxFactory.Identifier(name));
 
         NameSyntax? result = null;
 
         foreach (string part in name.Split('.').Reverse())
         {
             if (result is null)
-                result = new SimpleNameSyntax(_syntaxFactory.Identifier(part));
+                result = new SimpleNameSyntax(syntaxFactory.Identifier(part));
             else
-                result = new QualifiedNameSyntax(new SimpleNameSyntax(_syntaxFactory.Identifier(part)), _syntaxFactory.Token(SyntaxTokenKind.Dot), result);
+                result = new QualifiedNameSyntax(new SimpleNameSyntax(syntaxFactory.Identifier(part)), syntaxFactory.Token(SyntaxTokenKind.Dot), result);
         }
 
         return result!;

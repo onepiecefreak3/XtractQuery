@@ -2,21 +2,12 @@
 
 namespace Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
-public struct Level5SyntaxToken
+public struct Level5SyntaxToken(SyntaxTokenKind kind, int position, int line, int column, string? text = null)
 {
-    public SyntaxTokenKind Kind { get; }
-    public string Text { get; }
+    public SyntaxTokenKind Kind { get; } = kind;
+    public string Text { get; } = text ?? string.Empty;
 
-    public int Position { get; }
-    public int Line { get; }
-    public int Column { get; }
-
-    public Level5SyntaxToken(SyntaxTokenKind kind, int position, int line, int column, string? text = null)
-    {
-        Text = text ?? string.Empty;
-        Kind = kind;
-        Position = position;
-        Line = line;
-        Column = column;
-    }
+    public int Position { get; } = position;
+    public int Line { get; } = line;
+    public int Column { get; } = column;
 }

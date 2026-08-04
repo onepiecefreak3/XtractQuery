@@ -8,15 +8,8 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal partial class GdsCodeUnitConverter : IGdsCodeUnitConverter
+internal partial class GdsCodeUnitConverter(IMethodNameMapper methodNameMapper) : IGdsCodeUnitConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-
-    public GdsCodeUnitConverter(IMethodNameMapper methodNameMapper)
-    {
-        _methodNameMapper = methodNameMapper;
-    }
-
     public GdsScriptFile CreateScriptFile(CodeUnitSyntax tree)
     {
         var instructions = new List<GdsScriptInstruction>();
@@ -145,8 +138,8 @@ internal partial class GdsCodeUnitConverter : IGdsCodeUnitConverter
         if (SubPattern().IsMatch(composedName))
             return GetNumberFromStringEnd(composedName);
 
-        if (_methodNameMapper.MapsMethodName(composedName))
-            return _methodNameMapper.GetInstructionType(composedName);
+        if (methodNameMapper.MapsMethodName(composedName))
+            return methodNameMapper.GetInstructionType(composedName);
 
         throw CreateException("Could not determine instruction type.", name.Location);
     }

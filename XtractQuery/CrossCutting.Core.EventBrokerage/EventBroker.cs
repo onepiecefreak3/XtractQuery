@@ -8,13 +8,8 @@ namespace CrossCutting.Core.EventBrokerage;
 
 public class EventBroker : IEventBroker
 {
-    private readonly Dictionary<Type, List<Subscription>> _messageSubscriptions;
+    private readonly Dictionary<Type, List<Subscription>> _messageSubscriptions = new();
     private Func<Type, object>? _resolverCallback;
-
-    public EventBroker()
-    {
-        _messageSubscriptions = new Dictionary<Type, List<Subscription>>();
-    }
 
     public void Subscribe<THandler, TMessage>(Action<THandler, TMessage> handler)
     {

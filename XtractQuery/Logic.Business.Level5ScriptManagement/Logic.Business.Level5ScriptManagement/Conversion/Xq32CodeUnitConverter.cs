@@ -8,15 +8,8 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal partial class Xq32CodeUnitConverter : IXq32CodeUnitConverter
+internal partial class Xq32CodeUnitConverter(IMethodNameMapper methodNameMapper) : IXq32CodeUnitConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-
-    public Xq32CodeUnitConverter(IMethodNameMapper methodNameMapper)
-    {
-        _methodNameMapper = methodNameMapper;
-    }
-
     public ScriptFile CreateScriptFile(CodeUnitSyntax tree)
     {
         var result = new ScriptFile
@@ -581,8 +574,8 @@ internal partial class Xq32CodeUnitConverter : IXq32CodeUnitConverter
         if (SubPattern().IsMatch(composedName))
             return GetNumberFromStringEnd(composedName);
 
-        if (_methodNameMapper.MapsMethodName(composedName))
-            return _methodNameMapper.GetInstructionType(composedName);
+        if (methodNameMapper.MapsMethodName(composedName))
+            return methodNameMapper.GetInstructionType(composedName);
 
         isMethodTransfer = true;
         return 20;

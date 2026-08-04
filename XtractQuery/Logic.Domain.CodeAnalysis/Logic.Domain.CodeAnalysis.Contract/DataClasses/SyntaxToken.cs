@@ -3,32 +3,27 @@
 namespace Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
 [DebuggerDisplay("[{FullSpan.Position}..{FullSpan.EndPosition}) {Text}")]
-public struct SyntaxToken
+public struct SyntaxToken(
+    string text,
+    int rawKind,
+    SyntaxTokenTrivia? leadingTrivia = null,
+    SyntaxTokenTrivia? trailingTrivia = null)
 {
     private int _textPosition;
 
     public SyntaxNode? Parent { get; internal set; }
 
-    public int RawKind { get; }
-    public string Text { get; }
+    public int RawKind { get; } = rawKind;
+    public string Text { get; } = text;
 
-    public SyntaxTokenTrivia? LeadingTrivia { get; private set; }
-    public SyntaxTokenTrivia? TrailingTrivia { get; private set; }
+    public SyntaxTokenTrivia? LeadingTrivia { get; private set; } = leadingTrivia;
+    public SyntaxTokenTrivia? TrailingTrivia { get; private set; } = trailingTrivia;
 
     public SyntaxLocation Location { get; private set; }
     public SyntaxLocation FullLocation { get; private set; }
 
     public SyntaxSpan Span => new(_textPosition, _textPosition + Text.Length);
     public SyntaxSpan FullSpan => new(LeadingTrivia?.Span.Position ?? _textPosition, TrailingTrivia?.Span.EndPosition ?? _textPosition + Text.Length);
-
-    public SyntaxToken(string text, int rawKind, SyntaxTokenTrivia? leadingTrivia = null, SyntaxTokenTrivia? trailingTrivia = null)
-    {
-        RawKind = rawKind;
-        Text = text;
-
-        LeadingTrivia = leadingTrivia;
-        TrailingTrivia = trailingTrivia;
-    }
 
     public SyntaxToken WithLeadingTrivia(string? trivia)
     {

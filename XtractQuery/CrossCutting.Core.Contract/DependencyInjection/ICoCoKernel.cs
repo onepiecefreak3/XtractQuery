@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using CrossCutting.Core.Contract.Aspects;
 using CrossCutting.Core.Contract.Bootstrapping;
-using CrossCutting.Core.Contract.DependencyInjection;
 using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
-using CrossCutting.Core.Contract.DependencyInjection.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrossCutting.Core.Contract.DependencyInjection;
 
-[MapException(typeof(DependencyInjectionException))]
 public interface ICoCoKernel
 {
     void Build(string scopeName);

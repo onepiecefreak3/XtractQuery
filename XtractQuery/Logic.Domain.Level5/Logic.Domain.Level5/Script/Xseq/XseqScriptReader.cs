@@ -7,21 +7,16 @@ using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script.Xseq;
 
-internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>, IXseqScriptReader
+internal class XseqScriptReader(
+    IXseqScriptDecompressor decompressor,
+    IXseqScriptEntrySizeProvider entrySizeProvider,
+    IXseqFunctionCache functionCache,
+    IScriptStringEncodingProvider encodingProvider)
+    : CompressedScriptReader<XseqFunction, XseqJump, XseqInstruction, XseqArgument>(decompressor, entrySizeProvider,
+        encodingProvider), IXseqScriptReader
 {
-    private readonly IXseqFunctionCache _externalFunctionCache;
-
-    private readonly Dictionary<ushort, HashSet<string>> _functionCache;
-    private readonly Dictionary<ushort, HashSet<string>> _jumpCache;
-
-    public XseqScriptReader(IXseqScriptDecompressor decompressor, IXseqScriptEntrySizeProvider entrySizeProvider, IXseqFunctionCache functionCache, IScriptStringEncodingProvider encodingProvider)
-        : base(decompressor, entrySizeProvider, encodingProvider)
-    {
-        _externalFunctionCache = functionCache;
-
-        _functionCache = new Dictionary<ushort, HashSet<string>>();
-        _jumpCache = new Dictionary<ushort, HashSet<string>>();
-    }
+    private readonly Dictionary<ushort, HashSet<string>> _functionCache = new();
+    private readonly Dictionary<ushort, HashSet<string>> _jumpCache = new();
 
     public override IReadOnlyList<XseqFunction> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
     {
@@ -273,7 +268,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
                     {
                         value = names.First();
                     }
-                    else if (_externalFunctionCache.TryResolve((ushort)argument.value, out string? cachedName))
+                    else if (functionCache.TryResolve((ushort)argument.value, out string? cachedName))
                     {
                         value = cachedName;
                     }
@@ -285,7 +280,7 @@ internal class XseqScriptReader : CompressedScriptReader<XseqFunction, XseqJump,
                     case 20:
                         if (_functionCache.TryGetValue((ushort)argument.value, out HashSet<string>? names))
                             value = names.First();
-                        else if (_externalFunctionCache.TryResolve((ushort)argument.value, out string? cachedName))
+                        else if (functionCache.TryResolve((ushort)argument.value, out string? cachedName))
                             value = cachedName;
                         break;
 

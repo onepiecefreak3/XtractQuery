@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace Logic.Domain.CodeAnalysis.Contract.Exceptions.Level5;
+﻿namespace Logic.Domain.CodeAnalysis.Contract.Exceptions.Level5;
 
 public class Level5ScriptParserException : Exception
 {
@@ -23,11 +21,5 @@ public class Level5ScriptParserException : Exception
     {
         Line = line;
         Column = column;
-    }
-
-    protected Level5ScriptParserException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
-    {
     }
 }

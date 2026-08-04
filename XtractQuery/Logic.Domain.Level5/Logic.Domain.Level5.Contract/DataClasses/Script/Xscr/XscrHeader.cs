@@ -1,6 +1,6 @@
 ﻿namespace Logic.Domain.Level5.Contract.DataClasses.Script.Xscr;
 
-public class XscrHeader
+public struct XscrHeader
 {
     public string magic;
     public short instructionEntryCount;

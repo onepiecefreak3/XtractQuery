@@ -4,16 +4,11 @@ namespace Logic.Domain.CodeAnalysis;
 
 internal abstract class Buffer<T> : IBuffer<T>
 {
-    private readonly IDictionary<int, T> _peeked;
+    private readonly IDictionary<int, T> _peeked = new Dictionary<int, T>();
 
     private int _currentPosition;
 
     public abstract bool IsEndOfInput { get; protected set; }
-
-    public Buffer()
-    {
-        _peeked = new Dictionary<int, T>();
-    }
 
     public T Peek(int position = 0)
     {

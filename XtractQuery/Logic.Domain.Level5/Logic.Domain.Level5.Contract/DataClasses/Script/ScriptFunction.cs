@@ -2,7 +2,7 @@
 
 public class ScriptFunction
 {
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     public short InstructionIndex { get; set; }
     public short InstructionCount { get; set; }

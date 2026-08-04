@@ -9,18 +9,13 @@ using Logic.Domain.Level5.InternalContract.Checksum;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
-internal class Xq32ScriptWriter : IXq32ScriptWriter
+internal class Xq32ScriptWriter(
+    IXq32ScriptCompressor compressor,
+    IChecksumFactory checksumFactory,
+    IScriptStringEncodingProvider encodingProvider)
+    : IXq32ScriptWriter
 {
-    private readonly IXq32ScriptCompressor _compressor;
-    private readonly Checksum<uint> _checksum;
-    private readonly IScriptStringEncodingProvider _encodingProvider;
-
-    public Xq32ScriptWriter(IXq32ScriptCompressor compressor, IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
-    {
-        _compressor = compressor;
-        _checksum = checksumFactory.CreateCrc32();
-        _encodingProvider = encodingProvider;
-    }
+    private readonly Checksum<uint> _checksum = checksumFactory.CreateCrc32();
 
     public void Write(ScriptFile script, Stream output, bool hasCompression)
     {
@@ -38,12 +33,12 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
 
     public void Write(ScriptContainer container, Stream output, bool hasCompression)
     {
-        _compressor.Compress(container, output, hasCompression);
+        compressor.Compress(container, output, hasCompression);
     }
 
     public void Write(ScriptContainer container, Stream output, CompressionType compressionType)
     {
-        _compressor.Compress(container, output, compressionType);
+        compressor.Compress(container, output, compressionType);
     }
 
     public void WriteFunctions(IReadOnlyList<Xq32Function> functions, Stream output, PointerLength length)
@@ -308,7 +303,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         CacheStrings(value, stringWriter, writtenNames);
 
         nameOffset = stringWriter.BaseStream.Position;
-        stringWriter.WriteString(value, _encodingProvider.GetEncoding());
+        stringWriter.WriteString(value, encodingProvider.GetEncoding());
 
         return nameOffset;
     }
@@ -418,7 +413,7 @@ internal class Xq32ScriptWriter : IXq32ScriptWriter
         {
             writtenNames.TryAdd(value, nameOffset);
 
-            nameOffset += _encodingProvider.GetEncoding().GetByteCount(value[..1]);
+            nameOffset += encodingProvider.GetEncoding().GetByteCount(value[..1]);
             value = value.Length > 1 ? value[1..] : string.Empty;
         } while (value.Length > 0);
 

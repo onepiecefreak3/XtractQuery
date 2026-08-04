@@ -7,17 +7,9 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
+internal class Xq32ScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
+    : IXq32ScriptFileConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-    private readonly ILevel5SyntaxFactory _syntaxFactory;
-
-    public Xq32ScriptFileConverter(IMethodNameMapper methodNameMapper, ILevel5SyntaxFactory syntaxFactory)
-    {
-        _methodNameMapper = methodNameMapper;
-        _syntaxFactory = syntaxFactory;
-    }
-
     public CodeUnitSyntax CreateCodeUnit(ScriptFile script)
     {
         IReadOnlyList<MethodDeclarationSyntax> methods = CreateMethodDeclarations(script);
@@ -37,7 +29,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private MethodDeclarationSyntax CreateMethodDeclaration(ScriptFunction function, ScriptFile script)
     {
-        SyntaxToken identifier = _syntaxFactory.Identifier(function.Name);
+        SyntaxToken identifier = syntaxFactory.Identifier(function.Name);
         _ = CreateMethodDeclarationMetadataParameters(function.LocalCount, function.ObjectCount);
         var parameters = CreateMethodDeclarationParameters(function.ParameterCount);
         var body = CreateMethodDeclarationBody(function, script);
@@ -47,9 +39,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private MethodDeclarationMetadataParametersSyntax CreateMethodDeclarationMetadataParameters(short unknownValue1, short unknownValue2)
     {
-        SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+        SyntaxToken relSmaller = syntaxFactory.Token(SyntaxTokenKind.Smaller);
         var list = CreateMethodDeclarationMetadataParameterList(unknownValue1, unknownValue2);
-        SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+        SyntaxToken relBigger = syntaxFactory.Token(SyntaxTokenKind.Greater);
 
         return new MethodDeclarationMetadataParametersSyntax(relSmaller, list, relBigger);
     }
@@ -57,7 +49,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
     private MethodDeclarationMetadataParameterListSyntax CreateMethodDeclarationMetadataParameterList(short unknownValue1, short unknownValue2)
     {
         var parameter1 = CreateNumericLiteralExpression(unknownValue1);
-        SyntaxToken comma = _syntaxFactory.Token(SyntaxTokenKind.Comma);
+        SyntaxToken comma = syntaxFactory.Token(SyntaxTokenKind.Comma);
         var parameter2 = CreateNumericLiteralExpression(unknownValue2);
 
         return new MethodDeclarationMetadataParameterListSyntax(parameter1, comma, parameter2);
@@ -65,9 +57,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private MethodDeclarationParametersSyntax CreateMethodDeclarationParameters(int parameterCount)
     {
-        SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
+        SyntaxToken parenOpen = syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
         var parameters = CreateMethodDeclarationParameterList(parameterCount);
-        SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
+        SyntaxToken parenClose = syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodDeclarationParametersSyntax(parenOpen, parameters, parenClose);
     }
@@ -87,9 +79,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private MethodDeclarationBodySyntax CreateMethodDeclarationBody(ScriptFunction function, ScriptFile script)
     {
-        SyntaxToken curlyOpen = _syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
+        SyntaxToken curlyOpen = syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
         var expressions = CreateStatements(function, script);
-        SyntaxToken curlyClose = _syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
+        SyntaxToken curlyClose = syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
 
         return new MethodDeclarationBodySyntax(curlyOpen, expressions, curlyClose);
     }
@@ -139,7 +131,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
     private GotoLabelStatementSyntax CreateGotoLabelStatement(ScriptJump jump)
     {
         var labelLiteral = CreateStringLiteralExpression(jump.Name);
-        SyntaxToken colonToken = _syntaxFactory.Token(SyntaxTokenKind.Colon);
+        SyntaxToken colonToken = syntaxFactory.Token(SyntaxTokenKind.Colon);
 
         return new GotoLabelStatementSyntax(labelLiteral, colonToken);
     }
@@ -177,17 +169,17 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private IfGotoStatementSyntax CreateIfGotoStatement(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken ifToken = _syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
+        SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
         var value = CreateValueExpression(script.Arguments[instruction.ArgumentIndex + 1]);
         var gotoStatement = CreateGotoExpression(instruction, script);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new IfGotoStatementSyntax(ifToken, value, gotoStatement, semicolon);
     }
 
     private GotoExpressionSyntax CreateGotoExpression(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken gotoToken = _syntaxFactory.Token(SyntaxTokenKind.GotoKeyword);
+        SyntaxToken gotoToken = syntaxFactory.Token(SyntaxTokenKind.GotoKeyword);
         var value = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
 
         return new GotoExpressionSyntax(gotoToken, value);
@@ -199,8 +191,8 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         if (labelList is null)
             throw new InvalidOperationException("Could not create goto statement.");
 
-        SyntaxToken gotoToken = _syntaxFactory.Token(SyntaxTokenKind.GotoKeyword);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken gotoToken = syntaxFactory.Token(SyntaxTokenKind.GotoKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new GotoStatementSyntax(gotoToken, labelList, semicolon);
     }
@@ -225,11 +217,11 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private IfNotGotoStatementSyntax CreateIfNotGotoStatement(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken ifToken = _syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
+        SyntaxToken ifToken = syntaxFactory.Token(SyntaxTokenKind.IfKeyword);
         var value = CreateValueExpression(script.Arguments[instruction.ArgumentIndex + 1]);
         var unaryExpression = CreateNotUnaryExpression(value);
         var gotoStatement = CreateGotoExpression(instruction, script);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new IfNotGotoStatementSyntax(ifToken, unaryExpression, gotoStatement, semicolon);
     }
@@ -237,7 +229,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
     private PostfixUnaryStatementSyntax CreatePostfixUnaryStatement(ScriptInstruction instruction, ScriptFile script)
     {
         var expression = CreatePostfixUnaryExpression(instruction, script);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new PostfixUnaryStatementSyntax(expression, semicolon);
     }
@@ -254,11 +246,11 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         switch (instruction.Type)
         {
             case 240:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Increment);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Increment);
                 break;
 
             case 241:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Decrement);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Decrement);
                 break;
 
             default:
@@ -270,27 +262,27 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private YieldStatementSyntax CreateYieldStatement()
     {
-        SyntaxToken yield = _syntaxFactory.Token(SyntaxTokenKind.YieldKeyword);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken yield = syntaxFactory.Token(SyntaxTokenKind.YieldKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new YieldStatementSyntax(yield, semicolon);
     }
 
     private ReturnStatementSyntax CreateReturnStatement(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken returnToken = _syntaxFactory.Token(SyntaxTokenKind.ReturnKeyword);
+        SyntaxToken returnToken = syntaxFactory.Token(SyntaxTokenKind.ReturnKeyword);
         ValueExpressionSyntax? valueExpression = null;
         if (instruction.ArgumentCount > 0)
             valueExpression = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new ReturnStatementSyntax(returnToken, valueExpression, semicolon);
     }
 
     private ExitStatementSyntax CreateExitStatement()
     {
-        SyntaxToken exit = _syntaxFactory.Token(SyntaxTokenKind.ExitKeyword);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken exit = syntaxFactory.Token(SyntaxTokenKind.ExitKeyword);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         return new ExitStatementSyntax(exit, semicolon);
     }
@@ -314,8 +306,8 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
             left = CreateArrayIndexExpression(leftValue, indexes);
         }
 
-        SyntaxToken equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.EqualsSign);
-        SyntaxToken semicolon = _syntaxFactory.Token(SyntaxTokenKind.Semicolon);
+        SyntaxToken equalsOperator = syntaxFactory.Token(SyntaxTokenKind.EqualsSign);
+        SyntaxToken semicolon = syntaxFactory.Token(SyntaxTokenKind.Semicolon);
 
         ExpressionSyntax right;
         switch (instruction.Type)
@@ -357,71 +349,71 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
                 break;
 
             case 250:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.PlusEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.PlusEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 251:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.MinusEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.MinusEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 252:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.MulEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.MulEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 253:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.DivEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.DivEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 254:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.ModEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.ModEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 260:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.AndEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.AndEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 261:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.OrEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.OrEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 262:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.XorEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.XorEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 270:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.LeftShiftEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.LeftShiftEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 271:
-                equalsOperator = _syntaxFactory.Token(SyntaxTokenKind.RightShiftEquals);
+                equalsOperator = syntaxFactory.Token(SyntaxTokenKind.RightShiftEquals);
                 right = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
                 break;
 
             case 511:
-                SyntaxToken intToken = _syntaxFactory.Token(SyntaxTokenKind.IntKeyword);
+                SyntaxToken intToken = syntaxFactory.Token(SyntaxTokenKind.IntKeyword);
                 var castValue1 = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
 
                 right = CreateTypeCastValueExpression(castValue1, intToken);
                 break;
 
             case 512:
-                SyntaxToken boolToken = _syntaxFactory.Token(SyntaxTokenKind.BoolKeyword);
+                SyntaxToken boolToken = syntaxFactory.Token(SyntaxTokenKind.BoolKeyword);
                 var castValue2 = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
 
                 right = CreateTypeCastValueExpression(castValue2, boolToken);
                 break;
 
             case 513:
-                SyntaxToken floatToken = _syntaxFactory.Token(SyntaxTokenKind.FloatKeyword);
+                SyntaxToken floatToken = syntaxFactory.Token(SyntaxTokenKind.FloatKeyword);
                 var castValue3 = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
 
                 right = CreateTypeCastValueExpression(castValue3, floatToken);
@@ -515,8 +507,8 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private TypeCastExpressionSyntax CreateTypeCastExpression(SyntaxToken type)
     {
-        SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
-        SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
+        SyntaxToken parenOpen = syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
+        SyntaxToken parenClose = syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new TypeCastExpressionSyntax(parenOpen, type, parenClose);
     }
@@ -524,7 +516,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
     private SwitchExpressionSyntax CreateSwitchExpression(ScriptInstruction instruction, ScriptFile script)
     {
         var switchValue = CreateValueExpression(script.Arguments[instruction.ArgumentIndex]);
-        SyntaxToken switchToken = _syntaxFactory.Token(SyntaxTokenKind.SwitchKeyword);
+        SyntaxToken switchToken = syntaxFactory.Token(SyntaxTokenKind.SwitchKeyword);
         var block = CreateSwitchBlockExpression(instruction, script);
 
         return new SwitchExpressionSyntax(switchValue, switchToken, block);
@@ -532,9 +524,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private SwitchBlockExpressionSyntax CreateSwitchBlockExpression(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken curlyOpen = _syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
+        SyntaxToken curlyOpen = syntaxFactory.Token(SyntaxTokenKind.CurlyOpen);
         var cases = CreateSwitchCaseExpressions(instruction, script);
-        SyntaxToken curlyClose = _syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
+        SyntaxToken curlyClose = syntaxFactory.Token(SyntaxTokenKind.CurlyClose);
 
         return new SwitchBlockExpressionSyntax(curlyOpen, cases, curlyClose);
     }
@@ -562,7 +554,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
     private LiteralSwitchCaseExpressionSyntax CreateLiteralSwitchCaseExpression(ScriptArgument literal, ScriptArgument argument)
     {
         var caseValue = CreateValueExpression(literal);
-        SyntaxToken arrowRight = _syntaxFactory.Token(SyntaxTokenKind.ArrowRight);
+        SyntaxToken arrowRight = syntaxFactory.Token(SyntaxTokenKind.ArrowRight);
         var value = CreateValueExpression(argument);
 
         return new LiteralSwitchCaseExpressionSyntax(caseValue, arrowRight, value);
@@ -570,8 +562,8 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private DefaultSwitchCaseExpressionSyntax CreateDefaultSwitchCaseExpression(ScriptArgument argument)
     {
-        SyntaxToken underscore = _syntaxFactory.Token(SyntaxTokenKind.Underscore);
-        SyntaxToken arrowRight = _syntaxFactory.Token(SyntaxTokenKind.ArrowRight);
+        SyntaxToken underscore = syntaxFactory.Token(SyntaxTokenKind.Underscore);
+        SyntaxToken arrowRight = syntaxFactory.Token(SyntaxTokenKind.ArrowRight);
         var value = CreateValueExpression(argument);
 
         return new DefaultSwitchCaseExpressionSyntax(underscore, arrowRight, value);
@@ -599,21 +591,21 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private UnaryExpressionSyntax CreateComplementUnaryExpression(ValueExpressionSyntax value)
     {
-        SyntaxToken operation = _syntaxFactory.Token(SyntaxTokenKind.Complement);
+        SyntaxToken operation = syntaxFactory.Token(SyntaxTokenKind.Complement);
 
         return new UnaryExpressionSyntax(operation, value);
     }
 
     private UnaryExpressionSyntax CreateNotUnaryExpression(ValueExpressionSyntax value)
     {
-        SyntaxToken operation = _syntaxFactory.Token(SyntaxTokenKind.NotKeyword);
+        SyntaxToken operation = syntaxFactory.Token(SyntaxTokenKind.NotKeyword);
 
         return new UnaryExpressionSyntax(operation, value);
     }
 
     private UnaryExpressionSyntax CreateNegateUnaryExpression(ValueExpressionSyntax value)
     {
-        SyntaxToken operation = _syntaxFactory.Token(SyntaxTokenKind.Minus);
+        SyntaxToken operation = syntaxFactory.Token(SyntaxTokenKind.Minus);
 
         return new UnaryExpressionSyntax(operation, value);
     }
@@ -627,11 +619,11 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         switch (instruction.Type)
         {
             case 121:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.AndKeyword);
+                operation = syntaxFactory.Token(SyntaxTokenKind.AndKeyword);
                 break;
 
             case 122:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.OrKeyword);
+                operation = syntaxFactory.Token(SyntaxTokenKind.OrKeyword);
                 break;
 
             default:
@@ -649,11 +641,11 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         switch (instruction.Type)
         {
             case 140:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Plus);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Plus);
                 return new BinaryExpressionSyntax(left, operation, CreateValueExpression(1, ScriptArgumentType.Int));
 
             case 141:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Minus);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Minus);
                 return new BinaryExpressionSyntax(left, operation, CreateValueExpression(1, ScriptArgumentType.Int));
         }
 
@@ -662,67 +654,67 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         switch (instruction.Type)
         {
             case 130:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Equals);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Equals);
                 break;
 
             case 131:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.NotEquals);
+                operation = syntaxFactory.Token(SyntaxTokenKind.NotEquals);
                 break;
 
             case 132:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.GreaterEquals);
+                operation = syntaxFactory.Token(SyntaxTokenKind.GreaterEquals);
                 break;
 
             case 133:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.SmallerEquals);
+                operation = syntaxFactory.Token(SyntaxTokenKind.SmallerEquals);
                 break;
 
             case 134:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Greater);
                 break;
 
             case 135:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Smaller);
                 break;
 
             case 150:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Plus);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Plus);
                 break;
 
             case 151:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Minus);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Minus);
                 break;
 
             case 152:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Mul);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Mul);
                 break;
 
             case 153:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Div);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Div);
                 break;
 
             case 154:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Mod);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Mod);
                 break;
 
             case 160:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.And);
+                operation = syntaxFactory.Token(SyntaxTokenKind.And);
                 break;
 
             case 161:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Or);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Or);
                 break;
 
             case 162:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.Xor);
+                operation = syntaxFactory.Token(SyntaxTokenKind.Xor);
                 break;
 
             case 170:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.LeftShift);
+                operation = syntaxFactory.Token(SyntaxTokenKind.LeftShift);
                 break;
 
             case 171:
-                operation = _syntaxFactory.Token(SyntaxTokenKind.RightShift);
+                operation = syntaxFactory.Token(SyntaxTokenKind.RightShift);
                 break;
 
             default:
@@ -734,7 +726,7 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private ArrayInstantiationExpressionSyntax CreateArrayInstantiationExpression(IList<ScriptArgument> indexes)
     {
-        SyntaxToken newToken = _syntaxFactory.Token(SyntaxTokenKind.NewKeyword);
+        SyntaxToken newToken = syntaxFactory.Token(SyntaxTokenKind.NewKeyword);
         var indexers = CreateArrayIndexerExpressions(indexes);
 
         return new ArrayInstantiationExpressionSyntax(newToken, indexers);
@@ -763,8 +755,8 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private ArrayIndexerExpressionSyntax CreateArrayIndexerExpression(ScriptArgument argument)
     {
-        SyntaxToken bracketOpen = _syntaxFactory.Token(SyntaxTokenKind.BracketOpen);
-        SyntaxToken bracketClose = _syntaxFactory.Token(SyntaxTokenKind.BracketClose);
+        SyntaxToken bracketOpen = syntaxFactory.Token(SyntaxTokenKind.BracketOpen);
+        SyntaxToken bracketClose = syntaxFactory.Token(SyntaxTokenKind.BracketClose);
 
         ValueExpressionSyntax value = CreateValueExpression(argument);
 
@@ -785,9 +777,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         if (IsMethodNameTransfer(instruction, script))
             return CreateName((string)script.Arguments[instruction.ArgumentIndex].Value);
 
-        if (_methodNameMapper.MapsInstructionType(instruction.Type))
+        if (methodNameMapper.MapsInstructionType(instruction.Type))
         {
-            string mappedMethod = _methodNameMapper.GetMethodName(instruction.Type);
+            string mappedMethod = methodNameMapper.GetMethodName(instruction.Type);
             return CreateName(mappedMethod);
         }
 
@@ -803,18 +795,18 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
             script.Arguments[instruction.ArgumentIndex].RawArgumentType < 0)
             return null;
 
-        SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+        SyntaxToken relSmaller = syntaxFactory.Token(SyntaxTokenKind.Smaller);
         var value = CreateNumericLiteralExpression(script.Arguments[instruction.ArgumentIndex].RawArgumentType);
-        SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+        SyntaxToken relBigger = syntaxFactory.Token(SyntaxTokenKind.Greater);
 
         return new MethodInvocationMetadataSyntax(relSmaller, value, relBigger);
     }
 
     private MethodInvocationParametersSyntax CreateMethodInvocationExpressionParameters(ScriptInstruction instruction, ScriptFile script)
     {
-        SyntaxToken parenOpen = _syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
+        SyntaxToken parenOpen = syntaxFactory.Token(SyntaxTokenKind.ParenOpen);
         var parameterList = CreateMethodInvocationParameterList(instruction, script);
-        SyntaxToken parenClose = _syntaxFactory.Token(SyntaxTokenKind.ParenClose);
+        SyntaxToken parenClose = syntaxFactory.Token(SyntaxTokenKind.ParenClose);
 
         return new MethodInvocationParametersSyntax(parenOpen, parameterList, parenClose);
     }
@@ -866,9 +858,9 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
 
     private ValueMetadataParametersSyntax CreateValueMetadataParameters(int rawArgumentType)
     {
-        SyntaxToken relSmaller = _syntaxFactory.Token(SyntaxTokenKind.Smaller);
+        SyntaxToken relSmaller = syntaxFactory.Token(SyntaxTokenKind.Smaller);
         var metadataParameter = CreateNumericLiteralExpression(rawArgumentType);
-        SyntaxToken relBigger = _syntaxFactory.Token(SyntaxTokenKind.Greater);
+        SyntaxToken relBigger = syntaxFactory.Token(SyntaxTokenKind.Greater);
 
         return new ValueMetadataParametersSyntax(relSmaller, metadataParameter, relBigger);
     }
@@ -924,76 +916,76 @@ internal class Xq32ScriptFileConverter : IXq32ScriptFileConverter
         // 0000+ ?
 
         if (variableSlot <= 999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("ctx", variableSlot));
+            return new VariableExpressionSyntax(syntaxFactory.Variable("ctx", variableSlot));
         if (variableSlot is >= 1000 and <= 1999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("temp", variableSlot - 1000));
+            return new VariableExpressionSyntax(syntaxFactory.Variable("temp", variableSlot - 1000));
         if (variableSlot is >= 2000 and <= 2999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("local", variableSlot - 2000));
+            return new VariableExpressionSyntax(syntaxFactory.Variable("local", variableSlot - 2000));
         if (variableSlot is >= 3000 and <= 3999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("param", variableSlot - 3000));
+            return new VariableExpressionSyntax(syntaxFactory.Variable("param", variableSlot - 3000));
         if (variableSlot is >= 4000 and <= 4999)
-            return new VariableExpressionSyntax(_syntaxFactory.Variable("global", variableSlot - 4000));
+            return new VariableExpressionSyntax(syntaxFactory.Variable("global", variableSlot - 4000));
 
         throw new InvalidOperationException($"Unknown variable slot {variableSlot}.");
     }
 
     private LiteralExpressionSyntax CreateUndefinedLiteralExpression()
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.UndefinedKeyword));
+        return new LiteralExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.UndefinedKeyword));
     }
 
     private LiteralExpressionSyntax CreateNumericLiteralExpression(uint value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.NumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.NumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateNumericLiteralExpression(int value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.NumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.NumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateHashStringExpression(string value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.HashStringLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.HashStringLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateHashNumericLiteral(uint value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.HashNumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.HashNumericLiteral(value));
     }
 
     private ExpressionSyntax CreateFloatingNumericLiteralExpression(float value)
     {
         if (value is float.PositiveInfinity)
-            return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.InfKeyword));
+            return new LiteralExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.InfKeyword));
 
         if (value is float.NegativeInfinity)
-            return new UnaryExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.Minus), CreateValueExpression(float.PositiveInfinity, ScriptArgumentType.Float));
+            return new UnaryExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.Minus), CreateValueExpression(float.PositiveInfinity, ScriptArgumentType.Float));
 
         if (value is float.NaN)
-            return new LiteralExpressionSyntax(_syntaxFactory.Token(SyntaxTokenKind.NanKeyword));
+            return new LiteralExpressionSyntax(syntaxFactory.Token(SyntaxTokenKind.NanKeyword));
 
-        return new LiteralExpressionSyntax(_syntaxFactory.FloatingNumericLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.FloatingNumericLiteral(value));
     }
 
     private LiteralExpressionSyntax CreateStringLiteralExpression(string value)
     {
-        return new LiteralExpressionSyntax(_syntaxFactory.StringLiteral(value));
+        return new LiteralExpressionSyntax(syntaxFactory.StringLiteral(value));
     }
 
     private NameSyntax CreateName(string name)
     {
         if (name.Contains('.'))
-            return new SimpleNameSyntax(_syntaxFactory.Identifier(name));
+            return new SimpleNameSyntax(syntaxFactory.Identifier(name));
 
         NameSyntax? result = null;
 
         foreach (string part in name.Split('.').Reverse())
         {
             if (result is null)
-                result = new SimpleNameSyntax(_syntaxFactory.Identifier(part));
+                result = new SimpleNameSyntax(syntaxFactory.Identifier(part));
             else
-                result = new QualifiedNameSyntax(new SimpleNameSyntax(_syntaxFactory.Identifier(part)), _syntaxFactory.Token(SyntaxTokenKind.Dot), result);
+                result = new QualifiedNameSyntax(new SimpleNameSyntax(syntaxFactory.Identifier(part)), syntaxFactory.Token(SyntaxTokenKind.Dot), result);
         }
 
         return result!;

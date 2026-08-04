@@ -7,21 +7,16 @@ using Logic.Domain.Level5.InternalContract.Script.Xq32;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
-internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>, IXq32ScriptReader
+internal class Xq32ScriptReader(
+    IXq32ScriptDecompressor decompressor,
+    IXq32ScriptEntrySizeProvider entrySizeProvider,
+    IXq32FunctionCache functionCache,
+    IScriptStringEncodingProvider encodingProvider)
+    : CompressedScriptReader<Xq32Function, Xq32Jump, Xq32Instruction, Xq32Argument>(decompressor, entrySizeProvider,
+        encodingProvider), IXq32ScriptReader
 {
-    private readonly IXq32FunctionCache _externalFunctionCache;
-
-    private readonly Dictionary<uint, HashSet<string>> _functionCache;
-    private readonly Dictionary<uint, HashSet<string>> _jumpCache;
-
-    public Xq32ScriptReader(IXq32ScriptDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider, IXq32FunctionCache functionCache, IScriptStringEncodingProvider encodingProvider)
-        : base(decompressor, entrySizeProvider, encodingProvider)
-    {
-        _externalFunctionCache = functionCache;
-
-        _functionCache = new Dictionary<uint, HashSet<string>>();
-        _jumpCache = new Dictionary<uint, HashSet<string>>();
-    }
+    private readonly Dictionary<uint, HashSet<string>> _functionCache = new();
+    private readonly Dictionary<uint, HashSet<string>> _jumpCache = new();
 
     public override IReadOnlyList<Xq32Function> ReadFunctions(Stream functionStream, int entryCount, PointerLength length)
     {
@@ -279,7 +274,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
                     {
                         value = names.First();
                     }
-                    else if (_externalFunctionCache.TryResolve(argument.value, out string? cachedName))
+                    else if (functionCache.TryResolve(argument.value, out string? cachedName))
                     {
                         value = cachedName;
                     }
@@ -291,7 +286,7 @@ internal class Xq32ScriptReader : CompressedScriptReader<Xq32Function, Xq32Jump,
                     case 20:
                         if (_functionCache.TryGetValue(argument.value, out HashSet<string>? names))
                             value = names.First();
-                        else if (_externalFunctionCache.TryResolve(argument.value, out string? cachedName))
+                        else if (functionCache.TryResolve(argument.value, out string? cachedName))
                             value = cachedName;
                         break;
 

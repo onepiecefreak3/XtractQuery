@@ -6,21 +6,14 @@ using Logic.Domain.Level5.InternalContract.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script;
 
-internal class ScriptEntrySizeProviderFactory : IScriptEntrySizeProviderFactory
+internal class ScriptEntrySizeProviderFactory(ICoCoKernel kernel) : IScriptEntrySizeProviderFactory
 {
-    private readonly ICoCoKernel _kernel;
-
-    public ScriptEntrySizeProviderFactory(ICoCoKernel kernel)
-    {
-        _kernel = kernel;
-    }
-
     public IScriptEntrySizeProvider Create(ScriptType type)
     {
         return type switch
         {
-            ScriptType.Xq32 => _kernel.Get<IXq32ScriptEntrySizeProvider>(),
-            ScriptType.Xseq => _kernel.Get<IXseqScriptEntrySizeProvider>(),
+            ScriptType.Xq32 => kernel.Get<IXq32ScriptEntrySizeProvider>(),
+            ScriptType.Xseq => kernel.Get<IXseqScriptEntrySizeProvider>(),
             _ => throw new InvalidOperationException($"Unknown script type {type}.")
         };
     }

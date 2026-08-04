@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace CrossCutting.Core.Contract.Configuration.Exceptions;
 
@@ -21,12 +20,6 @@ public class KeyOrCategoryNotFoundException : ConfigurationException
     }
 
     public KeyOrCategoryNotFoundException(string message, Exception inner) : base(message, inner)
-    {
-    }
-
-    private KeyOrCategoryNotFoundException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
     {
     }
 }

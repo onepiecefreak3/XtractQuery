@@ -1,30 +1,20 @@
 ﻿using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
 using Logic.Domain.Level5.InternalContract.Checksum;
-using Logic.Domain.Level5.InternalContract.Script.Xq32;
-using Logic.Domain.Level5.InternalContract.Script.Xseq;
 using Logic.Domain.Level5.Script.Xq32;
 using Logic.Domain.Level5.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script;
 
-internal class StringTableFactory : IStringTableFactory
+internal class StringTableFactory(IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
+    : IStringTableFactory
 {
-    private readonly IChecksumFactory _checksumFactory;
-    private readonly IScriptStringEncodingProvider _encodingProvider;
-
-    public StringTableFactory(IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
-    {
-        _checksumFactory = checksumFactory;
-        _encodingProvider = encodingProvider;
-    }
-
     public IStringTable Create(Stream input, ScriptType type)
     {
         return type switch
         {
-            ScriptType.Xq32 => new Xq32StringTable(input, _checksumFactory, _encodingProvider),
-            ScriptType.Xseq => new XseqStringTable(input, _checksumFactory, _encodingProvider),
+            ScriptType.Xq32 => new Xq32StringTable(input, checksumFactory, encodingProvider),
+            ScriptType.Xseq => new XseqStringTable(input, checksumFactory, encodingProvider),
             _ => throw new InvalidOperationException($"Unknown script type {type}.")
         };
     }
@@ -33,8 +23,8 @@ internal class StringTableFactory : IStringTableFactory
     {
         return type switch
         {
-            ScriptType.Xq32 => new Xq32StringTable(_checksumFactory, _encodingProvider),
-            ScriptType.Xseq => new XseqStringTable(_checksumFactory, _encodingProvider),
+            ScriptType.Xq32 => new Xq32StringTable(checksumFactory, encodingProvider),
+            ScriptType.Xseq => new XseqStringTable(checksumFactory, encodingProvider),
             _ => throw new InvalidOperationException($"Unknown script type {type}.")
         };
     }

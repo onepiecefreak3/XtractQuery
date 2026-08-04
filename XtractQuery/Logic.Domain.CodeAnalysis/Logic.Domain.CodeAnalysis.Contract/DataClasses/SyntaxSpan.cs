@@ -1,15 +1,9 @@
 ﻿namespace Logic.Domain.CodeAnalysis.Contract.DataClasses;
 
-public readonly struct SyntaxSpan
+public readonly struct SyntaxSpan(int position, int endPosition)
 {
-    public int Position { get; }
-    public int EndPosition { get; }
-
-    public SyntaxSpan(int position, int endPosition)
-    {
-        Position = position;
-        EndPosition = endPosition;
-    }
+    public int Position { get; } = position;
+    public int EndPosition { get; } = endPosition;
 
     public override string ToString()
     {

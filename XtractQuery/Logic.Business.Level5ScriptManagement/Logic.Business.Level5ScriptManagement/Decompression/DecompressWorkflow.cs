@@ -17,9 +17,9 @@ class DecompressWorkflow(
     {
         bool isDirectory = Directory.Exists(config.InputPath);
         if (isDirectory)
-            DecompressDirectory(config.InputPath);
+            DecompressDirectory(config.InputPath!);
         else
-            DecompressFile(config.InputPath);
+            DecompressFile(config.InputPath!);
     }
 
     private void DecompressDirectory(string dirPath)

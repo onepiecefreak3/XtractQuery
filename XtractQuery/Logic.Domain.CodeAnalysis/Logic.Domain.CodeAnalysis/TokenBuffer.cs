@@ -2,22 +2,15 @@
 
 namespace Logic.Domain.CodeAnalysis;
 
-internal class TokenBuffer<TToken> : Buffer<TToken>
+internal class TokenBuffer<TToken>(ILexer<TToken> lexer) : Buffer<TToken>
     where TToken : struct
 {
-    private readonly ILexer<TToken> _lexer;
-
     public override bool IsEndOfInput { get; protected set; }
-
-    public TokenBuffer(ILexer<TToken> lexer)
-    {
-        _lexer = lexer;
-    }
 
     protected override TToken ReadInternal()
     {
-        TToken value = _lexer.Read();
-        IsEndOfInput = _lexer.IsEndOfInput;
+        TToken value = lexer.Read();
+        IsEndOfInput = lexer.IsEndOfInput;
 
         return value;
     }

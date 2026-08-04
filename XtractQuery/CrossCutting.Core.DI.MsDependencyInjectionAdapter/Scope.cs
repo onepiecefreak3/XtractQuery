@@ -4,16 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrossCutting.Core.DI.MsDependencyInjectionAdapter;
 
-internal sealed class Scope : IScope
+internal sealed class Scope(IServiceScope scope) : IScope
 {
-    private readonly IServiceScope _scope;
+    private readonly IServiceScope _scope = scope ?? throw new ArgumentNullException(nameof(scope));
 
     public event EventHandler<ResolveRequestEventArgs>? ResolveRequest;
-
-    public Scope(IServiceScope scope)
-    {
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
-    }
 
     public TContract Get<TContract>()
         where TContract : class

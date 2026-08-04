@@ -24,7 +24,7 @@ public sealed class Configurator : IConfigurator
         return _categories.Any(c => c.Name == category && c.Entries.Any(e => e.Key == key));
     }
 
-    public T Get<T>(string category, string key, T defaultValue = default!)
+    public T? Get<T>(string category, string key, T? defaultValue = default!)
     {
         if (string.IsNullOrWhiteSpace(category))
             throw new ArgumentNullException(nameof(category));

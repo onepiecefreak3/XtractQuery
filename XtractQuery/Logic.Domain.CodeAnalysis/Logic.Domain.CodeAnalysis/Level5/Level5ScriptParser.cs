@@ -7,17 +7,9 @@ using Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 
-internal class Level5ScriptParser : ILevel5ScriptParser
+internal class Level5ScriptParser(ITokenFactory<Level5SyntaxToken> scriptFactory, ILevel5SyntaxFactory syntaxFactory)
+    : ILevel5ScriptParser
 {
-    private readonly ITokenFactory<Level5SyntaxToken> _scriptFactory;
-    private readonly ILevel5SyntaxFactory _syntaxFactory;
-
-    public Level5ScriptParser(ITokenFactory<Level5SyntaxToken> scriptFactory, ILevel5SyntaxFactory syntaxFactory)
-    {
-        _scriptFactory = scriptFactory;
-        _syntaxFactory = syntaxFactory;
-    }
-
     public CodeUnitSyntax ParseCodeUnit(string text)
     {
         IBuffer<Level5SyntaxToken> buffer = CreateTokenBuffer(text);
@@ -1654,7 +1646,7 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
         SyntaxTokenTrivia? trailingTrivia = ReadTrivia(buffer);
 
-        return _syntaxFactory.Create(content.Text, (int)expectedKind, leadingTrivia, trailingTrivia);
+        return syntaxFactory.Create(content.Text, (int)expectedKind, leadingTrivia, trailingTrivia);
     }
 
     private SyntaxTokenTrivia? ReadTrivia(IBuffer<Level5SyntaxToken> buffer)
@@ -1720,8 +1712,8 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
     private IBuffer<Level5SyntaxToken> CreateTokenBuffer(string text)
     {
-        ILexer<Level5SyntaxToken> lexer = _scriptFactory.CreateLexer(text);
-        return _scriptFactory.CreateTokenBuffer(lexer);
+        ILexer<Level5SyntaxToken> lexer = scriptFactory.CreateLexer(text);
+        return scriptFactory.CreateTokenBuffer(lexer);
     }
 
     private Exception CreateException(IBuffer<Level5SyntaxToken> buffer, string message, params SyntaxTokenKind[] expected)

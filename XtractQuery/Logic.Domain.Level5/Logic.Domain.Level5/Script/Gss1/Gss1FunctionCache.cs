@@ -5,16 +5,11 @@ using Logic.Domain.Level5.Contract.Script.Gss1;
 
 namespace Logic.Domain.Level5.Script.Gss1;
 
-internal class Gss1FunctionCache : IGss1FunctionCache
+internal class Gss1FunctionCache(IChecksumFactory checksums) : IGss1FunctionCache
 {
-    private readonly Checksum<ushort> _hash;
+    private readonly Checksum<ushort> _hash = checksums.CreateCrc16();
 
     private readonly Dictionary<ushort, string> _lookup = [];
-
-    public Gss1FunctionCache(IChecksumFactory checksums)
-    {
-        _hash = checksums.CreateCrc16();
-    }
 
     public bool TryAdd(string scriptName, string name)
     {

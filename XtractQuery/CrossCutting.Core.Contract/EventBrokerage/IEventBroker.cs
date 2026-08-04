@@ -1,10 +1,7 @@
 ﻿using System;
-using CrossCutting.Core.Contract.Aspects;
-using CrossCutting.Core.Contract.EventBrokerage.Exceptions;
 
 namespace CrossCutting.Core.Contract.EventBrokerage;
 
-[MapException(typeof(EventBrokerageException))]
 public interface IEventBroker
 {
     void Subscribe<TMessage>(Func<TMessage, bool> filter, Action<TMessage> handler);

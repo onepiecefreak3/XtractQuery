@@ -2,5 +2,5 @@
 
 public class GdsScriptFile
 {
-    public GdsScriptInstruction[] Instructions { get; set; }
+    public required GdsScriptInstruction[] Instructions { get; set; }
 }

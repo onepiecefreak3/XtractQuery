@@ -9,15 +9,8 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal partial class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
+internal partial class Gsd1CodeUnitConverter(IMethodNameMapper methodNameMapper) : IGsd1CodeUnitConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-
-    public Gsd1CodeUnitConverter(IMethodNameMapper methodNameMapper)
-    {
-        _methodNameMapper = methodNameMapper;
-    }
-
     public Gsd1ScriptFile CreateScriptFile(CodeUnitSyntax tree)
     {
         var result = new Gsd1ScriptFile
@@ -75,8 +68,8 @@ internal partial class Gsd1CodeUnitConverter : IGsd1CodeUnitConverter
         if (SubPattern().IsMatch(composedName))
             return GetNumberFromStringEnd(composedName);
 
-        if (_methodNameMapper.MapsMethodName(composedName))
-            return _methodNameMapper.GetInstructionType(composedName);
+        if (methodNameMapper.MapsMethodName(composedName))
+            return methodNameMapper.GetInstructionType(composedName);
 
         throw CreateException("Could not determine instruction type.", name.Location);
     }

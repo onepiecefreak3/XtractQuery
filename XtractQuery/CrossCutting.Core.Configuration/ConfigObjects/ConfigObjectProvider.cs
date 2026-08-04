@@ -3,16 +3,11 @@ using CrossCutting.Core.Contract.Configuration.Exceptions;
 
 namespace CrossCutting.Core.Configuration.ConfigObjects;
 
-public class ConfigObjectProvider : IConfigObjectProvider
+public class ConfigObjectProvider(IConfigurator configurator) : IConfigObjectProvider
 {
-    private readonly IConfigurator _configurator;
+    private readonly IConfigurator _configurator = configurator ?? throw new ArgumentNullException(nameof(configurator));
     private readonly Dictionary<Type, object> _configObjects = new();
     private readonly object _sync = new();
-
-    public ConfigObjectProvider(IConfigurator configurator)
-    {
-        _configurator = configurator ?? throw new ArgumentNullException(nameof(configurator));
-    }
 
     public TConfig Get<TConfig>()
     {

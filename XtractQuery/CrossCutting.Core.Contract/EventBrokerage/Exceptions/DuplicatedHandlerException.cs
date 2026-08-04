@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace CrossCutting.Core.Contract.EventBrokerage.Exceptions;
 
@@ -15,12 +14,6 @@ public class DuplicatedHandlerException : EventBrokerageException
     }
 
     public DuplicatedHandlerException(string message, Exception inner) : base(message, inner)
-    {
-    }
-
-    private DuplicatedHandlerException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
     {
     }
 }

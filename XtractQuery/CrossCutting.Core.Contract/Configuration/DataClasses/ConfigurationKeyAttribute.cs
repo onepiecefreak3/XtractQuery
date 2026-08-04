@@ -7,19 +7,13 @@ namespace CrossCutting.Core.Contract.Configuration.DataClasses;
 /// Only category <c>CommandLine</c> is supported.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class ConfigurationKeyAttribute : Attribute
+public sealed class ConfigurationKeyAttribute(string category, string[] keys) : Attribute
 {
-    public string Category { get; }
-    public string[] Keys { get; }
+    public string Category { get; } = category;
+    public string[] Keys { get; } = keys;
 
     public ConfigurationKeyAttribute(string category, string key)
         : this(category, [key])
     {
-    }
-
-    public ConfigurationKeyAttribute(string category, string[] keys)
-    {
-        Category = category;
-        Keys = keys;
     }
 }

@@ -9,15 +9,8 @@ using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion;
 
-internal partial class XscrCodeUnitConverter : IXscrCodeUnitConverter
+internal partial class XscrCodeUnitConverter(IMethodNameMapper methodNameMapper) : IXscrCodeUnitConverter
 {
-    private readonly IMethodNameMapper _methodNameMapper;
-
-    public XscrCodeUnitConverter(IMethodNameMapper methodNameMapper)
-    {
-        _methodNameMapper = methodNameMapper;
-    }
-
     public XscrScriptFile CreateScriptFile(CodeUnitSyntax tree)
     {
         var result = new XscrScriptFile
@@ -75,8 +68,8 @@ internal partial class XscrCodeUnitConverter : IXscrCodeUnitConverter
         if (SubPattern().IsMatch(composedName))
             return GetNumberFromStringEnd(composedName);
 
-        if (_methodNameMapper.MapsMethodName(composedName))
-            return _methodNameMapper.GetInstructionType(composedName);
+        if (methodNameMapper.MapsMethodName(composedName))
+            return methodNameMapper.GetInstructionType(composedName);
 
         throw CreateException("Could not determine instruction type.", name.Location);
     }

@@ -2,5 +2,5 @@
 
 public class GdsScriptJump
 {
-    public string Label { get; set; }
+    public required string Label { get; set; }
 }

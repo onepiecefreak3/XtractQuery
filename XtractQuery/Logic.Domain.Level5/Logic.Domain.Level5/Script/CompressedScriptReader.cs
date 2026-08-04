@@ -5,22 +5,15 @@ using Logic.Domain.Level5.Contract.Script;
 
 namespace Logic.Domain.Level5.Script;
 
-internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, TArgument> : ICompressedScriptReader
+internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, TArgument>(
+    IScriptDecompressor decompressor,
+    IScriptEntrySizeProvider entrySizeProvider,
+    IScriptStringEncodingProvider encodingProvider)
+    : ICompressedScriptReader
 {
-    private readonly IScriptDecompressor _decompressor;
-    private readonly IScriptEntrySizeProvider _entrySizeProvider;
-    private readonly IScriptStringEncodingProvider _encodingProvider;
-
-    public CompressedScriptReader(IScriptDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider, IScriptStringEncodingProvider encodingProvider)
-    {
-        _decompressor = decompressor;
-        _entrySizeProvider = entrySizeProvider;
-        _encodingProvider = encodingProvider;
-    }
-
     public ScriptFile Read(Stream input)
     {
-        ScriptContainer container = _decompressor.Decompress(input);
+        ScriptContainer container = decompressor.Decompress(input);
 
         return Read(container);
     }
@@ -48,7 +41,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptFunction> ReadFunctions(CompressedScriptTable functionTable, CompressedScriptStringTable? stringTable)
     {
-        if (!TryDetectTablePointerLength(functionTable, _entrySizeProvider.GetFunctionEntrySize, out PointerLength? length))
+        if (!TryDetectTablePointerLength(functionTable, entrySizeProvider.GetFunctionEntrySize, out PointerLength? length))
             throw new InvalidOperationException("Could not detect pointer length.");
 
         return ReadFunctions(functionTable, stringTable, length!.Value);
@@ -56,7 +49,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptJump> ReadJumps(CompressedScriptTable jumpTable, CompressedScriptStringTable? stringTable)
     {
-        if (!TryDetectTablePointerLength(jumpTable, _entrySizeProvider.GetJumpEntrySize, out PointerLength? length))
+        if (!TryDetectTablePointerLength(jumpTable, entrySizeProvider.GetJumpEntrySize, out PointerLength? length))
             throw new InvalidOperationException("Could not detect pointer length.");
 
         return ReadJumps(jumpTable, stringTable, length!.Value);
@@ -64,7 +57,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptInstruction> ReadInstructions(CompressedScriptTable instructionTable)
     {
-        if (!TryDetectTablePointerLength(instructionTable, _entrySizeProvider.GetInstructionEntrySize, out PointerLength? length))
+        if (!TryDetectTablePointerLength(instructionTable, entrySizeProvider.GetInstructionEntrySize, out PointerLength? length))
             throw new InvalidOperationException("Could not detect pointer length.");
 
         return ReadInstructions(instructionTable, length!.Value);
@@ -72,7 +65,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptArgument> ReadArguments(CompressedScriptTable argumentTable, CompressedScriptTable instructionTable, CompressedScriptStringTable? stringTable)
     {
-        if (!TryDetectTablePointerLength(argumentTable, _entrySizeProvider.GetArgumentEntrySize, out PointerLength? length))
+        if (!TryDetectTablePointerLength(argumentTable, entrySizeProvider.GetArgumentEntrySize, out PointerLength? length))
             throw new InvalidOperationException("Could not detect pointer length.");
 
         return ReadArguments(argumentTable, instructionTable, stringTable, length!.Value);
@@ -87,7 +80,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
     {
         ClearFunctionCache();
 
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, encodingProvider.GetEncoding(), true);
 
         var result = new ScriptFunction[functions.Count];
 
@@ -102,7 +95,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
     {
         ClearJumpCache();
 
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, encodingProvider.GetEncoding(), true);
 
         var result = new ScriptJump[jumps.Count];
 
@@ -126,7 +119,7 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
 
     public IList<ScriptArgument> CreateArguments(IReadOnlyList<TArgument> arguments, IReadOnlyList<ScriptInstruction> instructions, CompressedScriptStringTable? stringTable = null)
     {
-        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, _encodingProvider.GetEncoding(), true);
+        using BinaryReaderX? stringReader = stringTable == null ? null : new BinaryReaderX(stringTable.Stream, encodingProvider.GetEncoding(), true);
 
         var result = new ScriptArgument[arguments.Count];
 
@@ -200,19 +193,19 @@ internal abstract class CompressedScriptReader<TFunction, TJump, TInstruction, T
         {
             var localLength = (PointerLength)i;
 
-            int entrySize = _entrySizeProvider.GetFunctionEntrySize(localLength);
+            int entrySize = entrySizeProvider.GetFunctionEntrySize(localLength);
             if (container.FunctionTable.EntryCount * entrySize != container.FunctionTable.Stream.Length)
                 continue;
 
-            entrySize = _entrySizeProvider.GetJumpEntrySize(localLength);
+            entrySize = entrySizeProvider.GetJumpEntrySize(localLength);
             if (container.JumpTable.EntryCount * entrySize != container.JumpTable.Stream.Length)
                 continue;
 
-            entrySize = _entrySizeProvider.GetInstructionEntrySize(localLength);
+            entrySize = entrySizeProvider.GetInstructionEntrySize(localLength);
             if (container.InstructionTable.EntryCount * entrySize != container.InstructionTable.Stream.Length)
                 continue;
 
-            entrySize = _entrySizeProvider.GetArgumentEntrySize(localLength);
+            entrySize = entrySizeProvider.GetArgumentEntrySize(localLength);
             if (container.ArgumentTable.EntryCount * entrySize != container.ArgumentTable.Stream.Length)
                 continue;
 

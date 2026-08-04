@@ -72,7 +72,7 @@ jobs:
           ls -lah "$PUBLISH_DIR" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: XtractQuery-${{ matrix.rid }}
           path: ${{ env.PUBLISH_DIR }}

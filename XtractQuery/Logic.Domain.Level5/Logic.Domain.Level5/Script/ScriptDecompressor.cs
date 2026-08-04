@@ -7,17 +7,11 @@ using CompressionType = Logic.Domain.Level5.Contract.Enums.Compression.Compressi
 
 namespace Logic.Domain.Level5.Script;
 
-internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
+internal abstract class ScriptDecompressor<THeader>(
+    IDecompressor decompressor,
+    IScriptEntrySizeProvider entrySizeProvider)
+    : IScriptDecompressor
 {
-    private readonly IDecompressor _decompressor;
-    private readonly IScriptEntrySizeProvider _entrySizeProvider;
-
-    public ScriptDecompressor(IDecompressor decompressor, IScriptEntrySizeProvider entrySizeProvider)
-    {
-        _decompressor = decompressor;
-        _entrySizeProvider = entrySizeProvider;
-    }
-
     public ScriptContainer Decompress(Stream input)
     {
         THeader header = ReadHeader(input);
@@ -130,19 +124,19 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
     {
         for (var i = 0; i < 2; i++)
         {
-            int entrySize = _entrySizeProvider.GetFunctionEntrySize((PointerLength)i);
+            int entrySize = entrySizeProvider.GetFunctionEntrySize((PointerLength)i);
             if (functionTable.count * entrySize != jumpTable.offset - functionTable.offset)
                 continue;
 
-            entrySize = _entrySizeProvider.GetJumpEntrySize((PointerLength)i);
+            entrySize = entrySizeProvider.GetJumpEntrySize((PointerLength)i);
             if (jumpTable.count * entrySize != instructionTable.offset - jumpTable.offset)
                 continue;
 
-            entrySize = _entrySizeProvider.GetInstructionEntrySize((PointerLength)i);
+            entrySize = entrySizeProvider.GetInstructionEntrySize((PointerLength)i);
             if (instructionTable.count * entrySize != argumentTable.offset - instructionTable.offset)
                 continue;
 
-            entrySize = _entrySizeProvider.GetArgumentEntrySize((PointerLength)i);
+            entrySize = entrySizeProvider.GetArgumentEntrySize((PointerLength)i);
             if (argumentTable.count * entrySize != stringOffset - argumentTable.offset)
                 continue;
 
@@ -204,8 +198,8 @@ internal abstract class ScriptDecompressor<THeader> : IScriptDecompressor
 
     private Stream Decompress(Stream input, int offset, out CompressionType compressionType)
     {
-        compressionType = _decompressor.PeekCompressionType(input, offset);
-        return _decompressor.Decompress(input, offset);
+        compressionType = decompressor.PeekCompressionType(input, offset);
+        return decompressor.Decompress(input, offset);
     }
 
     protected abstract THeader ReadHeader(Stream input);

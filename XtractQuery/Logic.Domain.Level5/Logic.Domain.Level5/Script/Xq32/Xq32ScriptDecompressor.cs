@@ -7,13 +7,9 @@ using Logic.Domain.Level5.InternalContract.Script.Xq32;
 
 namespace Logic.Domain.Level5.Script.Xq32;
 
-internal class Xq32ScriptDecompressor : ScriptDecompressor<Xq32Header>, IXq32ScriptDecompressor
+internal class Xq32ScriptDecompressor(IDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider)
+    : ScriptDecompressor<Xq32Header>(decompressor, entrySizeProvider), IXq32ScriptDecompressor
 {
-    public Xq32ScriptDecompressor(IDecompressor decompressor, IXq32ScriptEntrySizeProvider entrySizeProvider)
-        : base(decompressor, entrySizeProvider)
-    {
-    }
-
     protected override int GetGlobalVariableCount(Xq32Header header)
     {
         return header.globalVariableCount;

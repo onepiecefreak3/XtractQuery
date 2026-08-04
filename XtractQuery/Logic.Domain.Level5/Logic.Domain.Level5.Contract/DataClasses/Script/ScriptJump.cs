@@ -2,7 +2,7 @@
 
 public class ScriptJump
 {
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     public int InstructionIndex { get; set; }
 }

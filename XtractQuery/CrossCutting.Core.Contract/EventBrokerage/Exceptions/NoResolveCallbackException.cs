@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace CrossCutting.Core.Contract.EventBrokerage.Exceptions;
 
@@ -15,12 +14,6 @@ public class NoResolveCallbackException : EventBrokerageException
     }
 
     public NoResolveCallbackException(string message, Exception inner) : base(message, inner)
-    {
-    }
-
-    private NoResolveCallbackException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context)
     {
     }
 }

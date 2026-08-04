@@ -6,22 +6,15 @@ using Logic.Domain.CodeAnalysis.DataClasses.Level5;
 
 namespace Logic.Domain.CodeAnalysis.Level5;
 
-internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
+internal class Level5ScriptLexer(IBuffer<int> buffer) : ILexer<Level5SyntaxToken>
 {
-    private readonly StringBuilder _sb;
-    private readonly IBuffer<int> _buffer;
+    private readonly StringBuilder _sb = new();
 
-    public bool IsEndOfInput => _buffer.IsEndOfInput;
+    public bool IsEndOfInput => buffer.IsEndOfInput;
 
     private int Line { get; set; } = 1;
     private int Column { get; set; } = 1;
     private int Position { get; set; }
-
-    public Level5ScriptLexer(IBuffer<int> buffer)
-    {
-        _sb = new StringBuilder();
-        _buffer = buffer;
-    }
 
     public Level5SyntaxToken Read()
     {
@@ -327,7 +320,7 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
             _sb.Append(ReadChar());
         }
 
-        if (_buffer.IsEndOfInput)
+        if (buffer.IsEndOfInput)
             throw CreateException("Invalid string literal end.", "\"");
 
         _sb.Append(ReadChar());
@@ -673,7 +666,7 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
     {
         character = default;
 
-        int result = _buffer.Peek(position);
+        int result = buffer.Peek(position);
         if (result < 0)
             return false;
 
@@ -683,7 +676,7 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
 
     private char ReadChar()
     {
-        int result = _buffer.Read();
+        int result = buffer.Read();
         if (result < 0)
             throw CreateException("Could not read character.");
 
