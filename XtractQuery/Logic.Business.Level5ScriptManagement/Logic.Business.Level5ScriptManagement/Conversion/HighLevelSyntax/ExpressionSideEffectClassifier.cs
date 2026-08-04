@@ -45,6 +45,15 @@ internal static class ExpressionSideEffectClassifier
                     return true;
                 return whileStatement.Body != null && whileStatement.Body.Statements.Any(IsEffectful);
 
+            case ForStatementSyntax forStatement:
+                if (forStatement.Initializer != null && IsEffectful(forStatement.Initializer))
+                    return true;
+                if (IsEffectful(forStatement.Condition))
+                    return true;
+                if (forStatement.Iterator != null && IsEffectful(forStatement.Iterator))
+                    return true;
+                return forStatement.Body.Statements.Any(IsEffectful);
+
             case DoWhileStatementSyntax doWhile:
                 return IsEffectful(doWhile.Condition) || doWhile.Body.Statements.Any(IsEffectful);
 

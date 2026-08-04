@@ -2,36 +2,52 @@
 
 public class CodeUnitSyntax : SyntaxNode
 {
-    public IReadOnlyList<MethodDeclarationSyntax> MethodDeclarations { get; private set; }
+    public IReadOnlyList<CodeUnitMemberSyntax> Members { get; private set; }
 
-    public override SyntaxLocation Location => MethodDeclarations.Count > 0 ? MethodDeclarations[0].Location : new(1, 1);
-    public override SyntaxSpan Span => new(MethodDeclarations.Count > 0 ? MethodDeclarations[0].Span.Position : 0,
-        MethodDeclarations.Count > 0 ? MethodDeclarations[^1].Span.EndPosition : 0);
+    public IReadOnlyList<MethodDeclarationSyntax> MethodDeclarations =>
+        Members.OfType<MethodDeclarationSyntax>().ToList();
 
-    public CodeUnitSyntax(IReadOnlyList<MethodDeclarationSyntax>? methodDeclarations)
+    public IReadOnlyList<GlobalDeclarationStatementSyntax> GlobalDeclarations =>
+        Members.OfType<GlobalDeclarationStatementSyntax>().ToList();
+
+    public override SyntaxLocation Location => Members.Count > 0 ? Members[0].Location : new(1, 1);
+    public override SyntaxSpan Span => new(Members.Count > 0 ? Members[0].Span.Position : 0,
+        Members.Count > 0 ? Members[^1].Span.EndPosition : 0);
+
+    public CodeUnitSyntax(IReadOnlyList<CodeUnitMemberSyntax>? members)
     {
-        MethodDeclarations = methodDeclarations ?? new List<MethodDeclarationSyntax>();
+        Members = members ?? new List<CodeUnitMemberSyntax>();
 
-        foreach (MethodDeclarationSyntax methodDeclaration in MethodDeclarations)
-            methodDeclaration.Parent = this;
+        foreach (CodeUnitMemberSyntax member in Members)
+            member.Parent = this;
 
         Root.Update();
     }
 
-    public void SetMethodDeclarations(IReadOnlyList<MethodDeclarationSyntax>? methodDeclarations, bool updatePosition = true)
+    public CodeUnitSyntax(IReadOnlyList<MethodDeclarationSyntax>? methodDeclarations)
+        : this(methodDeclarations?.Cast<CodeUnitMemberSyntax>().ToList())
     {
-        MethodDeclarations = methodDeclarations ?? new List<MethodDeclarationSyntax>();
-        foreach (MethodDeclarationSyntax methodDeclaration in MethodDeclarations)
-            methodDeclaration.Parent = this;
+    }
+
+    public void SetMembers(IReadOnlyList<CodeUnitMemberSyntax>? members, bool updatePosition = true)
+    {
+        Members = members ?? new List<CodeUnitMemberSyntax>();
+        foreach (CodeUnitMemberSyntax member in Members)
+            member.Parent = this;
 
         if (updatePosition)
             Root.Update();
     }
 
+    public void SetMethodDeclarations(IReadOnlyList<MethodDeclarationSyntax>? methodDeclarations, bool updatePosition = true)
+    {
+        SetMembers(methodDeclarations?.Cast<CodeUnitMemberSyntax>().ToList(), updatePosition);
+    }
+
     internal override int UpdatePosition(int position, ref int line, ref int column)
     {
-        foreach (MethodDeclarationSyntax methodDeclaration in MethodDeclarations)
-            position = methodDeclaration.UpdatePosition(position, ref line, ref column);
+        foreach (CodeUnitMemberSyntax member in Members)
+            position = member.UpdatePosition(position, ref line, ref column);
 
         return position;
     }

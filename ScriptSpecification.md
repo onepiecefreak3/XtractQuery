@@ -53,6 +53,29 @@ while (true) {  // while (false) is not valid syntax
 while (not sub5610($param0)); // Self-looping while for engine functions that might return a different value over time
 ```
 
+### For
+
+A high-level syntax that allows conditional looping logic with a counter.
+
+Reference:
+```
+for ($local0 = 0; $local0 < 10; $local0++) {
+  // ...
+}
+```
+```
+for ($local0 = 0; $local10 < 5; $local0++) {
+  // ...
+}
+```
+```
+$local0 = 0;
+// ...
+for (; $local0 < 10; $local0++) {
+  // ...
+}
+```
+
 ## Chain Assignments
 
 A high-level syntax that allows setting multiple variables to the same value in one statement.
@@ -79,8 +102,8 @@ Combining multiple operations in the same expression follows this operator prece
 | x&y |
 | x^y |
 | x\|y |
-| x and y, x && y |
-| x or y, x \|\| y |
+| x and y, x&&y |
+| x or y, x\|\|y |
 
 Reference:
 ```
@@ -122,9 +145,9 @@ All literal values and variables can be suffixed by ``<[type]>`` to explicitly s
 ## Variable notation
 
 Variables have a fixed notation to declare their placement on the stack. (see "Variables" in the format specification)<br>
-All variables start with the prefix '$', followed by a fixed term and number from 0 to 999 for placement on the stack.
+All variables start with the prefix `$`, followed by a fixed term and number from 0 to 999 for placement on the stack.
 
-Additionally, as of version 3.0.4, an optional variable name can be appended after the number portion of the variable.<br>
+Additionally, an optional variable name can be appended after the number portion of the variable.<br>
 Everything after the number will be ignored for compilation and follows no specific syntax other than it has to append to the number portion and shouldn't start with a number itself.
 
 | Notation | Description |
@@ -134,6 +157,22 @@ Everything after the number will be ignored for compilation and follows no speci
 | ```$local0``` | Holds values only in the function it was set in.<br>Equivalent to a common variable in other programming languages. |
 | ```$param0``` | Holds input parameters into the function. |
 | ```$global0``` | Holds values through multiple functions only in the script it was set in. |
+
+### Auto-assignment
+
+When writing your own code, variables do not have to follow the fixed term and number notation.<br>
+As long as an identifier is prefixed with `$`, it will be a variable and auto-assigned a stack and slot number automatically at compilation.
+
+Reference:
+```
+global $bossHp; // Declares a global stack variable; will be auto-assigned a global stack slot
+
+DecreaseHp($damage) // Input parameters will be auto-assigned a parameter stack slot
+{
+    $totalDamage = $damage * 2; // Local variable will be auto-assigned a local variable stack slot
+    $bossHp -= $totalDamage;
+}
+```
 
 ## Instructions
 

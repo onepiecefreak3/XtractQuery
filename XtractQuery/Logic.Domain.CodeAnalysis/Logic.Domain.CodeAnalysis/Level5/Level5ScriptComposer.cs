@@ -145,8 +145,31 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
 
     private void ComposeCodeUnit(CodeUnitSyntax codeUnit, StringBuilder sb)
     {
-        foreach (MethodDeclarationSyntax methodDeclaration in codeUnit.MethodDeclarations)
-            ComposeMethodDeclaration(methodDeclaration, sb);
+        foreach (CodeUnitMemberSyntax member in codeUnit.Members)
+            ComposeCodeUnitMember(member, sb);
+    }
+
+    private void ComposeCodeUnitMember(CodeUnitMemberSyntax member, StringBuilder sb)
+    {
+        switch (member)
+        {
+            case MethodDeclarationSyntax methodDeclaration:
+                ComposeMethodDeclaration(methodDeclaration, sb);
+                break;
+
+            case GlobalDeclarationStatementSyntax globalDeclaration:
+                ComposeGlobalDeclarationStatement(globalDeclaration, sb);
+                break;
+        }
+    }
+
+    private void ComposeGlobalDeclarationStatement(
+        GlobalDeclarationStatementSyntax globalDeclaration,
+        StringBuilder sb)
+    {
+        ComposeSyntaxToken(globalDeclaration.GlobalKeyword, sb);
+        ComposeVariableExpressions(globalDeclaration.Variables, sb);
+        ComposeSyntaxToken(globalDeclaration.Semicolon, sb);
     }
 
     private void ComposeMethodDeclaration(MethodDeclarationSyntax methodDeclaration, StringBuilder sb)
@@ -247,6 +270,10 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
                 ComposeWhileStatement(whileStatement, sb);
                 break;
 
+            case ForStatementSyntax forStatement:
+                ComposeForStatement(forStatement, sb);
+                break;
+
             case DoWhileStatementSyntax doWhileStatement:
                 ComposeDoWhileStatement(doWhileStatement, sb);
                 break;
@@ -331,6 +358,44 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
             ComposeBlock(whileStatement.Body, sb);
         if (whileStatement.Semicolon != null)
             ComposeSyntaxToken(whileStatement.Semicolon.Value, sb);
+    }
+
+    private void ComposeForStatement(ForStatementSyntax forStatement, StringBuilder sb)
+    {
+        ComposeSyntaxToken(forStatement.For, sb);
+        ComposeSyntaxToken(forStatement.ParenOpen, sb);
+        if (forStatement.Initializer != null)
+            ComposeForClauseStatement(forStatement.Initializer, sb);
+        if (forStatement.FirstSemicolon != null)
+            ComposeSyntaxToken(forStatement.FirstSemicolon.Value, sb);
+        ComposeExpression(forStatement.Condition, sb);
+        ComposeSyntaxToken(forStatement.SecondSemicolon, sb);
+        if (forStatement.Iterator != null)
+            ComposeForClauseStatement(forStatement.Iterator, sb);
+        ComposeSyntaxToken(forStatement.ParenClose, sb);
+        ComposeBlock(forStatement.Body, sb);
+    }
+
+    private void ComposeForClauseStatement(StatementSyntax statement, StringBuilder sb)
+    {
+        switch (statement)
+        {
+            case AssignmentStatementSyntax assignment:
+                ComposeExpression(assignment.Left, sb);
+                ComposeSyntaxToken(assignment.EqualsOperator, sb);
+                ComposeExpression(assignment.Right, sb);
+                ComposeSyntaxToken(assignment.Semicolon, sb);
+                break;
+
+            case PostfixUnaryStatementSyntax postfix:
+                ComposeExpression(postfix.Expression, sb);
+                ComposeSyntaxToken(postfix.Semicolon, sb);
+                break;
+
+            default:
+                ComposeStatement(statement, sb);
+                break;
+        }
     }
 
     private void ComposeDoWhileStatement(DoWhileStatementSyntax doWhileStatement, StringBuilder sb)

@@ -1,6 +1,8 @@
 ﻿using Logic.Business.Level5ScriptManagement.InternalContract.Creation;
 using System.Diagnostics.CodeAnalysis;
+using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract;
+using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.Level5.Contract.DataClasses.Script;
 
 namespace Logic.Business.Level5ScriptManagement.Creation;
@@ -8,6 +10,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateWorkflow(
     ScriptManagementConfiguration config,
     IScriptTypeConverter typeConverter,
+    INamedParameterSlotPass namedParameterSlotPass,
     ICreateXq32Workflow createXq32Workflow,
     ICreateXseqWorkflow createXseqWorkflow,
     ICreateXscrWorkflow createXscrWorkflow,
@@ -47,10 +50,21 @@ class CreateWorkflow(
         if (wasSuccessful)
         {
             Console.WriteLine("Ok");
+            if (type is ScriptType.Xq32 or ScriptType.Xseq or ScriptType.Gss1)
+                PrintParameterGlobalConflicts();
             return;
         }
 
         Console.WriteLine($"Error: {GetInnermostException(error!).Message}");
+    }
+
+    private void PrintParameterGlobalConflicts()
+    {
+        foreach (NamedParameterGlobalConflictWarning warning in namedParameterSlotPass.Warnings)
+        {
+            Console.WriteLine(
+                $"Warning: Method {warning.MethodName} parameter {warning.ParameterName} conflicts with a global declaration; the parameter takes precedence.");
+        }
     }
 
     private bool TryCreateFile(string filePath, ScriptType type, [NotNullWhen(false)] out Exception? error)

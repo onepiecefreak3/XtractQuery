@@ -76,9 +76,11 @@ internal class Level5SyntaxFactory : ILevel5SyntaxFactory
             case SyntaxTokenKind.IfKeyword: return new("if", (int)kind);
             case SyntaxTokenKind.ElseKeyword: return new("else", (int)kind);
             case SyntaxTokenKind.WhileKeyword: return new("while", (int)kind);
+            case SyntaxTokenKind.ForKeyword: return new("for", (int)kind);
             case SyntaxTokenKind.DoKeyword: return new("do", (int)kind);
             case SyntaxTokenKind.BreakKeyword: return new("break", (int)kind);
             case SyntaxTokenKind.ContinueKeyword: return new("continue", (int)kind);
+            case SyntaxTokenKind.GlobalKeyword: return new("global", (int)kind);
             case SyntaxTokenKind.TrueKeyword: return new("true", (int)kind);
             case SyntaxTokenKind.IntKeyword: return new("int", (int)kind);
             case SyntaxTokenKind.BoolKeyword: return new("bool", (int)kind);

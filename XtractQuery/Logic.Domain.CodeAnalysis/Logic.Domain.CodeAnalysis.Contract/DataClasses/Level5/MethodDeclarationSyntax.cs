@@ -1,6 +1,6 @@
 ﻿namespace Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
 
-public class MethodDeclarationSyntax : SyntaxNode
+public class MethodDeclarationSyntax : CodeUnitMemberSyntax
 {
     public SyntaxToken Identifier { get; private set; }
     public MethodDeclarationMetadataParametersSyntax? MetadataParameters { get; private set; }

@@ -126,11 +126,55 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
     private void NormalizeCodeUnit(CodeUnitSyntax codeUnit, WhitespaceNormalizeContext ctx)
     {
-        foreach (MethodDeclarationSyntax methodDeclaration in codeUnit.MethodDeclarations)
+        foreach (CodeUnitMemberSyntax member in codeUnit.Members)
         {
-            ctx.IsFirstElement = codeUnit.MethodDeclarations[0] == methodDeclaration;
-            ctx.ShouldLineBreak = codeUnit.MethodDeclarations[^1] != methodDeclaration;
-            NormalizeMethodDeclaration(methodDeclaration, ctx);
+            ctx.IsFirstElement = codeUnit.Members[0] == member;
+            ctx.ShouldLineBreak = codeUnit.Members[^1] != member;
+            NormalizeCodeUnitMember(member, ctx);
+        }
+    }
+
+    private void NormalizeCodeUnitMember(CodeUnitMemberSyntax member, WhitespaceNormalizeContext ctx)
+    {
+        switch (member)
+        {
+            case MethodDeclarationSyntax methodDeclaration:
+                NormalizeMethodDeclaration(methodDeclaration, ctx);
+                break;
+
+            case GlobalDeclarationStatementSyntax globalDeclaration:
+                NormalizeGlobalDeclarationStatement(globalDeclaration, ctx);
+                break;
+        }
+    }
+
+    private void NormalizeGlobalDeclarationStatement(
+        GlobalDeclarationStatementSyntax globalDeclaration,
+        WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken globalKeyword = globalDeclaration.GlobalKeyword.WithNoTrivia().WithTrailingTrivia(" ");
+        SyntaxToken semicolon = globalDeclaration.Semicolon.WithNoTrivia();
+
+        if (ctx.ShouldLineBreak)
+            semicolon = semicolon.WithTrailingTrivia("\r\n\r\n");
+        else
+            semicolon = semicolon.WithTrailingTrivia("\r\n");
+
+        globalDeclaration.SetGlobalKeyword(globalKeyword, false);
+        NormalizeGlobalDeclarationVariableList(globalDeclaration.Variables, ctx);
+        globalDeclaration.SetSemicolon(semicolon, false);
+    }
+
+    private void NormalizeGlobalDeclarationVariableList(
+        CommaSeparatedSyntaxList<VariableExpressionSyntax> list,
+        WhitespaceNormalizeContext ctx)
+    {
+        foreach (VariableExpressionSyntax value in list.Elements)
+        {
+            ctx.IsFirstElement = list.Elements[0] == value;
+            ctx.ShouldLineBreak = false;
+            ctx.ShouldIndent = false;
+            NormalizeVariableExpression(value, ctx);
         }
     }
 
@@ -265,6 +309,10 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
             case WhileStatementSyntax whileStatement:
                 NormalizeWhileStatement(whileStatement, ctx);
+                break;
+
+            case ForStatementSyntax forStatement:
+                NormalizeForStatement(forStatement, ctx);
                 break;
 
             case DoWhileStatementSyntax doWhileStatement:
@@ -406,6 +454,82 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
         whileStatement.SetWhile(newWhile, false);
         whileStatement.SetParenOpen(parenOpen, false);
         whileStatement.SetParenClose(parenClose, false);
+    }
+
+    private void NormalizeForStatement(ForStatementSyntax forStatement, WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken newFor = forStatement.For.WithNoTrivia();
+        if (ctx is { ShouldIndent: true, Indent: > 0 })
+            newFor = newFor.WithLeadingTrivia(new string('\t', ctx.Indent));
+
+        SyntaxToken parenOpen = forStatement.ParenOpen.WithNoTrivia().WithLeadingTrivia(" ");
+        SyntaxToken parenClose = forStatement.ParenClose.WithNoTrivia();
+        SyntaxToken secondSemicolon = forStatement.SecondSemicolon.WithNoTrivia();
+
+        ctx.ShouldIndent = false;
+        ctx.ShouldLineBreak = false;
+        ctx.IsFirstElement = true;
+
+        if (forStatement.Initializer != null)
+        {
+            NormalizeForClauseStatement(forStatement.Initializer, ctx, trailingSpace: true);
+        }
+        else if (forStatement.FirstSemicolon != null)
+        {
+            forStatement.SetFirstSemicolon(
+                forStatement.FirstSemicolon.Value.WithNoTrivia().WithTrailingTrivia(" "), false);
+        }
+
+        NormalizeExpression(forStatement.Condition, ctx);
+        forStatement.SetSecondSemicolon(secondSemicolon.WithTrailingTrivia(" "), false);
+
+        if (forStatement.Iterator != null)
+            NormalizeForClauseStatement(forStatement.Iterator, ctx, trailingSpace: false);
+
+        NormalizeBlock(forStatement.Body, ctx);
+
+        forStatement.SetFor(newFor, false);
+        forStatement.SetParenOpen(parenOpen, false);
+        forStatement.SetParenClose(parenClose, false);
+    }
+
+    private void NormalizeForClauseStatement(StatementSyntax statement, WhitespaceNormalizeContext ctx, bool trailingSpace)
+    {
+        switch (statement)
+        {
+            case AssignmentStatementSyntax assignment:
+            {
+                SyntaxToken equals = assignment.EqualsOperator.WithNoTrivia()
+                    .WithLeadingTrivia(" ")
+                    .WithTrailingTrivia(" ");
+                SyntaxToken semicolon = assignment.Semicolon.WithNoTrivia();
+                if (trailingSpace)
+                    semicolon = semicolon.WithTrailingTrivia(" ");
+
+                ctx.IsFirstElement = true;
+                NormalizeExpression(assignment.Left, ctx);
+                assignment.SetEqualsOperator(equals, false);
+                NormalizeExpression(assignment.Right, ctx);
+                assignment.SetSemicolon(semicolon, false);
+                break;
+            }
+
+            case PostfixUnaryStatementSyntax postfix:
+            {
+                SyntaxToken semicolon = postfix.Semicolon.WithNoTrivia();
+                if (trailingSpace)
+                    semicolon = semicolon.WithTrailingTrivia(" ");
+
+                ctx.IsFirstElement = true;
+                NormalizeExpression(postfix.Expression, ctx);
+                postfix.SetSemicolon(semicolon, false);
+                break;
+            }
+
+            default:
+                NormalizeStatement(statement, ctx);
+                break;
+        }
     }
 
     private void NormalizeDoWhileStatement(DoWhileStatementSyntax doWhileStatement, WhitespaceNormalizeContext ctx)

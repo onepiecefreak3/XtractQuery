@@ -7,15 +7,21 @@ internal class HighLevelCodeUnitConverter(
     ITempPropagationPass tempPropagationPass,
     IChainAssignmentFoldPass chainAssignmentFoldPass,
     IStructuredLoopPass structuredLoopPass,
-    IStructuredIfPass structuredIfPass) : IHighLevelCodeUnitConverter
+    IStructuredIfPass structuredIfPass,
+    IStructuredForPass structuredForPass) : IHighLevelCodeUnitConverter
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {
-        var methods = new List<MethodDeclarationSyntax>();
-        foreach (MethodDeclarationSyntax method in tree.MethodDeclarations)
-            methods.Add(ConvertMethod(method));
+        var members = new List<CodeUnitMemberSyntax>();
+        foreach (CodeUnitMemberSyntax member in tree.Members)
+        {
+            if (member is MethodDeclarationSyntax method)
+                members.Add(ConvertMethod(method));
+            else
+                members.Add(member);
+        }
 
-        return new CodeUnitSyntax(methods);
+        return new CodeUnitSyntax(members);
     }
 
     private MethodDeclarationSyntax ConvertMethod(MethodDeclarationSyntax method)
@@ -37,6 +43,9 @@ internal class HighLevelCodeUnitConverter(
 
             statements = afterIfs;
         }
+
+        // For-raise needs structured while + break/continue already in place.
+        statements = structuredForPass.Apply(statements);
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);
