@@ -34,12 +34,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: 10.0
+      
+      - name: Setup NuGet sources
+        run: |
+          dotnet nuget update source Kuriimu2 --username ${{ secrets.GITHUB_TOKEN }} --password ${{ secrets.GITHUB_TOKEN }}
 
       # Native AOT on Linux needs a C toolchain + zlib headers for the final native link.
       - name: Install Linux AOT prerequisites
