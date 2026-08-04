@@ -13,8 +13,8 @@ public class Configuration
 
     public static void ConfigureLogger()
     {
-        LoggingConfiguration config = new NLog.Config.LoggingConfiguration();
-        FileTarget fileLogTarget = new NLog.Targets.FileTarget();
+        LoggingConfiguration config = new LoggingConfiguration();
+        FileTarget fileLogTarget = new FileTarget();
         fileLogTarget.Layout = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "FileLayout", "${longdate}|${level:uppercase=true}|${logger}|${message}");
         fileLogTarget.FileName = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "FileName", "logs/iDxLog.log");
         fileLogTarget.ArchiveFileName = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "ArchiveFileName", "logs/iDxLog.{#}.log");
@@ -27,7 +27,7 @@ public class Configuration
         fileLogTarget.ArchiveNumbering = StringToArchiveNumberingMode(archiveNumbering);
         fileLogTarget.ArchiveDateFormat = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "ArchiveDateFormat", "yyyy-MM-dd");
 
-        ColoredConsoleTarget consoleLogTarget = new NLog.Targets.ColoredConsoleTarget();
+        ColoredConsoleTarget consoleLogTarget = new ColoredConsoleTarget();
         consoleLogTarget.Layout = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "ConsoleLayout", "${longdate}|${level:uppercase=true}|${logger}|${message}");
 
         string fileLogLevel = GetValue<string>("CrossCutting.Core.Logging.NLogAdapter", "FileLogLevel", "Error");

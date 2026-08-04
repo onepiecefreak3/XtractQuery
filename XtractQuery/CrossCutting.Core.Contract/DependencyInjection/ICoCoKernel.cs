@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using CrossCutting.Core.Contract.Aspects;
 using CrossCutting.Core.Contract.Bootstrapping;
+using CrossCutting.Core.Contract.DependencyInjection;
 using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
 using CrossCutting.Core.Contract.DependencyInjection.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,20 +14,28 @@ public interface ICoCoKernel
 {
     void Build(string scopeName);
 
-    void Register<TContract, TImplementation>()
-        where TImplementation : TContract;
-    void Register<TContract, TImplementation>(ActivationScope scope)
-        where TImplementation : TContract;
+    void Register<TContract, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
+        where TContract : class
+        where TImplementation : class, TContract;
+    void Register<TContract, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(ActivationScope scope)
+        where TContract : class
+        where TImplementation : class, TContract;
 
-    void Register<TContract, TImplementation>(string key)
-        where TImplementation : TContract;
-    void Register<TContract, TImplementation>(string key, ActivationScope scope)
-        where TImplementation : TContract;
+    void Register<TContract, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(string key)
+        where TContract : class
+        where TImplementation : class, TContract;
+    void Register<TContract, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(string key, ActivationScope scope)
+        where TContract : class
+        where TImplementation : class, TContract;
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     void Register(Type contract, Type implementation);
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     void Register(Type contract, Type implementation, ActivationScope scope);
 
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     void Register(string key, Type contract, Type implementation);
+    [RequiresUnreferencedCode("Open type registration requires runtime type inspection.")]
     void Register(string key, Type contract, Type implementation, ActivationScope scope);
 
     void RegisterInstance<TComponent>(TComponent instance)
@@ -34,18 +44,22 @@ public interface ICoCoKernel
     void RegisterInstanceKeyed<TComponent>(TComponent instance, Type registerAs, string key)
         where TComponent : class;
 
-    void RegisterToSelf<TImplementation>();
-    void RegisterToSelf<TImplementation>(ActivationScope scope);
+    void RegisterToSelf<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>()
+        where TImplementation : class;
+    void RegisterToSelf<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(ActivationScope scope)
+        where TImplementation : class;
 
-    void RegisterComponent<TComponent>()
-        where TComponent : IComponentActivator;
+    void RegisterComponent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TComponent>()
+        where TComponent : class, IComponentActivator;
 
     TContract Get<TContract>()
         where TContract : class;
+    [RequiresUnreferencedCode("ConstructorParameter resolution uses ActivatorUtilities which inspects constructors.")]
     TContract Get<TContract>(params ConstructorParameter[] parameters)
         where TContract : class;
 
     object Get(Type contractType);
+    [RequiresUnreferencedCode("ConstructorParameter resolution uses ActivatorUtilities which inspects constructors.")]
     object Get(Type contractType, params ConstructorParameter[] parameters);
 
     void RegisterConfiguration<T>();

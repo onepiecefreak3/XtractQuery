@@ -21,7 +21,7 @@ public sealed class Logger : ILogger
 
     public Logger()
     {
-        _logger = NLog.LogManager.GetCurrentClassLogger();
+        _logger = LogManager.GetCurrentClassLogger();
         Configuration.ConfigureLogger();
     }
 

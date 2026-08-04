@@ -1,0 +1,74 @@
+name: Publish Native AOT
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-aot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: AOT ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-arm64
+
+    env:
+      PROJECT: XtractQuery/XtractQuery/XtractQuery.csproj
+      CONFIGURATION: Release
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      PUBLISH_DIR: ${{ github.workspace }}/artifacts/${{ matrix.rid }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Native AOT on Linux needs a C toolchain + zlib headers for the final native link.
+      - name: Install Linux AOT prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang zlib1g-dev
+
+      - name: Publish Native AOT
+        shell: bash
+        run: |
+          dotnet publish "$PROJECT" -c "$CONFIGURATION" -r "${{ matrix.rid }}" -o "$PUBLISH_DIR" \
+            --self-contained true -p:StripSymbols=true
+
+      - name: Prune symbols and mark Unix binary executable
+        shell: bash
+        run: |
+          find "$PUBLISH_DIR" -type f \( -name '*.pdb' -o -name '*.dbg' \) -delete
+          find "$PUBLISH_DIR" -type d -name '*.dSYM' -exec rm -rf {} + 2>/dev/null || true
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            chmod +x "$PUBLISH_DIR/XtractQuery"
+          fi
+          echo "### ${{ matrix.rid }}" >> "$GITHUB_STEP_SUMMARY"
+          ls -lah "$PUBLISH_DIR" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XtractQuery-${{ matrix.rid }}
+          path: ${{ env.PUBLISH_DIR }}
+          if-no-files-found: error
+          retention-days: 30

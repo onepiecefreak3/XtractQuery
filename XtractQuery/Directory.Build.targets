@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    VS / `dotnet publish -p:PublishAot=true` / solution publish pass PublishAot as a global
+    property to every project in the graph. Roslyn generators target netstandard2.0 and then
+    fail with NETSDK1207. Clear AOT/trim publish flags before the SDK validates the TFM.
+  -->
+  <Target Name="DisableNativeAotForUnsupportedProjects"
+          BeforeTargets="ProcessFrameworkReferences;_CheckForInvalidConfigurationAndPlatform"
+          Condition="'$(IsRoslynComponent)' == 'true' Or '$(TargetFramework)' == 'netstandard2.0'">
+    <PropertyGroup>
+      <PublishAot>false</PublishAot>
+      <PublishTrimmed>false</PublishTrimmed>
+      <PublishReadyToRun>false</PublishReadyToRun>
+      <IsAotCompatible>false</IsAotCompatible>
+      <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+      <EnableAotAnalyzer>false</EnableAotAnalyzer>
+      <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+    </PropertyGroup>
+  </Target>
+</Project>

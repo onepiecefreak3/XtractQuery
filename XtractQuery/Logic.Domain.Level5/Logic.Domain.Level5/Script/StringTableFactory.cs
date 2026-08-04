@@ -1,27 +1,30 @@
-﻿using CrossCutting.Core.Contract.DependencyInjection;
-using CrossCutting.Core.Contract.DependencyInjection.DataClasses;
-using Logic.Domain.Level5.Contract.DataClasses.Script;
+﻿using Logic.Domain.Level5.Contract.DataClasses.Script;
 using Logic.Domain.Level5.Contract.Script;
+using Logic.Domain.Level5.InternalContract.Checksum;
 using Logic.Domain.Level5.InternalContract.Script.Xq32;
 using Logic.Domain.Level5.InternalContract.Script.Xseq;
+using Logic.Domain.Level5.Script.Xq32;
+using Logic.Domain.Level5.Script.Xseq;
 
 namespace Logic.Domain.Level5.Script;
 
 internal class StringTableFactory : IStringTableFactory
 {
-    private readonly ICoCoKernel _kernel;
+    private readonly IChecksumFactory _checksumFactory;
+    private readonly IScriptStringEncodingProvider _encodingProvider;
 
-    public StringTableFactory(ICoCoKernel kernel)
+    public StringTableFactory(IChecksumFactory checksumFactory, IScriptStringEncodingProvider encodingProvider)
     {
-        _kernel = kernel;
+        _checksumFactory = checksumFactory;
+        _encodingProvider = encodingProvider;
     }
 
     public IStringTable Create(Stream input, ScriptType type)
     {
         return type switch
         {
-            ScriptType.Xq32 => _kernel.Get<IXq32StringTable>(new ConstructorParameter("stream", input)),
-            ScriptType.Xseq => _kernel.Get<IXseqStringTable>(new ConstructorParameter("stream", input)),
+            ScriptType.Xq32 => new Xq32StringTable(input, _checksumFactory, _encodingProvider),
+            ScriptType.Xseq => new XseqStringTable(input, _checksumFactory, _encodingProvider),
             _ => throw new InvalidOperationException($"Unknown script type {type}.")
         };
     }
@@ -30,8 +33,8 @@ internal class StringTableFactory : IStringTableFactory
     {
         return type switch
         {
-            ScriptType.Xq32 => _kernel.Get<IXq32StringTable>(),
-            ScriptType.Xseq => _kernel.Get<IXseqStringTable>(),
+            ScriptType.Xq32 => new Xq32StringTable(_checksumFactory, _encodingProvider),
+            ScriptType.Xseq => new XseqStringTable(_checksumFactory, _encodingProvider),
             _ => throw new InvalidOperationException($"Unknown script type {type}.")
         };
     }

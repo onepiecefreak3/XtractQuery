@@ -1,10 +1,7 @@
-﻿using Komponent.Contract.Aspects;
-
-namespace Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
+﻿namespace Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 
 public class Xq32Header
 {
-    [FixedLength(4)]
     public string magic = "XQ32";
 
     public short functionEntryCount;

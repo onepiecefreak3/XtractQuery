@@ -11,7 +11,7 @@ public sealed class Bootstrapper : IBootstrapper
 {
     private readonly List<IComponentActivator> _components;
 
-    public Bootstrapper(IComponentActivator[] components)
+    public Bootstrapper(IEnumerable<IComponentActivator> components)
     {
         _components = components.ToList();
     }

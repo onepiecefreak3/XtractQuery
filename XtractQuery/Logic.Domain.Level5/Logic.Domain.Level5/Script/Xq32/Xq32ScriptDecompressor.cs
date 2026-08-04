@@ -1,4 +1,5 @@
-﻿using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
+﻿using Komponent.IO;
+using Logic.Domain.Level5.Contract.DataClasses.Script.Xq32;
 using Logic.Domain.Level5.Contract.Script.Xq32;
 using Logic.Domain.Level5.DataClasses.Script;
 using Logic.Domain.Level5.InternalContract.Compression;
@@ -57,5 +58,32 @@ internal class Xq32ScriptDecompressor : ScriptDecompressor<Xq32Header>, IXq32Scr
     protected override int GetStringTableOffset(Xq32Header header)
     {
         return header.stringOffset << 2;
+    }
+
+    protected override Xq32Header ReadHeader(Stream input)
+    {
+        var bkPos = input.Position;
+        input.Position = 0;
+
+        using var br = new BinaryReaderX(input, true);
+
+        var header = new Xq32Header
+        {
+            magic = br.ReadString(4),
+            functionEntryCount = br.ReadInt16(),
+            functionOffset = br.ReadUInt16(),
+            jumpOffset = br.ReadUInt16(),
+            jumpEntryCount = br.ReadInt16(),
+            instructionOffset = br.ReadUInt16(),
+            instructionEntryCount = br.ReadInt16(),
+            argumentOffset = br.ReadUInt16(),
+            argumentEntryCount = br.ReadInt16(),
+            globalVariableCount = br.ReadInt16(),
+            stringOffset = br.ReadUInt16()
+        };
+
+        input.Position = bkPos;
+
+        return header;
     }
 }
