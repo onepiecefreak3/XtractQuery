@@ -41,9 +41,11 @@ jobs:
         with:
           dotnet-version: 10.0
       
+      # GitHub Packages auth. --store-password-in-clear-text is required on Linux/macOS
+      # (NuGet password encryption is Windows-only and fails restore otherwise).
       - name: Setup NuGet sources
-        run: |
-          dotnet nuget update source Kuriimu2 --username ${{ secrets.PERSONAL_ACCESS_TOKEN }} --password ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: >
+          dotnet nuget update source Kuriimu2 --username "${{ github.actor }}" --password "${{ secrets.PERSONAL_ACCESS_TOKEN }}" --store-password-in-clear-text
 
       # Native AOT on Linux needs a C toolchain + zlib headers for the final native link.
       - name: Install Linux AOT prerequisites
