@@ -10,6 +10,4 @@ public interface IScope : IDisposable
     object Get(Type contractType);
 
     string GetHash();
-
-    event EventHandler<ResolveRequestEventArgs> ResolveRequest;
 }

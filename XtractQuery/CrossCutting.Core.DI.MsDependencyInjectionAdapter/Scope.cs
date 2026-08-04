@@ -8,8 +8,6 @@ internal sealed class Scope(IServiceScope scope) : IScope
 {
     private readonly IServiceScope _scope = scope ?? throw new ArgumentNullException(nameof(scope));
 
-    public event EventHandler<ResolveRequestEventArgs>? ResolveRequest;
-
     public TContract Get<TContract>()
         where TContract : class
     {
