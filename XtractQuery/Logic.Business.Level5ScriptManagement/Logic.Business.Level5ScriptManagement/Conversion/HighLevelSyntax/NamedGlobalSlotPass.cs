@@ -1,5 +1,3 @@
-using Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax.Cfg;
-using Logic.Business.Level5ScriptManagement.DataClasses.Conversion;
 using Logic.Business.Level5ScriptManagement.InternalContract.Conversion.HighLevelSyntax;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses;
 using Logic.Domain.CodeAnalysis.Contract.DataClasses.Level5;
@@ -8,255 +6,112 @@ using Logic.Domain.CodeAnalysis.Contract.Level5;
 namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
 /// <summary>
-/// Compile-only: rewrites free-form named locals (<c>$counter</c>) to <c>$localN</c>
-/// with CFG liveness-based slot reuse. Explicit typed slots are left alone and reserve
-/// their local indices. Local bank is slots 0..999.
+/// Compile-only: rewrites declared named globals (<c>$bossType</c>) to <c>$globalN</c>
+/// with script-wide slot assignment. Explicit <c>$globalN</c> / <c>$globalN_name</c> reserve
+/// slots. Declaration members are stripped from the returned code unit.
 /// </summary>
-internal class NamedLocalSlotPass(
-    IControlFlowGraphBuilder cfgBuilder,
-    ILevel5SyntaxFactory syntaxFactory) : INamedLocalSlotPass
+internal class NamedGlobalSlotPass(ILevel5SyntaxFactory syntaxFactory) : INamedGlobalSlotPass
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {
-        var members = new List<CodeUnitMemberSyntax>();
+        List<(string Name, SyntaxLocation Location)> declared = CollectDeclaredNames(tree);
+        bool hasGlobalMembers = tree.Members.Any(m => m is GlobalDeclarationStatementSyntax);
+
+        if (declared.Count == 0)
+        {
+            if (!hasGlobalMembers)
+                return tree;
+
+            return new CodeUnitSyntax(tree.Members.OfType<MethodDeclarationSyntax>().Cast<CodeUnitMemberSyntax>().ToList());
+        }
+
+        HashSet<int> reserved = CollectReservedGlobalSlots(tree);
+        ValidateReservedGlobalSlots(reserved);
+
+        Dictionary<string, int> assignment = AssignSlots(declared, reserved);
+        RewriteNamedGlobals(tree, assignment);
+
+        return new CodeUnitSyntax(tree.Members.OfType<MethodDeclarationSyntax>().Cast<CodeUnitMemberSyntax>().ToList());
+    }
+
+    private static List<(string Name, SyntaxLocation Location)> CollectDeclaredNames(CodeUnitSyntax tree)
+    {
+        var result = new List<(string Name, SyntaxLocation Location)>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (CodeUnitMemberSyntax member in tree.Members)
         {
-            if (member is MethodDeclarationSyntax method)
-                members.Add(ConvertMethod(method));
-            else
-                members.Add(member);
-        }
-
-        return new CodeUnitSyntax(members);
-    }
-
-    private MethodDeclarationSyntax ConvertMethod(MethodDeclarationSyntax method)
-    {
-        IReadOnlyList<StatementSyntax> statements = method.Body.Expressions;
-        if (statements.Count == 0)
-            return method;
-
-        HashSet<int> reservedLocals = CollectReservedLocalSlots(statements);
-        List<string> namedLocals = CollectNamedLocals(statements);
-        if (namedLocals.Count == 0)
-            return method;
-
-        ValidateReservedLocalSlots(reservedLocals, method.Location);
-
-        ControlFlowGraph cfg = cfgBuilder.Build(statements);
-        Dictionary<string, HashSet<string>> interference = BuildInterference(statements, cfg, namedLocals);
-        Dictionary<string, int> assignment = AssignSlots(namedLocals, interference, reservedLocals);
-
-        RewriteNamedLocals(statements, assignment);
-
-        return method;
-    }
-
-    private static HashSet<int> CollectReservedLocalSlots(IReadOnlyList<StatementSyntax> statements)
-    {
-        var reserved = new HashSet<int>();
-        foreach (StatementSyntax statement in statements)
-            CollectReservedLocalSlots(statement, reserved);
-        return reserved;
-    }
-
-    private static void CollectReservedLocalSlots(StatementSyntax statement, HashSet<int> reserved)
-    {
-        foreach (string name in CollectAllVariableNames(statement))
-        {
-            if (VariableSlotClassifier.TryGetExplicitLocalSlot(name, out int slot))
-                reserved.Add(slot);
-        }
-    }
-
-    private static List<string> CollectNamedLocals(IReadOnlyList<StatementSyntax> statements)
-    {
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        foreach (StatementSyntax statement in statements)
-        {
-            foreach (string name in CollectAllVariableNames(statement))
-            {
-                if (VariableSlotClassifier.IsNamedLocal(name))
-                    names.Add(name);
-            }
-        }
-
-        return names.OrderBy(n => n, StringComparer.Ordinal).ToList();
-    }
-
-    private static void ValidateReservedLocalSlots(HashSet<int> reserved, SyntaxLocation location)
-    {
-        foreach (int slot in reserved)
-        {
-            if (slot is < 0 or >= VariableSlotClassifier.LocalSlotCount)
-            {
-                throw CreateException(
-                    $"Local slot {slot} is out of range. Valid local slots are 0..{VariableSlotClassifier.LocalSlotCount - 1}.",
-                    location);
-            }
-        }
-    }
-
-    private static Dictionary<string, HashSet<string>> BuildInterference(
-        IReadOnlyList<StatementSyntax> statements,
-        ControlFlowGraph cfg,
-        IReadOnlyList<string> namedLocals)
-    {
-        var namedSet = new HashSet<string>(namedLocals, StringComparer.Ordinal);
-        var uses = new HashSet<string>[statements.Count];
-        var defs = new HashSet<string>[statements.Count];
-
-        for (var i = 0; i < statements.Count; i++)
-        {
-            uses[i] = FilterNamed(CollectStatementUses(statements[i]), namedSet);
-            defs[i] = FilterNamed(ExpressionSideEffectClassifier.CollectAssignedVariables(statements[i]), namedSet);
-        }
-
-        Dictionary<StatementBlock, HashSet<string>> liveIn = ComputeLiveIn(cfg, uses, defs);
-        var interference = namedLocals.ToDictionary(
-            n => n,
-            _ => new HashSet<string>(StringComparer.Ordinal),
-            StringComparer.Ordinal);
-
-        // Overlapping live ranges interfere: clique on LiveIn/LiveOut at each statement.
-        foreach (StatementBlock block in cfg.Blocks)
-        {
-            if (block.IsExit || block.StatementCount == 0)
+            if (member is not GlobalDeclarationStatementSyntax declaration)
                 continue;
 
-            HashSet<string> live = JoinSuccessorLiveIn(block, liveIn, cfg);
-            for (int i = block.EndStatementIndex - 1; i >= block.InstructionIndex; i--)
+            foreach (VariableExpressionSyntax variable in declaration.Variables.Elements)
             {
-                AddInterferenceClique(interference, live);
-
-                live.ExceptWith(defs[i]);
-                live.UnionWith(uses[i]);
-
-                AddInterferenceClique(interference, live);
-            }
-        }
-
-        return interference;
-    }
-
-    private static void AddInterferenceClique(
-        Dictionary<string, HashSet<string>> interference,
-        HashSet<string> live)
-    {
-        if (live.Count < 2)
-            return;
-
-        string[] vars = live.ToArray();
-        for (var i = 0; i < vars.Length; i++)
-        {
-            for (var j = i + 1; j < vars.Length; j++)
-            {
-                interference[vars[i]].Add(vars[j]);
-                interference[vars[j]].Add(vars[i]);
-            }
-        }
-    }
-
-    private static Dictionary<StatementBlock, HashSet<string>> ComputeLiveIn(
-        ControlFlowGraph cfg,
-        HashSet<string>[] uses,
-        HashSet<string>[] defs)
-    {
-        var liveIn = new Dictionary<StatementBlock, HashSet<string>>();
-        var liveOut = new Dictionary<StatementBlock, HashSet<string>>();
-
-        foreach (StatementBlock block in cfg.Blocks)
-        {
-            if (block.IsExit)
-                continue;
-
-            liveIn[block] = [];
-            liveOut[block] = [];
-        }
-
-        var changed = true;
-        while (changed)
-        {
-            changed = false;
-
-            foreach (StatementBlock block in cfg.Blocks)
-            {
-                if (block.IsExit)
-                    continue;
-
-                HashSet<string> newOut = JoinSuccessorLiveIn(block, liveIn, cfg);
-                if (!SetEquals(liveOut[block], newOut))
+                string name = variable.Variable.Text;
+                if (!VariableSlotClassifier.IsNamedVariable(name))
                 {
-                    liveOut[block] = newOut;
-                    changed = true;
+                    throw CreateException(
+                        $"Global declaration name \"{name}\" must be a free-form variable, not a typed slot.",
+                        variable.Location);
                 }
 
-                HashSet<string> newIn = TransferBackward(block, uses, defs, liveOut[block]);
-                if (!SetEquals(liveIn[block], newIn))
+                if (!seen.Add(name))
                 {
-                    liveIn[block] = newIn;
-                    changed = true;
+                    throw CreateException(
+                        $"Global variable \"{name}\" is declared more than once.",
+                        variable.Location);
                 }
+
+                result.Add((name, variable.Location));
             }
-        }
-
-        return liveIn;
-    }
-
-    private static HashSet<string> JoinSuccessorLiveIn(
-        StatementBlock block,
-        IReadOnlyDictionary<StatementBlock, HashSet<string>> liveIn,
-        ControlFlowGraph cfg)
-    {
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        foreach (ControlFlowEdge edge in ControlFlowGraphQueries.GetOutgoing(cfg, block))
-        {
-            if (edge.Target.IsExit)
-                continue;
-
-            if (liveIn.TryGetValue(edge.Target, out HashSet<string>? succIn))
-                result.UnionWith(succIn);
         }
 
         return result;
     }
 
-    private static HashSet<string> TransferBackward(
-        StatementBlock block,
-        HashSet<string>[] uses,
-        HashSet<string>[] defs,
-        HashSet<string> liveOut)
+    private static HashSet<int> CollectReservedGlobalSlots(CodeUnitSyntax tree)
     {
-        HashSet<string> live = CloneSet(liveOut);
-        for (int i = block.EndStatementIndex - 1; i >= block.InstructionIndex; i--)
+        var reserved = new HashSet<int>();
+
+        foreach (MethodDeclarationSyntax method in tree.MethodDeclarations)
         {
-            live.ExceptWith(defs[i]);
-            live.UnionWith(uses[i]);
+            foreach (StatementSyntax statement in method.Body.Expressions)
+            {
+                foreach (string name in CollectAllVariableNames(statement))
+                {
+                    if (VariableSlotClassifier.TryGetExplicitGlobalSlot(name, out int slot))
+                        reserved.Add(slot);
+                }
+            }
         }
 
-        return live;
+        return reserved;
+    }
+
+    private static void ValidateReservedGlobalSlots(HashSet<int> reserved)
+    {
+        foreach (int slot in reserved)
+        {
+            if (slot is < 0 or >= VariableSlotClassifier.GlobalSlotCount)
+            {
+                throw new InvalidOperationException(
+                    $"Global slot {slot} is out of range. Valid global slots are 0..{VariableSlotClassifier.GlobalSlotCount - 1}.");
+            }
+        }
     }
 
     private static Dictionary<string, int> AssignSlots(
-        IReadOnlyList<string> namedLocals,
-        IReadOnlyDictionary<string, HashSet<string>> interference,
-        HashSet<int> reservedLocals)
+        IReadOnlyList<(string Name, SyntaxLocation Location)> declared,
+        HashSet<int> reserved)
     {
         var assignment = new Dictionary<string, int>(StringComparer.Ordinal);
+        var used = new HashSet<int>(reserved);
 
-        foreach (string name in namedLocals)
+        foreach ((string name, SyntaxLocation location) in declared)
         {
-            var forbidden = new HashSet<int>(reservedLocals);
-            foreach (string neighbor in interference[name])
-            {
-                if (assignment.TryGetValue(neighbor, out int neighborSlot))
-                    forbidden.Add(neighborSlot);
-            }
-
             int slot = -1;
-            for (var candidate = 0; candidate < VariableSlotClassifier.LocalSlotCount; candidate++)
+            for (var candidate = 0; candidate < VariableSlotClassifier.GlobalSlotCount; candidate++)
             {
-                if (!forbidden.Contains(candidate))
+                if (used.Add(candidate))
                 {
                     slot = candidate;
                     break;
@@ -265,8 +120,9 @@ internal class NamedLocalSlotPass(
 
             if (slot < 0)
             {
-                throw new InvalidOperationException(
-                    $"Cannot allocate local slot for \"{name}\": all {VariableSlotClassifier.LocalSlotCount} local slots are in use.");
+                throw CreateException(
+                    $"Cannot allocate global slot for \"{name}\": all {VariableSlotClassifier.GlobalSlotCount} global slots are in use.",
+                    location);
             }
 
             assignment[name] = slot;
@@ -275,12 +131,13 @@ internal class NamedLocalSlotPass(
         return assignment;
     }
 
-    private void RewriteNamedLocals(
-        IReadOnlyList<StatementSyntax> statements,
-        IReadOnlyDictionary<string, int> assignment)
+    private void RewriteNamedGlobals(CodeUnitSyntax tree, IReadOnlyDictionary<string, int> assignment)
     {
-        foreach (StatementSyntax statement in statements)
-            RewriteStatement(statement, assignment);
+        foreach (MethodDeclarationSyntax method in tree.MethodDeclarations)
+        {
+            foreach (StatementSyntax statement in method.Body.Expressions)
+                RewriteStatement(statement, assignment);
+        }
     }
 
     private void RewriteStatement(StatementSyntax statement, IReadOnlyDictionary<string, int> assignment)
@@ -315,6 +172,44 @@ internal class NamedLocalSlotPass(
             case GotoStatementSyntax gotoStatement:
                 foreach (ValueExpressionSyntax target in gotoStatement.Targets.Elements)
                     RewriteExpression(target, assignment);
+                break;
+
+            case IfStatementSyntax ifStatement:
+                RewriteExpression(ifStatement.Condition, assignment);
+                foreach (StatementSyntax nested in ifStatement.Body.Statements)
+                    RewriteStatement(nested, assignment);
+                if (ifStatement.Else != null)
+                    RewriteStatement(ifStatement.Else.Statement, assignment);
+                break;
+
+            case WhileStatementSyntax whileStatement:
+                RewriteExpression(whileStatement.Condition, assignment);
+                if (whileStatement.Body != null)
+                {
+                    foreach (StatementSyntax nested in whileStatement.Body.Statements)
+                        RewriteStatement(nested, assignment);
+                }
+                break;
+
+            case ForStatementSyntax forStatement:
+                if (forStatement.Initializer != null)
+                    RewriteStatement(forStatement.Initializer, assignment);
+                RewriteExpression(forStatement.Condition, assignment);
+                if (forStatement.Iterator != null)
+                    RewriteStatement(forStatement.Iterator, assignment);
+                foreach (StatementSyntax nested in forStatement.Body.Statements)
+                    RewriteStatement(nested, assignment);
+                break;
+
+            case DoWhileStatementSyntax doWhile:
+                RewriteExpression(doWhile.Condition, assignment);
+                foreach (StatementSyntax nested in doWhile.Body.Statements)
+                    RewriteStatement(nested, assignment);
+                break;
+
+            case BlockSyntax block:
+                foreach (StatementSyntax nested in block.Statements)
+                    RewriteStatement(nested, assignment);
                 break;
         }
     }
@@ -417,13 +312,63 @@ internal class NamedLocalSlotPass(
         if (!assignment.TryGetValue(text, out int slot))
             return;
 
-        SyntaxToken token = syntaxFactory.Variable("local", (uint)slot);
+        SyntaxToken token = syntaxFactory.Variable("global", (uint)slot);
         if (variable.Variable.LeadingTrivia is { } leading)
             token = token.WithLeadingTrivia(leading.Text);
         if (variable.Variable.TrailingTrivia is { } trailing)
             token = token.WithTrailingTrivia(trailing.Text);
 
         variable.SetVariable(token, updatePositions: false);
+    }
+
+    private static HashSet<string> CollectAllVariableNames(StatementSyntax statement)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        names.UnionWith(CollectStatementUses(statement));
+        names.UnionWith(ExpressionSideEffectClassifier.CollectAssignedVariables(statement));
+
+        switch (statement)
+        {
+            case IfStatementSyntax ifStatement:
+                names.UnionWith(ExpressionSideEffectClassifier.CollectReadVariables(ifStatement.Condition));
+                foreach (StatementSyntax nested in ifStatement.Body.Statements)
+                    names.UnionWith(CollectAllVariableNames(nested));
+                if (ifStatement.Else != null)
+                    names.UnionWith(CollectAllVariableNames(ifStatement.Else.Statement));
+                break;
+
+            case WhileStatementSyntax whileStatement:
+                names.UnionWith(ExpressionSideEffectClassifier.CollectReadVariables(whileStatement.Condition));
+                if (whileStatement.Body != null)
+                {
+                    foreach (StatementSyntax nested in whileStatement.Body.Statements)
+                        names.UnionWith(CollectAllVariableNames(nested));
+                }
+                break;
+
+            case ForStatementSyntax forStatement:
+                if (forStatement.Initializer != null)
+                    names.UnionWith(CollectAllVariableNames(forStatement.Initializer));
+                names.UnionWith(ExpressionSideEffectClassifier.CollectReadVariables(forStatement.Condition));
+                if (forStatement.Iterator != null)
+                    names.UnionWith(CollectAllVariableNames(forStatement.Iterator));
+                foreach (StatementSyntax nested in forStatement.Body.Statements)
+                    names.UnionWith(CollectAllVariableNames(nested));
+                break;
+
+            case DoWhileStatementSyntax doWhile:
+                names.UnionWith(ExpressionSideEffectClassifier.CollectReadVariables(doWhile.Condition));
+                foreach (StatementSyntax nested in doWhile.Body.Statements)
+                    names.UnionWith(CollectAllVariableNames(nested));
+                break;
+
+            case BlockSyntax block:
+                foreach (StatementSyntax nested in block.Statements)
+                    names.UnionWith(CollectAllVariableNames(nested));
+                break;
+        }
+
+        return names;
     }
 
     private static HashSet<string> CollectStatementUses(StatementSyntax statement)
@@ -492,36 +437,6 @@ internal class NamedLocalSlotPass(
         }
 
         result.UnionWith(ExpressionSideEffectClassifier.CollectReadVariables(right));
-    }
-
-    private static HashSet<string> CollectAllVariableNames(StatementSyntax statement)
-    {
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        names.UnionWith(CollectStatementUses(statement));
-        names.UnionWith(ExpressionSideEffectClassifier.CollectAssignedVariables(statement));
-        return names;
-    }
-
-    private static HashSet<string> FilterNamed(HashSet<string> names, HashSet<string> namedSet)
-    {
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        foreach (string name in names)
-        {
-            if (namedSet.Contains(name))
-                result.Add(name);
-        }
-
-        return result;
-    }
-
-    private static HashSet<string> CloneSet(HashSet<string> source)
-    {
-        return new HashSet<string>(source, StringComparer.Ordinal);
-    }
-
-    private static bool SetEquals(HashSet<string> left, HashSet<string> right)
-    {
-        return left.SetEquals(right);
     }
 
     private static Exception CreateException(string message, SyntaxLocation location)

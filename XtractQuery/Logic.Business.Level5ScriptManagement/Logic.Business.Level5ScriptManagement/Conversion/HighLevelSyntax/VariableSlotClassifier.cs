@@ -9,6 +9,7 @@ namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 internal static partial class VariableSlotClassifier
 {
     public const int LocalSlotCount = 1000;
+    public const int GlobalSlotCount = 1000;
 
     public static bool TryGetTypedSlot(string text, out string type, out int slot)
     {
@@ -24,10 +25,12 @@ internal static partial class VariableSlotClassifier
         return true;
     }
 
-    public static bool IsNamedLocal(string text)
+    public static bool IsNamedVariable(string text)
     {
         return text.StartsWith('$') && !TryGetTypedSlot(text, out _, out _);
     }
+
+    public static bool IsNamedLocal(string text) => IsNamedVariable(text);
 
     public static bool TryGetExplicitLocalSlot(string text, out int slot)
     {
@@ -36,6 +39,19 @@ internal static partial class VariableSlotClassifier
             return false;
 
         if (type != "local")
+            return false;
+
+        slot = typedSlot;
+        return true;
+    }
+
+    public static bool TryGetExplicitGlobalSlot(string text, out int slot)
+    {
+        slot = -1;
+        if (!TryGetTypedSlot(text, out string type, out int typedSlot))
+            return false;
+
+        if (type != "global")
             return false;
 
         slot = typedSlot;

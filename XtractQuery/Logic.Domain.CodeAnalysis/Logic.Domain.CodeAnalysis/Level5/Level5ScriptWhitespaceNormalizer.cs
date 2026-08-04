@@ -126,11 +126,55 @@ internal class Level5ScriptWhitespaceNormalizer : ILevel5ScriptWhitespaceNormali
 
     private void NormalizeCodeUnit(CodeUnitSyntax codeUnit, WhitespaceNormalizeContext ctx)
     {
-        foreach (MethodDeclarationSyntax methodDeclaration in codeUnit.MethodDeclarations)
+        foreach (CodeUnitMemberSyntax member in codeUnit.Members)
         {
-            ctx.IsFirstElement = codeUnit.MethodDeclarations[0] == methodDeclaration;
-            ctx.ShouldLineBreak = codeUnit.MethodDeclarations[^1] != methodDeclaration;
-            NormalizeMethodDeclaration(methodDeclaration, ctx);
+            ctx.IsFirstElement = codeUnit.Members[0] == member;
+            ctx.ShouldLineBreak = codeUnit.Members[^1] != member;
+            NormalizeCodeUnitMember(member, ctx);
+        }
+    }
+
+    private void NormalizeCodeUnitMember(CodeUnitMemberSyntax member, WhitespaceNormalizeContext ctx)
+    {
+        switch (member)
+        {
+            case MethodDeclarationSyntax methodDeclaration:
+                NormalizeMethodDeclaration(methodDeclaration, ctx);
+                break;
+
+            case GlobalDeclarationStatementSyntax globalDeclaration:
+                NormalizeGlobalDeclarationStatement(globalDeclaration, ctx);
+                break;
+        }
+    }
+
+    private void NormalizeGlobalDeclarationStatement(
+        GlobalDeclarationStatementSyntax globalDeclaration,
+        WhitespaceNormalizeContext ctx)
+    {
+        SyntaxToken globalKeyword = globalDeclaration.GlobalKeyword.WithNoTrivia().WithTrailingTrivia(" ");
+        SyntaxToken semicolon = globalDeclaration.Semicolon.WithNoTrivia();
+
+        if (ctx.ShouldLineBreak)
+            semicolon = semicolon.WithTrailingTrivia("\r\n\r\n");
+        else
+            semicolon = semicolon.WithTrailingTrivia("\r\n");
+
+        globalDeclaration.SetGlobalKeyword(globalKeyword, false);
+        NormalizeGlobalDeclarationVariableList(globalDeclaration.Variables, ctx);
+        globalDeclaration.SetSemicolon(semicolon, false);
+    }
+
+    private void NormalizeGlobalDeclarationVariableList(
+        CommaSeparatedSyntaxList<VariableExpressionSyntax> list,
+        WhitespaceNormalizeContext ctx)
+    {
+        foreach (VariableExpressionSyntax value in list.Elements)
+        {
+            ctx.IsFirstElement = list.Elements[0] == value;
+            ctx.ShouldLineBreak = false;
+            ctx.ShouldIndent = false;
+            NormalizeVariableExpression(value, ctx);
         }
     }
 

@@ -606,6 +606,9 @@ internal class Level5ScriptLexer : ILexer<Level5SyntaxToken>
             case "continue":
                 return new Level5SyntaxToken(SyntaxTokenKind.ContinueKeyword, position, line, column, finalValue);
 
+            case "global":
+                return new Level5SyntaxToken(SyntaxTokenKind.GlobalKeyword, position, line, column, finalValue);
+
             case "true":
                 return new Level5SyntaxToken(SyntaxTokenKind.TrueKeyword, position, line, column, finalValue);
 

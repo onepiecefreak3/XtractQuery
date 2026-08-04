@@ -12,6 +12,7 @@ class CreateXq32Workflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
     ILowLevelCodeUnitConverter lowLevelConverter,
+    INamedGlobalSlotPass namedGlobalSlotPass,
     INamedLocalSlotPass namedLocalSlotPass,
     IXq32CodeUnitConverter treeConverter,
     IXq32ScriptWriter scriptWriter)
@@ -27,6 +28,7 @@ class CreateXq32Workflow(
         // Convert to script data
         CodeUnitSyntax codeUnit = scriptParser.ParseCodeUnit(readableScript);
         codeUnit = lowLevelConverter.Convert(codeUnit);
+        codeUnit = namedGlobalSlotPass.Convert(codeUnit);
         codeUnit = namedLocalSlotPass.Convert(codeUnit);
 
         ScriptFile script = treeConverter.CreateScriptFile(codeUnit);

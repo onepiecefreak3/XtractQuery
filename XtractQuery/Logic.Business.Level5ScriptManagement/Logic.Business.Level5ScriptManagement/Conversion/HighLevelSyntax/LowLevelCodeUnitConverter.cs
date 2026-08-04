@@ -9,11 +9,16 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {
-        var methods = new List<MethodDeclarationSyntax>();
-        foreach (MethodDeclarationSyntax method in tree.MethodDeclarations)
-            methods.Add(ConvertMethod(method));
+        var members = new List<CodeUnitMemberSyntax>();
+        foreach (CodeUnitMemberSyntax member in tree.Members)
+        {
+            if (member is MethodDeclarationSyntax method)
+                members.Add(ConvertMethod(method));
+            else
+                members.Add(member);
+        }
 
-        return new CodeUnitSyntax(methods);
+        return new CodeUnitSyntax(members);
     }
 
     private MethodDeclarationSyntax ConvertMethod(MethodDeclarationSyntax method)
