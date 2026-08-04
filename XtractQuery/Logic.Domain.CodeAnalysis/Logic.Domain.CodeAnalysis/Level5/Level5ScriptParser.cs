@@ -126,9 +126,56 @@ internal class Level5ScriptParser : ILevel5ScriptParser
 
     private CodeUnitSyntax ParseCodeUnit(IBuffer<Level5SyntaxToken> buffer)
     {
-        var methodDeclarations = ParseMethodDeclarations(buffer);
+        var members = ParseCodeUnitMembers(buffer);
 
-        return new CodeUnitSyntax(methodDeclarations);
+        return new CodeUnitSyntax(members);
+    }
+
+    private IReadOnlyList<CodeUnitMemberSyntax> ParseCodeUnitMembers(IBuffer<Level5SyntaxToken> buffer)
+    {
+        var result = new List<CodeUnitMemberSyntax>();
+
+        while (buffer.Peek().Kind != SyntaxTokenKind.EndOfFile)
+        {
+            if (HasTokenKind(buffer, SyntaxTokenKind.GlobalKeyword))
+                result.Add(ParseGlobalDeclarationStatement(buffer));
+            else
+                result.Add(ParseMethodDeclaration(buffer));
+        }
+
+        return result;
+    }
+
+    private GlobalDeclarationStatementSyntax ParseGlobalDeclarationStatement(IBuffer<Level5SyntaxToken> buffer)
+    {
+        SyntaxToken globalKeyword = ParseGlobalKeywordToken(buffer);
+        var variables = ParseGlobalDeclarationVariableList(buffer);
+        SyntaxToken semicolon = ParseSemicolonToken(buffer);
+
+        return new GlobalDeclarationStatementSyntax(globalKeyword, variables, semicolon);
+    }
+
+    private CommaSeparatedSyntaxList<VariableExpressionSyntax> ParseGlobalDeclarationVariableList(
+        IBuffer<Level5SyntaxToken> buffer)
+    {
+        var result = new List<VariableExpressionSyntax>();
+
+        if (!HasTokenKind(buffer, SyntaxTokenKind.Variable))
+            throw CreateException(buffer, "Invalid global declaration variable list.", SyntaxTokenKind.Variable);
+
+        result.Add(ParseVariableExpression(buffer));
+
+        while (HasTokenKind(buffer, SyntaxTokenKind.Comma))
+        {
+            SkipTokenKind(buffer, SyntaxTokenKind.Comma);
+
+            if (!HasTokenKind(buffer, SyntaxTokenKind.Variable))
+                throw CreateException(buffer, "Invalid end of global declaration variable list.", SyntaxTokenKind.Variable);
+
+            result.Add(ParseVariableExpression(buffer));
+        }
+
+        return new CommaSeparatedSyntaxList<VariableExpressionSyntax>(result);
     }
 
     private IReadOnlyList<MethodDeclarationSyntax> ParseMethodDeclarations(IBuffer<Level5SyntaxToken> buffer)
@@ -1505,6 +1552,11 @@ internal class Level5ScriptParser : ILevel5ScriptParser
     private SyntaxToken ParseContinueKeywordToken(IBuffer<Level5SyntaxToken> buffer)
     {
         return CreateToken(buffer, SyntaxTokenKind.ContinueKeyword);
+    }
+
+    private SyntaxToken ParseGlobalKeywordToken(IBuffer<Level5SyntaxToken> buffer)
+    {
+        return CreateToken(buffer, SyntaxTokenKind.GlobalKeyword);
     }
 
     private SyntaxToken ParseTrueKeywordToken(IBuffer<Level5SyntaxToken> buffer)

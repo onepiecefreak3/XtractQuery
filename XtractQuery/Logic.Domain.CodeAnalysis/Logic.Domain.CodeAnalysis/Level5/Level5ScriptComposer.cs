@@ -145,8 +145,31 @@ internal class Level5ScriptComposer : ILevel5ScriptComposer
 
     private void ComposeCodeUnit(CodeUnitSyntax codeUnit, StringBuilder sb)
     {
-        foreach (MethodDeclarationSyntax methodDeclaration in codeUnit.MethodDeclarations)
-            ComposeMethodDeclaration(methodDeclaration, sb);
+        foreach (CodeUnitMemberSyntax member in codeUnit.Members)
+            ComposeCodeUnitMember(member, sb);
+    }
+
+    private void ComposeCodeUnitMember(CodeUnitMemberSyntax member, StringBuilder sb)
+    {
+        switch (member)
+        {
+            case MethodDeclarationSyntax methodDeclaration:
+                ComposeMethodDeclaration(methodDeclaration, sb);
+                break;
+
+            case GlobalDeclarationStatementSyntax globalDeclaration:
+                ComposeGlobalDeclarationStatement(globalDeclaration, sb);
+                break;
+        }
+    }
+
+    private void ComposeGlobalDeclarationStatement(
+        GlobalDeclarationStatementSyntax globalDeclaration,
+        StringBuilder sb)
+    {
+        ComposeSyntaxToken(globalDeclaration.GlobalKeyword, sb);
+        ComposeVariableExpressions(globalDeclaration.Variables, sb);
+        ComposeSyntaxToken(globalDeclaration.Semicolon, sb);
     }
 
     private void ComposeMethodDeclaration(MethodDeclarationSyntax methodDeclaration, StringBuilder sb)

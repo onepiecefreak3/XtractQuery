@@ -79,6 +79,7 @@ public enum SyntaxTokenKind
     DoKeyword,
     BreakKeyword,
     ContinueKeyword,
+    GlobalKeyword,
     TrueKeyword,
     IntKeyword,
     BoolKeyword,
