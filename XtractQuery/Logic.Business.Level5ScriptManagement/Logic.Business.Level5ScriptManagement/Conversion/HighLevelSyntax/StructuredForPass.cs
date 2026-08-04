@@ -9,7 +9,10 @@ namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 /// <summary>
 /// Raises classic counted <c>while</c> loops into <c>for</c> after structured
 /// loop/if raising. Matches <c>init; while (cond) { body; step; }</c> where
-/// <c>step</c> updates a variable (condition need not reference that variable).
+/// <c>step</c> is a forward induction on a variable that <c>cond</c> also
+/// references (e.g. <c>i++</c> / <c>i += n</c> / <c>i = i + n</c>).
+/// Rejects <c>while (true)</c> scanners and countdown waits whose trailing
+/// update is not a forward induction — those stay as <c>while</c>.
 /// Break/continue stay as keywords inside the for body.
 /// </summary>
 internal class StructuredForPass(ILevel5SyntaxFactory syntaxFactory) : IStructuredForPass
@@ -57,6 +60,14 @@ internal class StructuredForPass(ILevel5SyntaxFactory syntaxFactory) : IStructur
 
         StatementSyntax step = body[^1];
         if (!TryGetUpdatedVariable(step, out string? variable) || variable is null)
+            return false;
+
+        // while (true) { …; i++; } and similar: step alone does not make a counted for.
+        if (!ReferencesVariable(whileStatement.Condition, variable))
+            return false;
+
+        // Countdown waits (i -= dt / i--) are while-shaped, not classic counted fors.
+        if (!IsForwardInductionStep(step, variable))
             return false;
 
         // For-lowering may leave a continue latch label immediately before the step.
@@ -233,6 +244,63 @@ internal class StructuredForPass(ILevel5SyntaxFactory syntaxFactory) : IStructur
             default:
                 return false;
         }
+    }
+
+    /// <summary>
+    /// Classic counted-for step: <c>++</c>, <c>+=</c>, or <c>$v = $v + …</c> /
+    /// <c>$v = … + $v</c>. Decrements and other updates stay on <c>while</c>.
+    /// </summary>
+    private static bool IsForwardInductionStep(StatementSyntax step, string variable)
+    {
+        switch (step)
+        {
+            case PostfixUnaryStatementSyntax postfix:
+                return postfix.Expression.Operation.RawKind == (int)SyntaxTokenKind.Increment &&
+                       TryGetVariableName(postfix.Expression.Value, out string? postfixVariable) &&
+                       postfixVariable == variable;
+
+            case AssignmentStatementSyntax assignment:
+            {
+                if (!TryGetVariableName(assignment.Left, out string? left) || left != variable)
+                    return false;
+
+                if (assignment.EqualsOperator.RawKind == (int)SyntaxTokenKind.PlusEquals)
+                    return true;
+
+                if (assignment.EqualsOperator.RawKind != (int)SyntaxTokenKind.EqualsSign)
+                    return false;
+
+                return IsAdditionUpdatingVariable(assignment.Right, variable);
+            }
+
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsAdditionUpdatingVariable(ExpressionSyntax expression, string variable)
+    {
+        expression = Unwrap(expression);
+
+        if (expression is ValueExpressionSyntax value)
+            return IsAdditionUpdatingVariable(value.Value, variable);
+
+        if (expression is not BinaryExpressionSyntax
+            {
+                Operation.RawKind: (int)SyntaxTokenKind.Plus
+            } binary)
+        {
+            return false;
+        }
+
+        bool leftIsVariable = IsVariableNamed(binary.Left, variable);
+        bool rightIsVariable = IsVariableNamed(binary.Right, variable);
+        return leftIsVariable ^ rightIsVariable;
+    }
+
+    private static bool IsVariableNamed(ExpressionSyntax expression, string variable)
+    {
+        return TryGetVariableName(expression, out string? name) && name == variable;
     }
 
     private static bool TryGetVariableName(ExpressionSyntax expression, out string? variable)
