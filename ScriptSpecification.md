@@ -145,9 +145,9 @@ All literal values and variables can be suffixed by ``<[type]>`` to explicitly s
 ## Variable notation
 
 Variables have a fixed notation to declare their placement on the stack. (see "Variables" in the format specification)<br>
-All variables start with the prefix '$', followed by a fixed term and number from 0 to 999 for placement on the stack.
+All variables start with the prefix `$`, followed by a fixed term and number from 0 to 999 for placement on the stack.
 
-Additionally, as of version 3.0.4, an optional variable name can be appended after the number portion of the variable.<br>
+Additionally, an optional variable name can be appended after the number portion of the variable.<br>
 Everything after the number will be ignored for compilation and follows no specific syntax other than it has to append to the number portion and shouldn't start with a number itself.
 
 | Notation | Description |
@@ -157,6 +157,22 @@ Everything after the number will be ignored for compilation and follows no speci
 | ```$local0``` | Holds values only in the function it was set in.<br>Equivalent to a common variable in other programming languages. |
 | ```$param0``` | Holds input parameters into the function. |
 | ```$global0``` | Holds values through multiple functions only in the script it was set in. |
+
+### Auto-assignment
+
+When writing your own code, variables do not have to follow the fixed term and number notation.<br>
+As long as an identifier is prefixed with `$`, it will be a variable and auto-assigned a stack and slot number automatically at compilation.
+
+Reference:
+```
+global $bossHp; // Declares a global stack variable; will be auto-assigned a global stack slot
+
+DecreaseHp($damage) // Input parameters will be auto-assigned a parameter stack slot
+{
+    $totalDamage = $damage * 2; // Local variable will be auto-assigned a local variable stack slot
+    $bossHp -= $totalDamage;
+}
+```
 
 ## Instructions
 
