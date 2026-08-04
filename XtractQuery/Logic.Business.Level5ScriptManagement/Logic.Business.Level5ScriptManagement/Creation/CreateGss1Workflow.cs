@@ -11,6 +11,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateGss1Workflow(
     ILevel5ScriptParser scriptParser,
     ILowLevelCodeUnitConverter lowLevelConverter,
+    INamedParameterSlotPass namedParameterSlotPass,
     INamedGlobalSlotPass namedGlobalSlotPass,
     INamedLocalSlotPass namedLocalSlotPass,
     IGss1CodeUnitConverter treeConverter,
@@ -27,6 +28,7 @@ class CreateGss1Workflow(
         // Convert to script data
         CodeUnitSyntax codeUnit = scriptParser.ParseCodeUnit(readableScript);
         codeUnit = lowLevelConverter.Convert(codeUnit);
+        codeUnit = namedParameterSlotPass.Convert(codeUnit);
         codeUnit = namedGlobalSlotPass.Convert(codeUnit);
         codeUnit = namedLocalSlotPass.Convert(codeUnit);
 
