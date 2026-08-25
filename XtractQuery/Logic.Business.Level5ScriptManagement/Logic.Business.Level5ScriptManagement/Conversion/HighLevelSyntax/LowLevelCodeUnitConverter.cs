@@ -31,11 +31,13 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         CollectUsedLabels(method.Body.Expressions, usedLabels);
         int nextLabel = 0;
         int ifConditionDest = 1;
+        var packedReserve = new NamedDestReserve();
 
         var loopStack = new Stack<LoopContext>();
         var statements = new List<StatementSyntax>();
         foreach (StatementSyntax statement in method.Body.Expressions)
-            FlattenStatement(statement, statements, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                statement, statements, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
         var body = new MethodDeclarationBodySyntax(method.Body.CurlyOpen, statements, method.Body.CurlyClose);
         return new MethodDeclarationSyntax(method.Identifier, method.MetadataParameters, method.Parameters, body);
@@ -48,11 +50,14 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack,
-        ref int ifConditionDest)
+        ref int ifConditionDest,
+        NamedDestReserve packedReserve)
     {
         if (statement is IfStatementSyntax ifStatement)
         {
-            LowerIfStatement(ifStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            packedReserve.Clear();
+            LowerIfStatement(
+                ifStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
             return;
         }
 
@@ -65,6 +70,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 MethodInvocationExpressionSyntax call = FlattenInvocationExpression(
                     invocation, output, temps, dest: 1);
                 Spill(call, output, temps, dest: 1);
+                packedReserve.OnCall();
                 break;
             }
 
@@ -76,7 +82,9 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                     assignment.Right,
                     assignment.Semicolon,
                     output,
-                    temps);
+                    temps,
+                    packedReserve.End);
+                UpdatePackedReserveAfterAssignment(assignment, packedReserve);
                 break;
             }
 
@@ -100,15 +108,21 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             }
 
             case WhileStatementSyntax whileStatement:
-                LowerWhileStatement(whileStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                packedReserve.Clear();
+                LowerWhileStatement(
+                    whileStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
                 break;
 
             case ForStatementSyntax forStatement:
-                LowerForStatement(forStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                packedReserve.Clear();
+                LowerForStatement(
+                    forStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
                 break;
 
             case DoWhileStatementSyntax doWhileStatement:
-                LowerDoWhileStatement(doWhileStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                packedReserve.Clear();
+                LowerDoWhileStatement(
+                    doWhileStatement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
                 break;
 
             case BreakStatementSyntax breakStatement:
@@ -121,7 +135,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
             case BlockSyntax block:
                 foreach (StatementSyntax nested in block.Statements)
-                    FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                    FlattenStatement(
+                        nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
                 break;
 
             case ReturnStatementSyntax returnStatement:
@@ -137,6 +152,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 }
 
                 output.Add(new ReturnStatementSyntax(returnStatement.Return, returnValue, returnStatement.Semicolon));
+                packedReserve.Clear();
                 break;
             }
 
@@ -149,6 +165,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             }
 
             default:
+                packedReserve.Clear();
                 output.Add(statement);
                 break;
         }
@@ -161,7 +178,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack,
-        ref int ifConditionDest)
+        ref int ifConditionDest,
+        NamedDestReserve packedReserve)
     {
         // Empty / one-liner while → spin: L: if cond goto L; (IfGoto dest 2).
         if (whileStatement.Body is null || whileStatement.Body.Statements.Count == 0)
@@ -181,7 +199,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         EmitIfNotGoto(NormalizeCondition(whileStatement.Condition), exitLabel, output, temps, dest: 1);
 
         foreach (StatementSyntax nested in whileStatement.Body.Statements)
-            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
         output.Add(CreateGoto(headLabel));
         output.Add(CreateLabel(exitLabel));
@@ -195,10 +214,19 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack,
-        ref int ifConditionDest)
+        ref int ifConditionDest,
+        NamedDestReserve packedReserve)
     {
         if (forStatement.Initializer != null)
-            FlattenStatement(EnsureStatementSemicolon(forStatement.Initializer), output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                EnsureStatementSemicolon(forStatement.Initializer),
+                output,
+                temps,
+                usedLabels,
+                ref nextLabel,
+                loopStack,
+                ref ifConditionDest,
+                packedReserve);
 
         string headLabel = AllocateLabel(usedLabels, ref nextLabel);
         string exitLabel = AllocateLabel(usedLabels, ref nextLabel);
@@ -215,13 +243,22 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         EmitIfNotGoto(NormalizeCondition(forStatement.Condition), exitLabel, output, temps, dest: 1);
 
         foreach (StatementSyntax nested in forStatement.Body.Statements)
-            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
         if (needsContinueLatch)
             output.Add(CreateLabel(continueLabel));
 
         if (forStatement.Iterator != null)
-            FlattenStatement(EnsureStatementSemicolon(forStatement.Iterator), output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                EnsureStatementSemicolon(forStatement.Iterator),
+                output,
+                temps,
+                usedLabels,
+                ref nextLabel,
+                loopStack,
+                ref ifConditionDest,
+                packedReserve);
 
         output.Add(CreateGoto(headLabel));
         output.Add(CreateLabel(exitLabel));
@@ -293,7 +330,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack,
-        ref int ifConditionDest)
+        ref int ifConditionDest,
+        NamedDestReserve packedReserve)
     {
         string headLabel = AllocateLabel(usedLabels, ref nextLabel);
         string continueLabel = AllocateLabel(usedLabels, ref nextLabel);
@@ -303,7 +341,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
         output.Add(CreateLabel(headLabel));
         foreach (StatementSyntax nested in doWhileStatement.Body.Statements)
-            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
         output.Add(CreateLabel(continueLabel));
         EmitIfGoto(NormalizeCondition(doWhileStatement.Condition), headLabel, output, temps);
@@ -340,9 +379,12 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         HashSet<string> usedLabels,
         ref int nextLabel,
         Stack<LoopContext> loopStack,
-        ref int ifConditionDest)
+        ref int ifConditionDest,
+        NamedDestReserve packedReserve)
     {
         int condDest = ifConditionDest;
+        if (IsLogicalStringComparison(ifStatement.Condition))
+            condDest = Math.Max(condDest, 2);
 
         // Empty `else { }` is indistinguishable from if-then after jump-table hash sort
         // co-locates ELSE/JOIN at the same instruction index. Emit the if-then shape.
@@ -351,7 +393,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
             string endLabel = AllocateLabel(usedLabels, ref nextLabel);
             EmitIfNotGoto(ifStatement.Condition, endLabel, output, temps, condDest);
             foreach (StatementSyntax nested in ifStatement.Body.Statements)
-                FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                FlattenStatement(
+                    nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
             // After `if { return; }`, dest 1 stays live at the join; the next if uses dest 2.
             ifConditionDest = AllPathsTerminate(ifStatement.Body.Statements)
@@ -365,7 +408,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
 
         EmitIfNotGoto(ifStatement.Condition, elseLabel, output, temps, condDest);
         foreach (StatementSyntax nested in ifStatement.Body.Statements)
-            FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
 
         // Allocate JOIN after the then-body so nested loops/ifs consume labels first
         // (`if { while; } else` → while @002, join @003), matching Level5.
@@ -374,14 +418,24 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         output.Add(CreateLabel(elseLabel));
 
         if (ifStatement.Else.Statement is IfStatementSyntax elseIf)
-            LowerIfStatement(elseIf, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            LowerIfStatement(
+                elseIf, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
         else if (ifStatement.Else.Statement is BlockSyntax elseBlock)
         {
             foreach (StatementSyntax nested in elseBlock.Statements)
-                FlattenStatement(nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+                FlattenStatement(
+                    nested, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest, packedReserve);
         }
         else
-            FlattenStatement(ifStatement.Else.Statement, output, temps, usedLabels, ref nextLabel, loopStack, ref ifConditionDest);
+            FlattenStatement(
+                ifStatement.Else.Statement,
+                output,
+                temps,
+                usedLabels,
+                ref nextLabel,
+                loopStack,
+                ref ifConditionDest,
+                packedReserve);
 
         ifConditionDest = 1;
         output.Add(CreateLabel(joinLabel));
@@ -612,7 +666,8 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         ExpressionSyntax right,
         SyntaxToken semicolon,
         List<StatementSyntax> output,
-        TempSlotFrame temps)
+        TempSlotFrame temps,
+        int packedEnd = 0)
     {
         if (right is AssignmentExpressionSyntax nested)
         {
@@ -620,7 +675,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
                 nested.Operation.RawKind != (int)SyntaxTokenKind.EqualsSign)
                 throw CreateException("Only '=' can be chained in assignments.", nested.Location);
 
-            FlattenAssignment(nested.Left, nested.Operation, nested.Right, semicolon, output, temps);
+            FlattenAssignment(nested.Left, nested.Operation, nested.Right, semicolon, output, temps, packedEnd);
 
             int dest = GetAssignmentDest(left);
             ExpressionSyntax flatLeft = FlattenExpression(left, output, temps, dest, dest, forceValue: false);
@@ -645,12 +700,103 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         bool forceValueRhs = operation.RawKind != (int)SyntaxTokenKind.EqualsSign
                              || flatTarget is ArrayIndexExpressionSyntax;
         int rhsDest = forceValueRhs && assignDest < 1 ? 1 : assignDest;
+        int reservedEnd = assignDest < 1 ? Math.Max(rhsDest, packedEnd) : rhsDest;
         ExpressionSyntax flatValue = forceValueRhs
             ? EnsureValueExpression(
-                FlattenExpression(right, output, temps, rhsDest, rhsDest, forceValue: true), output, temps, rhsDest)
-            : FlattenExpression(right, output, temps, rhsDest, rhsDest, forceValue: false);
+                FlattenExpression(right, output, temps, rhsDest, reservedEnd, forceValue: true), output, temps, rhsDest)
+            : FlattenExpression(right, output, temps, rhsDest, reservedEnd, forceValue: false);
 
         output.Add(new AssignmentStatementSyntax(flatTarget, operation, flatValue, semicolon));
+    }
+
+    private static void UpdatePackedReserveAfterAssignment(
+        AssignmentStatementSyntax assignment,
+        NamedDestReserve packedReserve)
+    {
+        if (IsVarToVarCopy(assignment))
+        {
+            packedReserve.OnVarCopy();
+            return;
+        }
+
+        packedReserve.OnConsumed(AssignmentNeedsPackedTemps(assignment));
+    }
+
+    private static bool IsVarToVarCopy(AssignmentStatementSyntax assignment)
+    {
+        if (assignment.EqualsOperator.RawKind != (int)SyntaxTokenKind.EqualsSign)
+            return false;
+
+        return IsNamedVariable(assignment.Left) && IsNamedVariable(assignment.Right);
+    }
+
+    private static bool IsNamedVariable(ExpressionSyntax expression)
+    {
+        expression = ExpressionParenthesizer.UnwrapParentheses(expression);
+        if (expression is ValueExpressionSyntax value)
+            expression = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        return expression is VariableExpressionSyntax variable && !TryGetTempSlot(variable, out _);
+    }
+
+    private static bool AssignmentNeedsPackedTemps(AssignmentStatementSyntax assignment)
+    {
+        if (GetAssignmentDest(assignment.Left) >= 1)
+            return false;
+
+        return ExpressionNeedsPackedTemps(assignment.Right);
+    }
+
+    private static bool ExpressionNeedsPackedTemps(ExpressionSyntax expression)
+    {
+        expression = ExpressionParenthesizer.UnwrapParentheses(expression);
+        if (expression is ValueExpressionSyntax value)
+            expression = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        return expression switch
+        {
+            BinaryExpressionSyntax binary => NeedsTempOperand(binary.Left) || NeedsTempOperand(binary.Right),
+            LogicalExpressionSyntax logical => NeedsTempOperand(logical.Left) || NeedsTempOperand(logical.Right),
+            _ => false
+        };
+    }
+
+    private static bool IsLogicalStringComparison(ExpressionSyntax condition)
+    {
+        condition = ExpressionParenthesizer.UnwrapParentheses(condition);
+        if (condition is ValueExpressionSyntax value)
+            condition = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        return condition is LogicalExpressionSyntax logical
+               && IsStringComparison(logical.Left)
+               && IsStringComparison(logical.Right);
+    }
+
+    private static bool IsStringComparison(ExpressionSyntax expression)
+    {
+        expression = ExpressionParenthesizer.UnwrapParentheses(expression);
+        if (expression is ValueExpressionSyntax value)
+            expression = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        if (expression is not BinaryExpressionSyntax binary)
+            return false;
+
+        if (binary.Operation.RawKind is not ((int)SyntaxTokenKind.Equals or (int)SyntaxTokenKind.NotEquals))
+            return false;
+
+        return IsStringLiteral(binary.Left) || IsStringLiteral(binary.Right);
+    }
+
+    private static bool IsStringLiteral(ExpressionSyntax expression)
+    {
+        expression = ExpressionParenthesizer.UnwrapParentheses(expression);
+        if (expression is ValueExpressionSyntax value)
+            expression = ExpressionParenthesizer.UnwrapParentheses(value.Value);
+
+        return expression is LiteralExpressionSyntax
+        {
+            Literal.RawKind: (int)SyntaxTokenKind.StringLiteral
+        };
     }
 
     private ValueExpressionSyntax FlattenAssignmentExpression(
@@ -822,7 +968,7 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         out ExpressionSyntax left,
         out ExpressionSyntax right)
     {
-        int next = temps.Resolve(FirstOperandDest(dest, reservedEnd));
+        int next = temps.Resolve(FirstOperandDest(dest, EffectivePackedReservedEnd(dest, reservedEnd, leftExpr)));
         bool leftComplex = NeedsTempOperand(leftExpr);
         bool rightComplex = NeedsTempOperand(rightExpr);
         int leftDest = leftComplex ? next : dest;
@@ -1102,6 +1248,18 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
         return Math.Max(dest + 1, reservedEnd + 1);
     }
 
+    /// <summary>
+    /// A discarded call leaves dest 1 live. The first complex operand can overwrite it
+    /// when it is on the left; a leaf left keeps dest 1, so a complex right starts at dest 2.
+    /// </summary>
+    private static int EffectivePackedReservedEnd(int dest, int reservedEnd, ExpressionSyntax leftExpr)
+    {
+        if (dest >= 1 || reservedEnd < 1)
+            return reservedEnd;
+
+        return NeedsTempOperand(leftExpr) ? 0 : reservedEnd;
+    }
+
     private static bool NeedsTempOperand(ExpressionSyntax expression)
     {
         expression = ExpressionParenthesizer.UnwrapParentheses(expression);
@@ -1284,6 +1442,38 @@ internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : I
     private static Exception CreateException(string message, SyntaxLocation location)
     {
         return new InvalidOperationException($"{message} (Line {location.Line}, Column {location.Column})");
+    }
+
+    private sealed class NamedDestReserve
+    {
+        public int End { get; private set; }
+        public bool Sticky { get; private set; }
+
+        public void OnCall()
+        {
+            End = 1;
+            Sticky = false;
+        }
+
+        public void OnVarCopy()
+        {
+            if (End > 0)
+                Sticky = true;
+        }
+
+        public void OnConsumed(bool usedPackedTemps)
+        {
+            if (Sticky && !usedPackedTemps)
+                return;
+
+            Clear();
+        }
+
+        public void Clear()
+        {
+            End = 0;
+            Sticky = false;
+        }
     }
 
     private sealed record LoopContext(string HeadLabel, string ContinueLabel, string ExitLabel);
