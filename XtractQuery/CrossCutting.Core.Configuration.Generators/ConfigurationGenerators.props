@@ -1,28 +1,45 @@
 <!-- Import this props file from projects that define [ConfigurationCategory] types. -->
 <Project>
-  <PropertyGroup>
-    <_CoCoConfigurationGeneratorsDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</_CoCoConfigurationGeneratorsDir>
-    <_CoCoConfigurationGeneratorsDll>$(_CoCoConfigurationGeneratorsDir)bin\$(Configuration)\netstandard2.0\CrossCutting.Core.Configuration.Generators.dll</_CoCoConfigurationGeneratorsDll>
-  </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="$(_CoCoConfigurationGeneratorsDir)CrossCutting.Core.Configuration.Generators.csproj"
+    <!--
+      OutputItemType=Analyzer is required so the generator runs on clean CI / Native AOT publishes.
+      A hardcoded bin\$(Configuration) Analyzer path misses the DLL when RuntimeIdentifier is flowed
+      (dotnet publish -r ...) because the output then sits under a RID subfolder.
+      Strip publish/RID properties so the analyzer always builds as netstandard2.0 without a RID.
+    -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)CrossCutting.Core.Configuration.Generators.csproj"
+                      OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"
-                      PrivateAssets="all" />
-    <Analyzer Include="$(_CoCoConfigurationGeneratorsDll)"
-              Condition="Exists('$(_CoCoConfigurationGeneratorsDll)')" />
+                      PrivateAssets="all"
+                      SetTargetFramework="TargetFramework=netstandard2.0"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed;PublishReadyToRun;PublishSingleFile" />
   </ItemGroup>
 
-  <!-- Ensure the generator assembly exists before CoreCompile when building from a clean tree. -->
-  <Target Name="BuildCoCoConfigurationGenerators"
-          BeforeTargets="ResolvePackageDependenciesForBuild;BeforeCompile;CoreCompile"
-          Condition="!Exists('$(_CoCoConfigurationGeneratorsDll)')">
-    <MSBuild Projects="$(_CoCoConfigurationGeneratorsDir)CrossCutting.Core.Configuration.Generators.csproj"
-             Targets="Build"
-             Properties="Configuration=$(Configuration)" />
-    <ItemGroup Condition="Exists('$(_CoCoConfigurationGeneratorsDll)')">
-      <Analyzer Include="$(_CoCoConfigurationGeneratorsDll)"
-                Condition="'%(Identity)' != '$(_CoCoConfigurationGeneratorsDll)'" />
+  <!--
+    Native AOT/ILLink does not treat unreferenced [ModuleInitializer] types as roots.
+    The configuration class is used; the generated *ConfigurationFactory is not.
+    Embed a descriptor so those factories survive publish without making config types partial.
+  -->
+  <Target Name="CoCoEmbedConfigurationFactoryTrimmerRoots"
+          BeforeTargets="PrepareResourceNames;CoreCompile"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_CoCoCfgFactoryDescriptor>$(IntermediateOutputPath)ILLink.Descriptors.CoCoConfigurationFactories.xml</_CoCoCfgFactoryDescriptor>
+      <_CoCoCfgFactoryNs Condition="'$(RootNamespace)' != ''">$(RootNamespace).GeneratedConfiguration</_CoCoCfgFactoryNs>
+      <_CoCoCfgFactoryNs Condition="'$(_CoCoCfgFactoryNs)' == ''">GeneratedConfiguration</_CoCoCfgFactoryNs>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile
+        File="$(_CoCoCfgFactoryDescriptor)"
+        Overwrite="true"
+        WriteOnlyWhenDifferent="true"
+        Lines="&lt;linker&gt;;  &lt;assembly fullname=&quot;$(AssemblyName)&quot;&gt;;    &lt;type fullname=&quot;$(_CoCoCfgFactoryNs)*&quot; preserve=&quot;all&quot; /&gt;;  &lt;/assembly&gt;;&lt;/linker&gt;" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(_CoCoCfgFactoryDescriptor)">
+        <LogicalName>ILLink.Descriptors.CoCoConfigurationFactories.xml</LogicalName>
+        <WithCulture>false</WithCulture>
+        <Type>Non-Resx</Type>
+      </EmbeddedResource>
     </ItemGroup>
   </Target>
 </Project>

@@ -11,6 +11,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <IsPublishable>false</IsPublishable>
     <PublishAot>false</PublishAot>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <NoWarn>$(NoWarn);RS2008</NoWarn>
   </PropertyGroup>
   <ItemGroup>
