@@ -50,3 +50,9 @@ To create a XQ32 script from human readable code:<br>
 
 To decompress the tables in a script (see "Compression" in format specification):<br>
 ```XtractQuery.exe -o d -f Path/To/File.xq```
+
+## Disclaimer
+
+Resolving and lowering high-level syntax structures and complex expressions were implemented by a supervised AI workflow utilizing Cursor Grok 4.5 Medium. The resolver and lowerer for those were also explicitly programmed to be single-line invocations to be toggled on or off by a simple command line parameter, if you do not want AI-generated code to run or prefer low-level instruction output.
+
+Everything else in this project was programmed manually by a human.
