@@ -11,7 +11,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateXseqWorkflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
-    ILowLevelCodeUnitConverter lowLevelConverter,
+    IXseqLowLevelCodeUnitConverter lowLevelConverter,
     INamedParameterSlotPass namedParameterSlotPass,
     INamedGlobalSlotPass namedGlobalSlotPass,
     INamedLocalSlotPass namedLocalSlotPass,

@@ -64,7 +64,9 @@ public class Level5ScriptManagementActivator : IComponentActivator
 
         kernel.Register<IXq32ScriptFileConverter, Xq32ScriptFileConverter>(ActivationScope.Unique);
         kernel.Register<IHighLevelCodeUnitConverter, HighLevelCodeUnitConverter>(ActivationScope.Unique);
-        kernel.Register<ILowLevelCodeUnitConverter, LowLevelCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IXseqLowLevelCodeUnitConverter, XseqLowLevelCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IXq32LowLevelCodeUnitConverter, Xq32LowLevelCodeUnitConverter>(ActivationScope.Unique);
+        kernel.Register<IGss1LowLevelCodeUnitConverter, Gss1LowLevelCodeUnitConverter>(ActivationScope.Unique);
         kernel.Register<INamedParameterSlotPass, NamedParameterSlotPass>(ActivationScope.Unique);
         kernel.Register<INamedGlobalSlotPass, NamedGlobalSlotPass>(ActivationScope.Unique);
         kernel.Register<INamedLocalSlotPass, NamedLocalSlotPass>(ActivationScope.Unique);

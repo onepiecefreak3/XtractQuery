@@ -5,7 +5,7 @@ using Logic.Domain.CodeAnalysis.Contract.Level5;
 
 namespace Logic.Business.Level5ScriptManagement.Conversion.HighLevelSyntax;
 
-internal class LowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : ILowLevelCodeUnitConverter
+internal class XseqLowLevelCodeUnitConverter(ILevel5SyntaxFactory syntaxFactory) : IXseqLowLevelCodeUnitConverter
 {
     public CodeUnitSyntax Convert(CodeUnitSyntax tree)
     {

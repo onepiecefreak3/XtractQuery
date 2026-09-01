@@ -11,7 +11,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 class CreateXq32Workflow(
     ScriptManagementConfiguration config,
     ILevel5ScriptParser scriptParser,
-    ILowLevelCodeUnitConverter lowLevelConverter,
+    IXq32LowLevelCodeUnitConverter lowLevelConverter,
     INamedParameterSlotPass namedParameterSlotPass,
     INamedGlobalSlotPass namedGlobalSlotPass,
     INamedLocalSlotPass namedLocalSlotPass,

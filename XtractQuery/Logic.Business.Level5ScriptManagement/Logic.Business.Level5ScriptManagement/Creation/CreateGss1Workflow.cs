@@ -10,7 +10,7 @@ namespace Logic.Business.Level5ScriptManagement.Creation;
 
 class CreateGss1Workflow(
     ILevel5ScriptParser scriptParser,
-    ILowLevelCodeUnitConverter lowLevelConverter,
+    IGss1LowLevelCodeUnitConverter lowLevelConverter,
     INamedParameterSlotPass namedParameterSlotPass,
     INamedGlobalSlotPass namedGlobalSlotPass,
     INamedLocalSlotPass namedLocalSlotPass,
